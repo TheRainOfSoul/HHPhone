@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="enable_default_phone">Включите «Телефонное приложение по умолчанию» в настройках</string>
+    <string name="unlock_to_access_full_app">Разблокируйте устройство</string>
+</resources>

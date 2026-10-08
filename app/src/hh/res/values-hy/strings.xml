@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="about_title">HHPhone-ի մասին</string>
+    <string name="about_title_plus">HHPhone-ի մասին</string>
+    <string name="about_text">@string/about_text_plus</string>
+    <string name="about_text_plus">
+        <![CDATA[
+        <h1>HHPhone — SIP հեռախոս HHPBX-ի և այլ SIP ԱՀԿ-ների համար</h1>
+        <p>Տարբերակ %1$s</p>
+        <p>Ձայնային և տեսազանգեր, մի քանի հաշիվ, TLS և SRTP։</p>
+        <p>Հաշվի կողքի գունավոր կետը ցույց է տալիս գրանցումը՝ կանաչ — գրանցված է,
+        դեղին — ընթացքում է, կարմիր — սխալ, սպիտակ — անջատված է։ Հպեք կետին՝ հաշիվը բացելու համար։</p>
+        <h2>Ելակետային կոդ</h2>
+        <p><a href="https://github.com/TheRainOfSoul/HHPhone">github.com/TheRainOfSoul/HHPhone</a> (GNU GPL)։</p>
+        <p>Հիմնված է TutPro Inc.-ի <a href="https://github.com/juha-h/baresip-studio">baresip+</a>-ի (BSD 3-Clause)
+        և <a href="https://github.com/baresip/baresip">baresip</a> գրադարանի վրա։</p>
+        <h2>Լիցենզիաներ</h2>
+        <ul>
+            <li><b>GNU GPL</b> HHPhone-ն ամբողջությամբ</li>
+            <li><b>BSD-3-Clause</b> baresip, baresip+</li>
+            <li><b>Apache 2.0</b> AMR կոդեկներ և TLS պաշտպանություն</li>
+            <li><b>AGPLv3</b> ZRTP գաղտնագրում</li>
+            <li><b>GNU LGPL 2.1</b> G.722, G.726 և Codec2 կոդեկներ</li>
+            <li><b>GNU GPLv3</b> G.729 կոդեկ</li>
+            <li><b>GNU GPLv2</b> H.264 և H.265 կոդեկներ</li>
+            <li><b>AOMedia</b> AV1 կոդեկ</li>
+        </ul>
+        <p>DG Solutions, Հայաստան։</p>
+        ]]>
+    </string>
+    <string name="account">Հաշիվ</string>
+    <string name="tel_uri_calls">TEL URI զանգերի համար</string>
+    <string name="tel_uri_messages">TEL URI հաղորդագրությունների համար</string>
+    <string name="not_available">Հասանելի չէ</string>
+    <string name="account_nickname_help">Կեղծանուն (եթե կա), որով այս հաշիվը նույնականացվում է HHPhone հավելվածում։</string>
+    <string name="nickname">Կեղծանուն</string>
+    <string name="sim_manager">SIM կառավարիչ</string>
+    <string name="invalid_account_nickname">Հաշվի անվավեր կեղծանուն \'%1$s\'</string>
+    <string name="non_unique_account_nickname">\'%1$s\' կեղծանունն արդեն գոյություն ունի</string>
+    <string name="display_name">Ցուցադրվող անուն</string>
+    <string name="display_name_help">Անուն (եթե կա), որն օգտագործվում է ելքային հարցումների From URI-ում։</string>
+    <string name="invalid_display_name">Անվավեր ցուցադրվող անուն \'%1$s\'</string>
+    <string name="authentication_username">Նույնականացման օգտանուն</string>
+    <string name="authentication_username_help">Նույնականացման օգտանուն, եթե SIP հարցումները պահանջում են նույնականացում։ Լռելյայն՝ հաշվի օգտանունը։</string>
+    <string name="invalid_authentication_username">Նույնականացման անվավեր օգտանուն \'%1$s\'</string>
+    <string name="authentication_password">Նույնականացման գաղտնաբառ</string>
+    <string name="authentication_password_help">Նույնականացման գաղտնաբառ՝ մինչև 64 նիշ։ Եթե օգտանունը տրված է, իսկ գաղտնաբառը՝ ոչ, այն կհարցվի HHPhone-ը գործարկելիս։</string>
+    <string name="invalid_authentication_password">Նույնականացման անվավեր գաղտնաբառ \'%1$s\'</string>
+    <string name="outbound_proxies">Ելքային պրոքսիներ</string>
+    <string name="outbound_proxies_help">Մեկ կամ երկու պրոքսիի SIP URI, որոնք պետք է օգտագործվեն հարցումներ ուղարկելիս։
+        Եթե տրված է երկուսը, REGISTER հարցումներն ուղարկվում են երկուսին էլ, իսկ մյուս հարցումները՝
+        այն մեկին, որը պատասխանում է։ Եթե ելքային պրոքսի տրված չէ, հարցումներն ուղարկվում են
+        հարցման URI-ի հոսթի DNS NAPTR/SRV/A գրառումների հիման վրա։ SIP URI-ի ձևն է՝
+        sip:&lt;host&gt;[:&lt;port&gt;][;transport=udp|tcp|tls|wss]։
+        Եթե &lt;port&gt;-ը տրված չէ, իսկ տրանսպորտը տրված է, &lt;port&gt;-ը լռելյայն 5060 է (udp, tcp), 5061 (tls)
+        կամ 443 (wss)։ Եթե &lt;host&gt;-ը IPv6 հասցե է, այն պետք է գրվի [] փակագծերում։
+\nՕրինակներ՝
+\n • sip:example.com;transport=tls
+\n • sip:[2001:67c:223:777::10];transport=tcp
+\n • sip:192.168.43.50:4430;transport=wss
+    </string>
+    <string name="sip_uri_of_proxy_server">Պրոքսի սերվերի SIP URI</string>
+    <string name="sip_uri_of_another_proxy_server">Մեկ այլ պրոքսի սերվերի SIP URI</string>
+    <string name="invalid_proxy_server_uri">Պրոքսի սերվերի անվավեր URI \'%1$s\'</string>
+    <string name="register">Գրանցել</string>
+    <string name="register_help">Եթե նշված է, գրանցումը միացված է, և REGISTER հարցումներն ուղարկվում են գրանցման միջակայքով նշված պարբերականությամբ։</string>
+    <string name="reg_int">Գրանցման միջակայք</string>
+    <string name="reg_int_help">Ցույց է տալիս, թե որքան հաճախ (վայրկյաններով) է HHPhone-ն ուղարկում REGISTER հարցումներ։ Թույլատրելի արժեքները՝ 60-ից 3600։</string>
+    <string name="invalid_reg_int">Գրանցման անվավեր միջակայք \'%1$s\'</string>
+    <string name="check_origin">Ստուգել աղբյուրը</string>
+    <string name="check_origin_help">Եթե նշված է, մուտքային հարցումները թույլատրվում են միայն այն IP հասցեներից, որոնց ուղարկվել են գրանցման հարցումները։</string>
+    <string name="media_nat">Մեդիայի NAT անցում</string>
+    <string name="media_nat_help">Ընտրում է մեդիայի NAT անցման արձանագրությունը (եթե կա)։ Հնարավոր տարբերակներն են STUN
+        (Session Traversal Utilities for NAT, RFC 5389) և ICE (Interactive Connectivity Establishment, RFC 5245)։</string>
+    <string name="stun_server">STUN/TURN սերվեր</string>
+    <string name="stun_server_help">STUN/TURN սերվերի URI՝ scheme:host[:port][;transport=udp|tcp] ձևով,
+        որտեղ scheme-ը \'stun\', \'stuns\', \'turn\' կամ \'turns\' է։ STUN և ICE արձանագրությունների համար գործարանային
+        STUN սերվերն է \'stun:stun.l.google.com:19302\'՝ Google-ի հանրային STUN սերվերը։ Գործարանային TURN սերվեր չկա։</string>
+    <string name="invalid_stun_server">STUN/TURN սերվերի անվավեր URI \'%1$s\'</string>
+    <string name="stun_username">STUN/TURN օգտանուն</string>
+    <string name="stun_username_help">Օգտանուն, եթե պահանջվում է STUN/TURN սերվերի կողմից</string>
+    <string name="invalid_stun_username">Անվավեր օգտանուն \'%1$s\'</string>
+    <string name="stun_password">STUN/TURN գաղտնաբառ</string>
+    <string name="stun_password_help">Գաղտնաբառ, եթե պահանջվում է STUN/TURN սերվերի կողմից</string>
+    <string name="invalid_stun_password">Անվավեր գաղտնաբառ \'%1$s\'</string>
+    <string name="media_encryption">Մեդիայի գաղտնագրում</string>
+    <string name="media_encryption_help">Ընտրում է մեդիայի տրանսպորտի գաղտնագրման արձանագրությունը (եթե կա)։
+\n • ZRTP (խորհուրդ է տրվում)՝ զանգը հաստատվելուց հետո փորձ է արվում համաձայնեցնել ZRTP ծայրից ծայր գաղտնագրում։
+\n • DTLS-SRTPF՝ ելքային զանգում առաջարկվում է UDP/TLS/RTP/SAVPF, իսկ մուտքայինում օգտագործվում է RTP/SAVP,
+            RTP/SAVPF, UDP/TLS/RTP/SAVP կամ UDP/TLS/RTP/SAVPF, եթե առաջարկված է։
+\n • SRTP-MANDF՝ ելքային զանգում առաջարկվում է RTP/SAVPF, իսկ մուտքայինում այն պարտադիր է։
+\n • SRTP-MAND՝ ելքային զանգում առաջարկվում է RTP/SAVP, իսկ մուտքայինում այն պարտադիր է։
+\n • SRTP՝ ելքային զանգում առաջարկվում է RTP/AVP, իսկ մուտքայինում օգտագործվում է RTP/SAVP կամ RTP/SAVPF, եթե առաջարկված է։
+    </string>
+    <string name="rtcp_mux">RTCP մուլտիպլեքսավորում</string>
+    <string name="rtcp_mux_help">Եթե նշված է, RTP և RTCP փաթեթները մուլտիպլեքսավորվում են մեկ պորտի վրա (RFC 5761)։</string>
+    <string name="rel_100">Հուսալի նախնական պատասխաններ</string>
+    <string name="rel_100_help">Եթե նշված է, հայտարարվում է հուսալի նախնական պատասխանների աջակցություն (RFC 3262)։</string>
+    <string name="dtmf_mode">DTMF ռեժիմ</string>
+    <string name="dtmf_mode_help">Ընտրում է, թե ինչպես են ուղարկվում DTMF տոները՝ 0–9, #, * և A-D։</string>
+    <string name="dtmf_inband">Ներգոտիական RTP իրադարձություններ</string>
+    <string name="dtmf_info">SIP INFO հարցումներ</string>
+    <string name="dtmf_auto">Ներգոտիական RTP կամ SIP INFO</string>
+    <string name="answer_mode">Պատասխանի ռեժիմ</string>
+    <string name="answer_mode_help">Ընտրում է, թե ինչպես պատասխանել մուտքային զանգերին։</string>
+    <string name="redirect_mode">Վերահասցեավորման ռեժիմ</string>
+    <string name="redirect_mode_help">Ընտրում է՝ զանգի վերահասցեավորման հարցումը կատարվի ավտոմատ, թե պահանջվի հաստատում։</string>
+    <string name="manual">Ձեռքով</string>
+    <string name="auto">Ավտոմատ</string>
+    <string name="block_unknown">Արգելափակել անծանոթներին</string>
+    <string name="block_unknown_help">Արգելափակել զանգերն ու հաղորդագրությունները այն զրուցակիցներից, որոնք կոնտակտներում չկան։</string>
+    <string name="block_hidden">Արգելափակել թաքնվածներին</string>
+    <string name="block_hidden_help">Արգելափակել զանգերն ու հաղորդագրությունները թաքցված համարով զրուցակիցներից։</string>
+    <string name="voicemail_uri">Ձայնային փոստի URI</string>
+    <string name="voicemain_uri_help">SIP URI՝ ձայնային փոստի հաղորդագրությունները ստուգելու համար։ Եթե դատարկ է,
+        ձայնային փոստի ծանուցումներին (Message Waiting Indications) բաժանորդագրություն չի արվում։</string>
+    <string name="voicemain_tel_uri_help">TEL URI՝ ձայնային փոստի հաղորդագրությունները ստուգելու համար։</string>
+    <string name="country_code">Երկրի կոդ</string>
+    <string name="country_code_help">Այս հաշվի E.164 երկրի կոդը։ Եթե զանգի կամ հաղորդագրության զրուցակցի URI-ի
+        օգտատիրոջ մասում կա հեռախոսահամար, որը չի սկսվում \'+\' նշանով, և կոնտակտը չի գտնվում,
+        համարին ավելացվում է այս կոդը, և կոնտակտը որոնվում է կրկին։ Եթե համարը սկսվում է մեկ \'0\' թվանշանով,
+        այն հեռացվում է կոդն ավելացնելուց առաջ։</string>
+    <string name="invalid_country_code">Երկրի անվավեր կոդ \'%1$s\'</string>
+    <string name="telephony_provider">Հեռախոսակապի մատակարար</string>
+    <string name="telephony_provider_help">SIP URI-ի հոսթի մաս, որն օգտագործվում է հեռախոսահամարներին զանգելիս։
+        Գործարանային արժեքը հաշվի տիրույթն է։ Եթե տրված չէ, այս հաշվով հնարավոր չէ զանգել հեռախոսահամարների։</string>
+    <string name="numeric_keypad">Թվային ստեղնաշար</string>
+    <string name="numeric_keypad_help">Եթե նշված է, թվային ստեղնաշարը ցուցադրվում է, երբ ակտիվ է \"Զանգել …\" դաշտը։</string>
+    <string name="invalid_sip_uri_hostpart">SIP URI-ի անվավեր հոսթի մաս \'%1$s\'</string>
+    <string name="default_account">Լռելյայն հաշիվ</string>
+    <string name="default_account_help">Եթե նշված է, այս հաշիվն ընտրվում է HHPhone-ը գործարկելիս։</string>
+    <string name="custom_parameters">Լրացուցիչ պարամետրեր</string>
+    <string name="custom_parameters_help">Հաշվի լրացուցիչ պարամետրերի ցուցակ՝ բաժանված կետ-ստորակետով</string>
+    <string name="accounts">Հաշիվներ</string>
+    <string name="new_account">Նոր հաշվի SIP URI</string>
+    <string name="accounts_help">Նոր հաշվի SIP URI՝ &lt;user&gt;@&lt;domain&gt;[:&lt;port&gt;][;transport=udp|tcp|tls|wss] ձևով։
+        Եթե &lt;port&gt;-ը տրված է, իսկ տրանսպորտը՝ ոչ, տրանսպորտը լռելյայն udp է։
+        Եթե &lt;port&gt;-ը տրված չէ, իսկ տրանսպորտը տրված է, &lt;port&gt;-ը լռելյայն 5060 է (udp, tcp), 5061 (tls)
+        կամ 443 (wss)։ Եթե ոչ մեկը տրված չէ, և ելքային պրոքսի նշված չէ, հաշվի գրանցիչը (եթե կա)
+        որոշվում է միայն տիրույթի DNS տվյալներով։
+        \nՕրինակ՝ user@example.com
+    </string>
+    <string name="invalid_aor">Անվավեր user@domain[:port][;transport=udp|tcp|tls|wss] \'%1$s\'</string>
+    <string name="account_exists">\'%1$s\' հաշիվն արդեն գոյություն ունի։</string>
+    <string name="account_allocation_failure">Չհաջողվեց ստեղծել նոր հաշիվ։</string>
+    <string name="encrypt_password">Գաղտնագրման գաղտնաբառ</string>
+    <string name="decrypt_password">Վերծանման գաղտնաբառ</string>
+    <string name="delete_account">Ջնջե՞լ \'%1$s\' հաշիվը։</string>
+    <string name="is_calling">զանգում է</string>
+    <string name="missed_call_from">Բաց թողնված զանգ՝</string>
+    <string name="missed_calls">Բաց թողնված զանգեր</string>
+    <string name="missed_calls_count">%1$d բաց թողնված զանգ</string>
+    <string name="transfer_request_to">Զանգի փոխանցման հարցում՝</string>
+    <string name="call_auto_rejected">Ավտոմատ մերժված զանգ \`%1$s\`-ից</string>
+    <string name="call_blocked">Ավտոմատ մերժված արգելափակված զանգ \`%1$s\`-ից</string>
+    <string name="hidden_call_blocked">Ավտոմատ մերժված զանգ թաքնված համարից</string>
+    <string name="message_blocked">Ավտոմատ մերժված արգելափակված հաղորդագրություն \`%1$s\`-ից</string>
+    <string name="hidden_message_blocked">Ավտոմատ մերժված հաղորդագրություն թաքնված ուղարկողից</string>
+    <string name="blocking">Արգելափակում</string>
+    <string name="blocking_rules">Արգելափակման կանոններ</string>
+    <string name="new_blocking_rule">Նոր արգելափակման կանոն</string>
+    <string name="blocking_rule_help">Արգելափակման կանոնը կարող է լինել պարզ տող կամ կանոնավոր արտահայտություն։
+        Եթե պարզ տողը պարունակվում է զրուցակցի URI-ում, կամ կանոնավոր արտահայտությունը համընկնում է զրուցակցի URI-ի հետ,
+        զանգը կամ հաղորդագրությունը կարգելափակվի։</string>
+    <string name="blocking_delete_alert">Ջնջե՞լ \'%1$s\' արգելափակման կանոնը։</string>
+    <string name="blocked">Արգելափակված</string>
+    <string name="blocked_calls">Արգելափակված զանգեր</string>
+    <string name="blocked_messages">Արգելափակված հաղորդագրություններ</string>
+    <string name="blocked_history_delete_alert">Ջնջե՞լ \'%2$s\' հաշվի %1$s պատմությունը։</string>
+    <string name="blocked_peer_delete_alert">Ջնջե՞լ \'%1$s\'-ը %2$s պատմությունից։</string>
+    <string name="blocked_calls_history">արգելափակված զանգերի</string>
+    <string name="blocked_messages_history">արգելափակված հաղորդագրությունների</string>
+    <string name="blocked_contact_question">Ավելացնե՞լ \'%1$s\' զրուցակցին կոնտակտներում։</string>
+    <string name="blocked_action_question">Ավելացնե՞լ \'%1$s\' զրուցակցին կոնտակտներում, թե՞ ապաարգելափակել։</string>
+    <string name="blocked_unblock_question">Ապաարգելափակե՞լ \'%1$s\' զրուցակցին։</string>
+    <string name="call_history">Զանգերի պատմություն</string>
+    <string name="call_details">Զանգի մանրամասներ</string>
+    <string name="calls_calls">զանգերը</string>
+    <string name="calls_call">զանգը</string>
+    <string name="peer">Զրուցակից</string>
+    <string name="direction">Ուղղություն</string>
+    <string name="time">Ժամանակ</string>
+    <string name="calls_duration">Տևողություն</string>
+    <string name="calls_add_delete_question">Ավելացնե՞լ \'%1$s\'-ը կոնտակտներում, արգելափակե՞լ,
+        թե՞ ջնջել %2$s զանգերի պատմությունից։</string>
+    <string name="calls_block_delete_question">Արգելափակե՞լ \'%1$s\'-ը, թե՞ ջնջել %2$s զանգերի պատմությունից։</string>
+    <string name="calls_delete_question">Ջնջե՞լ %2$s զանգերի պատմությունից։</string>
+    <string name="disable_history">Անջատել</string>
+    <string name="enable_history">Միացնել</string>
+    <string name="delete_history_alert">Ջնջե՞լ \'%1$s\' հաշվի զանգերի պատմությունը։</string>
+    <string name="call_answered">Զանգին պատասխանվել է</string>
+    <string name="call_answered_elsewhere">Զանգին պատասխանվել է այլ սարքից</string>
+    <string name="call_missed">Բաց թողնված զանգ</string>
+    <string name="call_rejected">Զանգը մերժվել է</string>
+    <string name="playing_recording">Ձայնագրության նվագարկում …</string>
+    <string name="save_recording">Պահել ձայնագրությունը</string>
+    <string name="save_recording_question">Պահե՞լ այս ձայնագրությունը։</string>
+    <string name="recording_saved">Ձայնագրությունը պահված է</string>
+    <string name="delete_call_alert">Ջնջե՞լ այս զանգը պատմությունից։</string>
+    <string name="chat_with">Զրույց %1$s-ի հետ</string>
+    <string name="new_message">Նոր հաղորդագրություն</string>
+    <string name="short_message_question">Ջնջե՞լ այս հաղորդագրությունը։</string>
+    <string name="add_contact">Ավելացնել կոնտակտ</string>
+    <string name="sending_failed">Հաղորդագրությունը չուղարկվեց</string>
+    <string name="message_failed">Սխալ</string>
+    <string name="chats">Զրույցների պատմություն</string>
+    <string name="today">Այսօր</string>
+    <string name="you">Դուք</string>
+    <string name="new_chat_peer">Նոր զրուցակից</string>
+    <string name="long_chat_question">Ավելացնե՞լ \'%1$s\'-ը կոնտակտներում, արգելափակե՞լ, թե՞ ջնջել այս զրույցը։</string>
+    <string name="long_chat_block_delete_question">Արգելափակե՞լ \'%1$s\'-ը, թե՞ ջնջել այս զրույցը։</string>
+    <string name="short_chat_question">Ջնջե՞լ \'%1$s\'-ի հետ զրույցը։</string>
+    <string name="delete_chats_alert">Ջնջե՞լ \'%1$s\' հաշվի զրույցների պատմությունը։</string>
+    <string name="audio_codecs">Աուդիո կոդեկներ</string>
+    <string name="video_codecs">Վիդեո կոդեկներ</string>
+    <string name="configuration">Կարգավորումներ</string>
+    <string name="start_automatically">Ավտոմատ գործարկում</string>
+    <string name="start_automatically_help">Եթե նշված է, HHPhone-ը ավտոմատ գործարկվում է սարքը միացնելուց
+        կամ HHPhone-ի նոր տարբերակը տեղադրելուց հետո։ Գործարկումը հետաձգվում է մինչև սարքի ապակողպումը։</string>
+    <string name="appear_on_top_permission">Ավտոմատ գործարկման համար անհրաժեշտ է «Ցուցադրել այլ հավելվածների վրայից» թույլտվությունը։</string>
+    <string name="battery_optimizations">Մարտկոցի օպտիմալացում</string>
+    <string name="battery_optimizations_help">Անջատեք մարտկոցի օպտիմալացումը, եթե ցանկանում եք նվազեցնել հավանականությունը,
+        որ Android-ը կսահմանափակի HHPhone-ի ցանցային հասանելիությունը կամ կանցկացնի HHPhone-ը սպասման ռեժիմի։</string>
+    <string name="default_phone_app">Լռելյայն հեռախոսային հավելված</string>
+    <string name="dialer_role_not_available">Լռելյայն հեռախոսային հավելվածի դերը հասանելի չէ</string>
+    <string name="default_phone_app_help">Եթե նշված է, HHPhone-ը լռելյայն հեռախոսային հավելվածն է։</string>
+    <string name="default_messaging_app">Լռելյայն հաղորդագրությունների հավելված</string>
+    <string name="default_messaging_app_help">Եթե նշված է, HHPhone-ը SMS/MMS-ի լռելյայն հավելվածն է։</string>
+    <string name="max_mms_images_size">MMS նկարների առավելագույն չափը</string>
+    <string name="max_mms_images_size_help">MMS հաղորդագրության նկարների առավելագույն ընդհանուր սեղմված չափը</string>
+    <string name="messaging_role_not_available">Լռելյայն հաղորդագրությունների հավելվածի դերը հասանելի չէ</string>
+    <string name="enable_default_messaging">Միացրեք «Լռելյայն հաղորդագրությունների հավելված»-ը Կարգավորումներում</string>
+    <string name="enable_default_phone">Միացրեք «Լռելյայն հեռախոսային հավելված»-ը Կարգավորումներում</string>
+    <string name="listen_address">Լսման հասցե</string>
+    <string name="listen_address_help">IP հասցե և պորտ՝ \'հասցե:պորտ\' ձևով, որով HHPhone-ը լսում է մուտքային SIP հարցումները։
+        IPv6 հասցեն պետք է գրվի [] փակագծերում։ IPv4 0.0.0.0 կամ IPv6 [::] հասցեն ստիպում է HHPhone-ին լսել բոլոր
+        հասանելի հասցեներով։ Եթե դատարկ է (գործարանային արժեք), HHPhone-ը լսում է կամայական պորտով բոլոր հասանելի հասցեներով։</string>
+    <string name="invalid_listen_address">Անվավեր լսման հասցե</string>
+    <string name="address_family">Հասցեների ընտանիք</string>
+    <string name="address_family_help">Ընտրում է, թե որ IP հասցեներն է օգտագործում HHPhone-ը։ Եթե ընտրված է IPv4 կամ IPv6,
+        HHPhone-ն օգտագործում է միայն IPv4 կամ միայն IPv6 հասցեներ։ Եթե ոչ մեկը ընտրված չէ, օգտագործվում են երկուսն էլ։</string>
+    <string name="transport_protocols">Տրանսպորտային արձանագրություններ</string>
+    <string name="transport_protocols_help">SIP հարցումների/պատասխանների աջակցվող տրանսպորտային արձանագրությունների ցուցակ՝
+        ստորակետով բաժանված։ Եթե դատարկ է, լռելյայն արժեքն է \'udp,tcp,tls,ws,wss\'՝ բոլոր աջակցվողները։
+        Նշեք միայն անհրաժեշտները։ UDP-ի օգտագործումը խորհուրդ չի տրվում անվտանգության և այլ պատճառներով։</string>
+    <string name="invalid_transport_protocols">Տրանսպորտային արձանագրությունների անվավեր ցուցակ</string>
+    <string name="dns_servers">DNS սերվերներ</string>
+    <string name="dns_servers_help">DNS սերվերների հասցեների ցուցակ՝ ստորակետով բաժանված։ Եթե տրված չէ,
+        DNS հասցեները դինամիկ ստացվում են համակարգից։ Յուրաքանչյուր հասցե ունի \'ip:port\' կամ \'ip\' ձևը։
+        Եթե պորտը բաց է թողնված, այն 53 է։ Եթե ip-ն IPv6 հասցե է, և պորտը նույնպես տրված է, ip-ն պետք է գրվի [] փակագծերում։
+        Օրինակ՝ \'8.8.8.8:53,[2001:4860:4860::8888]:53\' ցուցակը ցույց է տալիս Google-ի հանրային DNS սերվերների IPv4 և IPv6 հասցեները։</string>
+    <string name="invalid_dns_servers">Անվավեր DNS սերվերներ</string>
+    <string name="failed_to_set_dns_servers">Չհաջողվեց սահմանել DNS սերվերները</string>
+    <string name="tls_certificate_file">TLS վկայագրի ֆայլ</string>
+    <string name="tls_certificate_file_help">Եթե նշված է, բեռնվել է կամ կբեռնվի այս HHPhone-ի TLS վկայագիրն ու
+        փակ բանալին պարունակող ֆայլը։ Android 9-ում \'cert.pem\' ֆայլը բեռնվում է Download թղթապանակից։
+        Անվտանգության նկատառումներով բեռնելուց հետո ջնջեք ֆայլը։</string>
+    <string name="verify_server">Ստուգել սերվերի վկայագրերը</string>
+    <string name="verify_server_help">Եթե նշված է, HHPhone-ը TLS տրանսպորտ օգտագործելիս ստուգում է SIP User Agent-ների
+        և SIP պրոքսի սերվերների TLS վկայագրերը։</string>
+    <string name="tls_ca_file">TLS CA ֆայլ</string>
+    <string name="tls_ca_file_help">Եթե նշված է, բեռնվել է կամ կբեռնվի ֆայլ, որը պարունակում է այն վկայագրման
+        կենտրոնների TLS վկայագրերը, որոնք ներառված չեն Android ՕՀ-ում։ Android 9-ում \'ca_certs.crt\' ֆայլը բեռնվում է Download թղթապանակից։</string>
+    <string name="no_read_permission">Արտաքին հիշողությունից կարդալու թույլտվություն չկա</string>
+    <string name="unique_contact_uri">Եզակի Contact URI</string>
+    <string name="unique_contact_uri_help">Եթե նշված է, Contact URI-ն երաշխավորված եզակի է։
+        Պետք է նշել, եթե կա մեկից ավելի հաշիվ նույն SIP URI օգտատիրոջ մասով, բայց նաև բարելավում է հաշիվների
+        պաշտպանությունը հարձակումներից։ Անջատեք, եթե ձեր մատակարարը պահանջում է, որ Contact URI-ի օգտատիրոջ մասը
+        համընկնի SIP URI-ի օգտատիրոջ մասի հետ։</string>
+    <string name="audio_settings">Ձայնի կարգավորումներ</string>
+    <string name="speaker_phone">Բարձրախոս</string>
+    <string name="speaker_phone_help">Եթե նշված է, բարձրախոսն ավտոմատ միանում է զանգի սկզբում։</string>
+    <string name="audio_modules_title">Աուդիո մոդուլներ</string>
+    <string name="audio_modules_help">Նշված մոդուլների աուդիո կոդեկները հասանելի են հաշիվների համար։</string>
+    <string name="failed_to_load_module">Չհաջողվեց բեռնել մոդուլը։</string>
+    <string name="microphone_gain">Խոսափողի ուժեղացում</string>
+    <string name="microphone_gain_help">Խոսափողի ձայնը բազմապատկել այս տասնորդական թվով։ Նվազագույն արժեքը 1.0 է
+        (գործարանային), որն անջատում է ուժեղացումը։ Ավելի մեծ արժեքները կարող են վատթարացնել ձայնի որակը։</string>
+    <string name="invalid_microphone_gain">Խոսափողի ուժեղացման անվավեր արժեք</string>
+    <string name="opus_bit_rate">Opus բիթային արագություն</string>
+    <string name="opus_bit_rate_help">Opus աուդիո հոսքի միջին առավելագույն բիթային արագությունը։
+        Թույլատրելի արժեքները՝ 6000-510000։ Գործարանային արժեքը՝ 28000։</string>
+    <string name="opus_packet_loss">Opus փաթեթների սպասվող կորուստ</string>
+    <string name="opus_packet_loss_help">Opus աուդիո հոսքի փաթեթների սպասվող կորստի տոկոսը՝ 0–100։
+        Գործարանային արժեքը՝ 1։ 0 արժեքն անջատում է նաև Opus-ի սխալների կանխիչ ուղղումը (FEC)։</string>
+    <string name="invalid_opus_bitrate">Opus-ի անվավեր բիթային արագություն</string>
+    <string name="invalid_opus_packet_loss">Opus փաթեթների կորստի անվավեր տոկոս</string>
+    <string name="audio_delay">Ձայնի ուշացում</string>
+    <string name="audio_delay_help">Ժամանակ (միլիվայրկյաններով), որքան սպասել զանգահարվողի ձայնին զանգը հաստատվելիս։
+        Մեծացրեք արժեքը, եթե զանգի սկզբում չեք լսում զանգահարվողին։</string>
+    <string name="invalid_audio_delay">Ձայնի անվավեր ուշացում \'%1$s\'։ Թույլատրելի արժեքները՝ 100-ից 3000։</string>
+    <string name="default_call_volume">Զանգի լռելյայն ձայնաուժգնություն</string>
+    <string name="default_call_volume_help">Եթե նշված է, զանգի լռելյայն ձայնաուժգնությունը 1–10 սանդղակով։</string>
+    <string name="tone_country">Ազդանշանների երկիր</string>
+    <string name="tone_country_help">Զանգի, սպասման և զբաղված ազդանշանների երկիրը</string>
+    <string name="ilbc_mode">iLBC ռեժիմ</string>
+    <string name="ilbc_mode_help">Ընտրում է iLBC կադրի լռելյայն տևողությունը։
+        30 մվ-ն ավելի լավ որակ է տալիս ցածր բիթային արագությամբ, իսկ 20 մվ-ն ունի ավելի փոքր ուշացում։</string>
+    <string name="dark_theme">Մուգ թեմա</string>
+    <string name="dark_theme_help">Միշտ օգտագործել մուգ թեման</string>
+    <string name="dynamic_colors">Դինամիկ գույներ</string>
+    <string name="dynamic_colors_help">Օգտագործել դինամիկ գույները, եթե միացված են Android-ի կարգավորումներում</string>
+    <string name="colorblind">Գունակուրություն</string>
+    <string name="colorblind_help">Գրանցման կարգավիճակի պատկերակներ՝ հարմար գունակույր մարդկանց համար</string>
+    <string name="proximity_sensing">Մոտեցման տվիչ</string>
+    <string name="proximity_sensing_help">Եթե նշված է, մոտեցման տվիչն ակտիվ է զանգերի ժամանակ։</string>
+    <string name="video_size">Վիդեոկադրի չափ</string>
+    <string name="video_size_help">Ուղարկվող վիդեոկադրերի չափը (լայնություն x բարձրություն)</string>
+    <string name="video_fps">Վիդեոկադրեր վայրկյանում</string>
+    <string name="video_fps_help">Կադրերի հաճախականություն, որն առաջարկվում է SDP համաձայնեցման ժամանակ։
+        Թույլատրելի արժեքները՝ 10-ից 30։</string>
+    <string name="invalid_fps">Վայրկյանում կադրերի անվավեր քանակ \'%1$d\'</string>
+    <string name="ringtone">Զանգի մեղեդի</string>
+    <string name="select_ringtone">Ընտրել զանգի մեղեդին</string>
+    <string name="user_agent">User Agent</string>
+    <string name="user_agent_help">SIP հարցումների/պատասխանների User-Agent դաշտի սեփական արժեք</string>
+    <string name="invalid_user_agent">User-Agent դաշտի անվավեր արժեք</string>
+    <string name="contacts_help">Ընտրում է՝ օգտագործել HHPhone-ի կոնտակտները, Android-ի կոնտակտները, թե երկուսն էլ։
+        Եթե օգտագործվում են երկուսը, և նույն անունով կոնտակտ կա երկու տեղում էլ, կընտրվի HHPhone-ի կոնտակտը։</string>
+    <string name="both">Երկուսն էլ</string>
+    <string name="debug">Վրիպազերծում</string>
+    <string name="debug_help">Եթե նշված է, Logcat-ում գրվում են debug և info մակարդակի հաղորդագրություններ։</string>
+    <string name="sip_trace">SIP հետագծում</string>
+    <string name="sip_trace_help">Եթե նշված է, և նշված է նաև «Վրիպազերծում»-ը, Logcat-ում գրվում է նաև SIP հարցումների
+        և պատասխանների հետագիծը։ Ավտոմատ անջատվում է HHPhone-ը գործարկելիս։</string>
+    <string name="reset_config">Վերադարձնել գործարանային կարգավորումները</string>
+    <string name="reset_config_help">Եթե նշված է, կարգավորումները վերադարձվում են գործարանային արժեքներին։</string>
+    <string name="reset_config_alert">Իսկապե՞ս վերադարձնել կարգավորումները գործարանային արժեքներին։</string>
+    <string name="reset">Վերակայել</string>
+    <string name="read_cert_error">Չհաջողվեց կարդալ \'cert.pem\' ֆայլը։</string>
+    <string name="read_ca_certs_error">Չհաջողվեց կարդալ \'ca_certs.crt\' ֆայլը։</string>
+    <string name="config_restart">Նոր կարգավորումներն ակտիվացնելու համար պետք է վերագործարկել HHPhone-ը։ Վերագործարկե՞լ հիմա։</string>
+    <string name="consent_request">Համաձայնության հարցում</string>
+    <string name="contacts_consent">Եթե ընտրված են Android-ի կոնտակտները, դրանք կարող են օգտագործվել զանգերում և
+        հաղորդագրություններում՝ որպես հղումներ SIP և tel URI-ներին։ HHPhone-ը չի պահում Android-ի կոնտակտները և
+        դրանք ոչ մեկի հետ չի կիսում։ Android-ի կոնտակտները HHPhone-ում հասանելի դարձնելու համար Google-ը պահանջում է,
+        որ համաձայնեք դրանց օգտագործմանը, ինչպես նկարագրված է այստեղ և հավելվածի
+        <a href="https://raw.githubusercontent.com/juha-h/baresip-studio/master/PrivacyPolicy.txt">Գաղտնիության քաղաքականությունում</a>։
+    </string>
+    <string name="new_contact">Նոր կոնտակտ</string>
+    <string name="contact_name">Անուն</string>
+    <string name="label">Պիտակ</string>
+    <string name="email">Էլ. փոստ</string>
+    <string name="sip_or_tel_uri">SIP կամ tel URI</string>
+    <string name="user_domain_or_number">user@domain կամ հեռախոսահամար</string>
+    <string name="favorite">Ընտրյալ</string>
+    <string name="favorite_help">Եթե նշված է, կոնտակտը ցուցադրվում է մյուս ընտրյալների հետ կոնտակտների ցուցակի վերևում։</string>
+    <string name="invalid_contact">Կոնտակտի անվավեր անուն \'%1$s\'</string>
+    <string name="contact_already_exists">\'%1$s\' կոնտակտն արդեն գոյություն ունի։</string>
+    <string name="contact_no_sip_or_tel_uri">\'%1$s\' կոնտակտը չունի SIP կամ TEL URI</string>
+    <string name="contact_no_tel_uri">\'%1$s\' կոնտակտը չունի TEL URI</string>
+    <string name="android_contact_help">Եթե նշված է, այս կոնտակտն ավելացվում է Android-ի կոնտակտներում։</string>
+    <string name="avatar_image">Պրոֆիլի նկար</string>
+    <string name="contacts">Կոնտակտներ</string>
+    <string name="contact_mode">Կոնտակտների ռեժիմ</string>
+    <string name="call_action">Զանգի գործողություն</string>
+    <string name="call">Զանգել</string>
+    <string name="show_call">Ցույց տալ</string>
+    <string name="contact_action_question">Զանգե՞լ, թե՞ հաղորդագրություն ուղարկել \'%1$s\'-ին։</string>
+    <string name="contact_email_action_question">Զանգե՞լ, հաղորդագրություն ուղարկե՞լ, թե՞ էլ. նամակ \'%1$s\'-ին։</string>
+    <string name="send_message">Ուղարկել հաղորդագրություն</string>
+    <string name="send_email">Ուղարկել էլ. նամակ</string>
+    <string name="contact_delete_question">Ջնջե՞լ \'%1$s\' կոնտակտը։</string>
+    <string name="contacts_delete_question">Ջնջե՞լ բոլոր կոնտակտները։</string>
+    <string name="search">Որոնում</string>
+    <string name="import_contacts">Ներմուծել</string>
+    <string name="export_contacts">Արտահանել</string>
+    <string name="contact_import_success">Կոնտակտները հաջողությամբ ներմուծվեցին</string>
+    <string name="contact_import_failure">Չհաջողվեց ներմուծել կոնտակտները</string>
+    <string name="contact_export_success">Կոնտակտները հաջողությամբ արտահանվեցին</string>
+    <string name="contact_export_failure">Չհաջողվեց արտահանել կոնտակտները</string>
+    <string name="alert">Զգուշացում</string>
+    <string name="info">Տեղեկություն</string>
+    <string name="notice">Ծանուցում</string>
+    <string name="cancel">Չեղարկել</string>
+    <string name="stop">Կանգնեցնել</string>
+    <string name="reply">Պատասխանել</string>
+    <string name="save">Պահել</string>
+    <string name="ok">Լավ</string>
+    <string name="yes">Այո</string>
+    <string name="no">Ոչ</string>
+    <string name="accept">Ընդունել</string>
+    <string name="deny">Մերժել</string>
+    <string name="add">Ավելացնել</string>
+    <string name="delete">Ջնջել</string>
+    <string name="block">Արգելափակել</string>
+    <string name="unblock">Ապաարգելափակել</string>
+    <string name="edit">Խմբագրել</string>
+    <string name="copy_uri">Պատճենել URI-ն</string>
+    <string name="copied_to_clipboard">Պատճենվեց սեղմատախտակին</string>
+    <string name="status">Կարգավիճակ</string>
+    <string name="error">Սխալ</string>
+    <string name="confirmation">Հաստատում</string>
+    <string name="anonymous">Անանուն</string>
+    <string name="unknown">Անհայտ</string>
+    <string name="invalid_sip_or_tel_uri">Անվավեր SIP կամ tel URI \'%1$s\'</string>
+    <string name="permission_denied">Թույլտվությունը մերժված է</string>
+    <string name="unlock_to_access_full_app">Ապակողպեք սարքը</string>
+    <string name="backup">Պահուստավորում</string>
+    <string name="restore">Վերականգնում</string>
+    <string name="about">Հավելվածի մասին</string>
+    <string name="restart">Վերագործարկել</string>
+    <string name="quit">Դուրս գալ</string>
+    <string name="outgoing_call_to_dots">Զանգել …</string>
+    <string name="incoming_call_from_dots">Զանգ …-ից</string>
+    <string name="diverted_by_dots">Վերահասցեավորված …-ի կողմից</string>
+    <string name="diverted_by">վերահասցեավորված է</string>
+    <string name="no_telephony_provider">\'%1$s\' հաշիվը չունի հեռախոսակապի մատակարար</string>
+    <string name="no_telephone_number">Բջջային զանգ կարելի է կատարել միայն հեռախոսահամարին</string>
+    <string name="video_call">Տեսազանգ</string>
+    <string name="video_request">Տեսահարցում</string>
+    <string name="allow_video">Ընդունե՞լ տեսապատկերի ուղարկումն ու ստացումը \'%1$s\'-ի հետ։</string>
+    <string name="allow_video_send">Ընդունե՞լ տեսապատկերի ուղարկումը \'%1$s\'-ին։</string>
+    <string name="allow_video_recv">Ընդունե՞լ տեսապատկերի ստացումը \'%1$s\'-ից։</string>
+    <string name="call_is_ringing">Զանգը հնչում է</string>
+    <string name="call_is_on_hold">Զանգը սպասման մեջ է</string>
+    <string name="call_is_connected">Զանգը միացված է</string>
+    <string name="rec_in_call">Ձայնագրումը կարելի է միացնել կամ անջատել միայն այն ժամանակ, երբ զանգը միացված չէ</string>
+    <string name="call_transfer">Զանգի փոխանցում</string>
+    <string name="blind">Անմիջական</string>
+    <string name="attended">Խորհրդակցությամբ</string>
+    <string name="transfer_destination">Փոխանցման հասցե</string>
+    <string name="choose_destination_uri">Ընտրեք նպատակային URI-ն</string>
+    <string name="transfer">Փոխանցել</string>
+    <string name="transfer_failed">Փոխանցումը ձախողվեց</string>
+    <string name="replaces_not_supported">Զրուցակիցը չի աջակցում REPLACES հնարավորությունը</string>
+    <string name="dtmf">DTMF</string>
+    <string name="call_info">Զանգի տեղեկություններ</string>
+    <string name="call_info_not_available">Տեղեկություններ չկան</string>
+    <string name="duration">Տևողություն՝ %1$d (վրկ)</string>
+    <string name="codecs">Կոդեկներ</string>
+    <string name="rate">Ընթացիկ արագություն՝ %1$s (Կբիթ/վ)</string>
+    <string name="average_rate">Միջին արագություն՝ %1$s (Կբիթ/վ)</string>
+    <string name="packets">Փաթեթներ</string>
+    <string name="lost">Կորած</string>
+    <string name="jitter">Ջիտեր՝ %1$s (մվ)</string>
+    <string name="voicemail_messages">Ձայնային փոստի հաղորդագրություններ</string>
+    <string name="you_have">Դուք ունեք</string>
+    <string name="one_new_message">մեկ նոր հաղորդագրություն</string>
+    <string name="new_messages">նոր հաղորդագրություն</string>
+    <string name="one_old_message">մեկ հին հաղորդագրություն</string>
+    <string name="old_messages">հին հաղորդագրություն</string>
+    <string name="and">և</string>
+    <string name="no_messages">Դուք հաղորդագրություններ չունեք</string>
+    <string name="listen">Լսել</string>
+    <string name="call_already_active">Դուք արդեն ունեք ակտիվ զանգ։</string>
+    <string name="start_failed">HHPhone-ը չգործարկվեց։ Պատճառը կարող է լինել կարգավորումների անվավեր արժեքը։
+        Ստուգեք լսման հասցեն, TLS վկայագրի ֆայլը և TLS CA ֆայլը։ Այնուհետև վերագործարկեք HHPhone-ը։</string>
+    <string name="registering_failed">\`%1$s\`-ի գրանցումը ձախողվեց։</string>
+    <string name="verify">Ստուգման հարցում</string>
+    <string name="verify_sas">Ստուգե՞լ SAS &lt;%1$s&gt;-ը։</string>
+    <string name="transfer_request">Փոխանցման հարցում</string>
+    <string name="transfer_request_query">Համաձա՞յն եք փոխանցել այս զանգը \'%1$s\'-ին։</string>
+    <string name="call_request">Զանգի հարցում</string>
+    <string name="call_request_query">Ընդունե՞լ \'%1$s\'-ին զանգելու հարցումը։</string>
+    <string name="redirect_notice">Ավտոմատ վերահասցեավորում \'%1$s\'-ին</string>
+    <string name="redirect_request">Վերահասցեավորման հարցում</string>
+    <string name="redirect_request_query">Ընդունե՞լ զանգի վերահասցեավորումը \'%1$s\'-ին։</string>
+    <string name="call_failed">Զանգը ձախողվեց</string>
+    <string name="call_closed">Զանգն ավարտված է</string>
+    <string name="call_not_secure">Այս զանգը ՊԱՇՏՊԱՆՎԱԾ ՉԷ։</string>
+    <string name="peer_not_verified">Այս զանգը ՊԱՇՏՊԱՆՎԱԾ է, բայց զրուցակիցը ՍՏՈՒԳՎԱԾ ՉԷ։</string>
+    <string name="call_is_secure">Այս զանգը ՊԱՇՏՊԱՆՎԱԾ է, և զրուցակիցը ՍՏՈՒԳՎԱԾ է։
+        Չեղարկե՞լ զրուցակցի ստուգումը։</string>
+    <string name="unverify">Չեղարկել ստուգումը</string>
+    <string name="backed_up">Հավելվածի տվյալները (առանց ձայնագրությունների) պահուստավորվեցին
+        \'%1$s\' ֆայլում։ Android 9-ում ֆայլը Download թղթապանակում է։</string>
+    <string name="backup_failed">Չհաջողվեց պահուստավորել հավելվածի տվյալները \'%1$s\' ֆայլում։
+        Ստուգեք Հավելվածներ → HHPhone → Թույլտվություններ → Հիշողություն։</string>
+    <string name="restart_request">Վերագործարկման հարցում</string>
+    <string name="restored">Հավելվածի տվյալները վերականգնվեցին։ HHPhone-ը պետք է վերագործարկել։ Վերագործարկե՞լ հիմա։</string>
+    <string name="restore_failed">Չհաջողվեց վերականգնել հավելվածի տվյալները։ Ստուգեք, որ ճիշտ գաղտնաբառ եք մուտքագրել,
+        և պահուստային ֆայլն այս հավելվածից է։ Android 9-ում ստուգեք նաև Հավելվածներ → HHPhone → Թույլտվություններ → Հիշողություն,
+        և որ \'%1$s\' ֆայլը կա Download թղթապանակում։</string>
+    <string name="restore_unzip_failed">Չհաջողվեց վերականգնել հավելվածի տվյալները։ Android 14 և ավելի նոր տարբերակները
+        թույլ չեն տալիս վերականգնել տվյալներ, որոնք պահուստավորվել են %1$s %2$s տարբերակից առաջ։</string>
+    <string name="no_notifications">Առանց «Ծանուցումներ» թույլտվության այս հավելվածը հնարավոր չէ օգտագործել։</string>
+    <string name="airplane_mode">Ինքնաթիռի ռեժիմը միացված է։ Անջատեք այն՝ բջջային հաշիվն օգտագործելու համար։</string>
+    <string name="mobile_service_not_available">Բջջային ծառայությունը հասանելի չէ։</string>
+    <string name="no_calls">HHPhone-ին ձայնային զանգերի համար անհրաժեշտ է «Խոսափող» թույլտվությունը։</string>
+    <string name="no_video_calls">Տրամադրեք «Տեսախցիկ» թույլտվությունը՝ տեսազանգեր կատարելու կամ ընդունելու համար։</string>
+    <string name="no_backup">Առանց «Հիշողություն» թույլտվության հնարավոր չէ պահուստավորել։</string>
+    <string name="no_restore">Առանց «Հիշողություն» թույլտվության հնարավոր չէ վերականգնել։</string>
+    <string name="no_android_contacts">Առանց «Կոնտակտներ» թույլտվության Android-ի կոնտակտները հասանելի չեն։</string>
+    <string name="no_cameras">Աջակցվող տեսախցիկներ չկան։</string>
+    <string name="no_network">Ցանցային կապ չկա։</string>
+    <string name="no_aec">Արձագանքի ապարատային ճնշում չկա։</string>
+    <string name="audio_focus_denied">Ձայնի ֆոկուսը մերժված է։</string>
+    <string name="ussd_failed">USSD հարցումը ձախողվեց</string>
+    <string name="ussd_service_unavailable">USSD ծառայությունը հասանելի չէ</string>
+    <string name="ussd_unknown_error">USSD անհայտ սխալ</string>
+    <string name="permissions_rationale">Թույլտվությունների բացատրություն</string>
+    <string name="audio_permissions">HHPhone-ին անհրաժեշտ են՝ «Խոսափող» թույլտվությունը ձայնային զանգերի համար,
+        «Մոտակա սարքեր»-ը՝ Bluetooth խոսափողը/բարձրախոսը հայտնաբերելու համար, «Ծանուցումներ»-ը՝ ծանուցումների համար,
+        իսկ Android 9-ում նաև «Հիշողություն»-ը՝ պահուստավորման/վերականգնման համար։</string>
+    <string name="audio_and_video_permissions">HHPhone-ին անհրաժեշտ են՝ «Խոսափող» թույլտվությունը ձայնային զանգերի համար,
+        «Տեսախցիկ»-ը՝ տեսազանգերի համար, «Մոտակա սարքեր»-ը՝ Bluetooth խոսափողը/բարձրախոսը հայտնաբերելու համար,
+        «Ծանուցումներ»-ը՝ ծանուցումների համար, իսկ Android 9-ում նաև «Հիշողություն»-ը՝ պահուստավորման/վերականգնման համար։</string>
+    <string name="call_recording_title">Զանգերի ձայնագրում</string>
+    <string name="call_recording_tip">Եթե ակտիվացված է, նոր մուտքային և ելքային զանգերը կձայնագրվեն։
+        Ձայնագրությունները կարելի է լսել Զանգի մանրամասներ էջում։</string>
+    <string name="microphone_title">Խոսափող</string>
+    <string name="microphone_tip">Եթե ակտիվացված է զանգի ժամանակ, խոսափողն անջատվում է։</string>
+    <string name="speakerphone_title">Բարձրախոս</string>
+    <string name="speakerphone_tip">Եթե ակտիվացված է, ձայնը հնչում է սարքի բարձրախոսով։</string>
+</resources>
