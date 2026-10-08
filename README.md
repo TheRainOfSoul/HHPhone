@@ -5,7 +5,7 @@ SIP-звонилка для Android: HHPBX и любые SIP-АТС. Голос 
 
 Основан на [baresip+](https://github.com/juha-h/baresip-studio/tree/video) (TutPro Inc., BSD 3-Clause)
 и библиотеке [baresip](https://github.com/baresip/baresip). Нативные библиотеки включают GPL-компоненты
-(x264, x265, bcg729, ZRTPCPP), поэтому HHPhone распространяется под **GNU GPL**; исходный текст лицензии baresip-studio — в `LICENSE`.
+(x264, x265, bcg729, ZRTPCPP), поэтому HHPhone распространяется под **GNU GPL v3** (текст — `COPYING`); исходная лицензия baresip-studio (BSD 3-Clause) — в `LICENSE`.
 
 ## Сборка
 
