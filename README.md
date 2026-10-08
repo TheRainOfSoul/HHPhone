@@ -1,9 +1,28 @@
-This branch adds video calling capability to baresip app and provides its sister app called baresip+. Currently AV1, H.264, H.265, VP8, and VP9 video codecs are supported.
+# HHPhone
 
-Static libraries and include files need to be generated to distribution directory using video branch of <a href="https://github.com/juha-h/libbaresip-android">libbaresip-android</a>.  Video codecs and support of android_camera input device are provided by FFmpeg libraries and need at least Android API level 28.
+SIP-звонилка для Android: HHPBX и любые SIP-АТС. Голос и видео, несколько учёток, TLS/SRTP.
+Языки: русский, армянский, английский. Android 9+.
 
-Video calling is possible on devices that include Camera2 API at hardware support level LIMITED or higher.
+Основан на [baresip+](https://github.com/juha-h/baresip-studio/tree/video) (TutPro Inc., BSD 3-Clause)
+и библиотеке [baresip](https://github.com/baresip/baresip). Нативные библиотеки включают GPL-компоненты
+(x264, x265, bcg729, ZRTPCPP), поэтому HHPhone распространяется под **GNU GPL**; исходный текст лицензии baresip-studio — в `LICENSE`.
 
-Ready to be installed baresip+ app is available from <a href="https://f-droid.org/en/packages/com.tutpro.baresip.plus">F-Droid</a> and from <a href="https://github.com/juha-h/baresip-studio/releases">GitHub</a>.
+## Сборка
 
-Copyright (c) 2020 TutPro Inc. Distributed under GNU GPL license.
+Нужны: Android SDK (NDK 30.0.16248370, CMake 3.31.6), JDK 21, `gh`.
+
+    powershell -File scripts\fetch-native.ps1
+    gradlew assembleHhDebug
+
+Выпуск: `gradlew assembleHhRelease` (ключ `%USERPROFILE%\.hhphone\keystore.properties`, см. app/build.gradle.kts).
+Пересборка нативных библиотек — `docs/native.md`. Проверка — `docs/testing.md`.
+
+## Обновление из upstream
+
+    git fetch upstream
+    git merge upstream/video
+    python scripts/brand-strings.py
+    python scripts/missing-strings.py   # перевести новые строки ru/hy
+
+Наш код: flavor `app/src/hh/`, `HH*.kt`, `Colors.kt`, `BaresipApp.kt` (одна строка), `BaresipService.kt` (`setPackage(packageName)`),
+`MainScreen.kt` (заголовок `app_name_plus`).
