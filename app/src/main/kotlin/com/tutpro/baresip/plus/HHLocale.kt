@@ -4,7 +4,6 @@ import android.app.LocaleManager
 import android.content.Context
 import android.os.Build
 import android.os.LocaleList
-import java.util.Locale
 
 private val HH_LANGUAGES = setOf("ru", "hy", "en")
 
@@ -18,7 +17,9 @@ object HHLocale {
         // Если понадобится — переопределять Configuration в attachBaseContext всех Activity и сервиса.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
         val lm = context.getSystemService(LocaleManager::class.java) ?: return
-        val lang = hhFallbackLanguage(Locale.getDefault().language, lm.applicationLocales.isEmpty) ?: return
+        // Не Locale.getDefault(): в процессе приложения он уже подобран под наши ru/hy/en (de,en → en).
+        val system = lm.systemLocales.get(0)?.language ?: return
+        val lang = hhFallbackLanguage(system, lm.applicationLocales.isEmpty) ?: return
         lm.applicationLocales = LocaleList.forLanguageTags(lang)
     }
 }
