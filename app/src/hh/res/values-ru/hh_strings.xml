@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="about_title">О HHPhone</string>
+    <string name="about_title_plus">О HHPhone</string>
+    <string name="about_text_plus">
+        <![CDATA[
+        <h1>HHPhone — SIP-телефон для HHPBX и других SIP-АТС</h1>
+        <p>Версия %1$s</p>
+        <p>Голосовые и видеозвонки, несколько учётных записей, TLS и SRTP.</p>
+        <p>Цветная точка у учётной записи показывает регистрацию: зелёная — зарегистрирована,
+        жёлтая — выполняется, красная — ошибка, белая — отключена. Касание точки открывает учётную запись.</p>
+        <h2>Исходный код</h2>
+        <p><a href="https://github.com/TheRainOfSoul/HHPhone">github.com/TheRainOfSoul/HHPhone</a> (GNU GPL).</p>
+        <p>Основан на <a href="https://github.com/juha-h/baresip-studio">baresip+</a> от TutPro Inc. (BSD 3-Clause)
+        и библиотеке <a href="https://github.com/baresip/baresip">baresip</a>.</p>
+        <h2>Лицензии</h2>
+        <ul>
+            <li><b>GNU GPL</b> HHPhone целиком</li>
+            <li><b>BSD-3-Clause</b> baresip, baresip+</li>
+            <li><b>Apache 2.0</b> кодеки AMR и защита TLS</li>
+            <li><b>AGPLv3</b> шифрование ZRTP</li>
+            <li><b>GNU LGPL 2.1</b> кодеки G.722, G.726 и Codec2</li>
+            <li><b>GNU GPLv3</b> кодек G.729</li>
+            <li><b>GNU GPLv2</b> кодеки H.264 и H.265</li>
+            <li><b>AOMedia</b> кодек AV1</li>
+        </ul>
+        <p>DG Solutions, Армения.</p>
+        ]]>
+    </string>
+</resources>

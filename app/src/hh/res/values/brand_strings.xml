@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Сгенерировано scripts/brand-strings.py, руками не править -->
+<resources>
+    <string name="account_nickname_help">Nickname (if any) used to identify this account within
+        HHPhone app.</string>
+    <string name="authentication_password_help">Authentication
+    Password up to 64 characters. If Authentication Username is given, but Password is not
+    given, it will be asked when HHPhone is started.
+    </string>
+    <string name="reg_int_help">Tells how often (in seconds) HHPhone sends REGISTER requests.
+        Valid values are from 60 to 3600.</string>
+    <string name="default_account_help">If checked, this account is selected when HHPhone is started.
+    </string>
+    <string name="start_automatically_help">If checked, HHPhone starts automatically after device boots
+        or after a new version of HHPhone is installed. Start is delayed until device is unlocked.
+    </string>
+    <string name="battery_optimizations_help">Disable battery optimizations if you want
+        to reduce likelihood that Android restricts HHPhone\'s access to network or enters HHPhone
+        to standby state.</string>
+    <string name="default_phone_app_help">If checked, HHPhone is the default phone app.</string>
+    <string name="default_messaging_app_help">If checked, HHPhone is the default messaging app for SMS/MMS.</string>
+    <string name="listen_address_help">IP address and port of form \'address:port\' at which HHPhone listens
+        for incoming SIP requests.  If IP address is an IPv6 address, it must be written inside
+        brackets [].  IPv4 address 0.0.0.0 or IPv6 address [::] makes HHPhone listen at all
+        available addresses. If left empty (factory default), HHPhone listens at an arbitrary port at
+        all available addresses.
+    </string>
+    <string name="address_family_help">Chooses which IP addresses HHPhone is
+        using.  If IPv4 or IPv6 is chosen, HHPhone uses only IPv4 or IPv6 addresses.  If neither is
+        chosen, HHPhone uses both IPv4 and IPv6 addresses.
+    </string>
+    <string name="tls_certificate_file_help">If checked, a file containing TLS certificate and
+        private key of this HHPhone instance has been or will be loaded. In Android version 9,
+        a file called \'cert.pem\' is loaded from Download folder. For security reasons,
+        delete the file after loading.</string>
+    <string name="verify_server_help">If checked, HHPhone verifies TLS certificates of SIP User
+        Agent and SIP Proxy Servers when TLS transport is used.</string>
+    <string name="contacts_help">Chooses if HHPhone contacts, Android contacts, or both are used.
+        If both are used and a contact with the same name exists in both contacts,
+        the HHPhone contact will be chosen.</string>
+    <string name="sip_trace_help">If checked and if Debug is checked, Logcat messages include also SIP
+        request and response trace. Unchecked automatically at HHPhone start.</string>
+    <string name="config_restart">You need to restart HHPhone in order to activate the new
+        settings. Restart now?
+    </string>
+    <string name="contacts_consent">If Android contacts is chosen, they can be used
+        in calling and messaging as references to SIP and tel URIs. HHPhone app does not store Android
+        contacts nor share them with anyone.  In order to make Android contacts available in HHPhone,
+        Google requires that you accept their use as described here and in app\'s
+        <a href="https://raw.githubusercontent.com/juha-h/baresip-studio/master/PrivacyPolicy.txt">Privacy Policy</a>.
+    </string>
+    <string name="start_failed">HHPhone failed to start. This may be due to an invalid Settings value.
+        Check Listen Address, TLS Certificate File, and TLS CA File.  Then restart HHPhone.
+    </string>
+    <string name="backup_failed">Failed to back up application data to file
+        \'%1$s\'. Check Apps → HHPhone → Permissions → Storage.</string>
+    <string name="restored">Application data restored. HHPhone needs to be restarted.
+        Restart now?
+    </string>
+    <string name="restore_failed">Failed to restore application data. Check that you gave correct
+        password and that the backup file is from this application. In Android versions 9,
+        also check Apps → HHPhone → Permissions → Storage and that file \'%1$s\' exists
+        in Download folder.
+    </string>
+    <string name="no_calls">HHPhone needs \"Microphone\" permission for voice calls.</string>
+    <string name="audio_permissions">HHPhone needs \"Microphone\" permission for voice calls,
+        \"Nearby devices\" permission for Bluetooth microphone/speaker detection,
+        \"Notifications\" permission for posting notifications, and in Android 9
+        \"Storage\" permission for Backup/Restore operations.</string>
+    <string name="audio_and_video_permissions">HHPhone needs \"Microphone\" permission
+        for voice calls, \"Camera\" permission for video calls, \"Nearby devices\" permission
+        for Bluetooth microphone/speaker detection, \"Notifications\" permission for posting
+        notifications, and in Android 9 \"Storage\" permissions for Backup/Restore operations.</string>
+</resources>

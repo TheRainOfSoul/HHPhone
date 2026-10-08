@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">HHPhone</string>
+    <string name="app_name_plus" translatable="false">HHPhone</string>
+    <string name="about_title">About HHPhone</string>
+    <string name="about_title_plus">About HHPhone</string>
+    <string name="about_text_plus">
+        <![CDATA[
+        <h1>HHPhone — SIP phone for HHPBX and other SIP PBXs</h1>
+        <p>Version %1$s</p>
+        <p>Voice and video calls, several accounts, TLS and SRTP.</p>
+        <p>The coloured dot next to an account shows its registration: green — registered,
+        yellow — in progress, red — failed, white — disabled. Touch it to open the account.</p>
+        <h2>Source code</h2>
+        <p><a href="https://github.com/TheRainOfSoul/HHPhone">github.com/TheRainOfSoul/HHPhone</a> (GNU GPL).</p>
+        <p>Based on <a href="https://github.com/juha-h/baresip-studio">baresip+</a> by TutPro Inc. (BSD 3-Clause)
+        and the <a href="https://github.com/baresip/baresip">baresip</a> library.</p>
+        <h2>Licenses</h2>
+        <ul>
+            <li><b>GNU GPL</b> HHPhone as a whole</li>
+            <li><b>BSD-3-Clause</b> baresip, baresip+</li>
+            <li><b>Apache 2.0</b> AMR codecs and TLS security</li>
+            <li><b>AGPLv3</b> ZRTP media encryption</li>
+            <li><b>GNU LGPL 2.1</b> G.722, G.726 and Codec2 codecs</li>
+            <li><b>GNU GPLv3</b> G.729 codec</li>
+            <li><b>GNU GPLv2</b> H.264 and H.265 codecs</li>
+            <li><b>AOMedia</b> AV1 codec</li>
+        </ul>
+        <p>DG Solutions, Armenia.</p>
+        ]]>
+    </string>
+</resources>

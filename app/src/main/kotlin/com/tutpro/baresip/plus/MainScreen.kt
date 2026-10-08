@@ -626,7 +626,7 @@ private fun TopAppBar(
     TopAppBar(
         title = {
             Text(
-                text = stringResource(R.string.baresip) + "+",
+                text = stringResource(R.string.app_name_plus),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
