@@ -1,4 +1,12 @@
 import com.android.build.api.dsl.ApplicationExtension
+import java.util.Properties
+
+// Постоянный ключ подписи HHPhone вне репозитория: ~/.hhphone/keystore.properties + android-release.jks.
+// Терять нельзя: APK с другим ключом не встанет поверх установленного.
+val hhReleaseKeys = Properties().apply {
+    val f = File(System.getProperty("user.home"), ".hhphone/keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
 
 plugins {
     alias(libs.plugins.compose.compiler)
@@ -28,11 +36,32 @@ configure<ApplicationExtension> {
         }
         vectorDrawables.useSupportLibrary = true
     }
+    flavorDimensions += "brand"
+    productFlavors {
+        create("hh") {
+            dimension = "brand"
+            applicationId = "am.dgsolutions.hhphone"
+            versionCode = 1
+            versionName = "0.1.0"
+            androidResources.localeFilters += listOf("en", "ru", "hy")
+        }
+    }
+    signingConfigs {
+        create("hhRelease") {
+            if (!hhReleaseKeys.isEmpty) {
+                storeFile = file(hhReleaseKeys.getProperty("storeFile"))
+                storePassword = hhReleaseKeys.getProperty("password")
+                keyAlias = hhReleaseKeys.getProperty("keyAlias")
+                keyPassword = hhReleaseKeys.getProperty("password")
+            }
+        }
+    }
     buildTypes {
         debug {
             ndk { abiFilters.add("x86_64") }
         }
         release {
+            if (!hhReleaseKeys.isEmpty) signingConfig = signingConfigs.getByName("hhRelease")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -98,5 +127,6 @@ dependencies {
     implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.compose.ui.text)
     implementation(libs.mmslib)
+    testImplementation(libs.junit)
 }
 

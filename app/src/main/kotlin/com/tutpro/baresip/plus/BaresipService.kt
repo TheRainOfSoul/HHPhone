@@ -170,7 +170,7 @@ class BaresipService: Service() {
         instance = this
 
         intent = Intent("com.tutpro.baresip.plus.EVENT")
-        intent.setPackage("com.tutpro.baresip.plus")
+        intent.setPackage(packageName)
 
         filesPath = filesDir.absolutePath
         pName = packageName

@@ -8,6 +8,7 @@ class BaresipApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        HHLocale.apply(this)
 
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
