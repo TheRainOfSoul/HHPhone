@@ -19,5 +19,5 @@
     <string name="hh_replace_account">Учётная запись %1$s уже есть. Заменить?</string>
     <string name="hh_no_password">В учётной записи нет сохранённого пароля — QR создать нельзя.</string>
     <string name="hh_need_pin_digits">Введите PIN из 4–8 цифр</string>
-    <string name="hh_service_not_running">HHPhone ещё не запущен. Откройте приложение и отсканируйте снова.</string>
+    <string name="hh_qr_unsupported">Эту учётную запись нельзя передать по QR (неподдерживаемые символы в логине, пароле или нике).</string>
 </resources>

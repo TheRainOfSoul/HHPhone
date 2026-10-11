@@ -19,5 +19,5 @@
     <string name="hh_replace_account">Account %1$s already exists. Replace it?</string>
     <string name="hh_no_password">The account has no saved password, a QR code cannot be created.</string>
     <string name="hh_need_pin_digits">Enter a PIN of 4–8 digits</string>
-    <string name="hh_service_not_running">HHPhone is not running yet. Open the app and scan again.</string>
+    <string name="hh_qr_unsupported">This account cannot be transferred by QR (unsupported characters in the login, password or nickname).</string>
 </resources>

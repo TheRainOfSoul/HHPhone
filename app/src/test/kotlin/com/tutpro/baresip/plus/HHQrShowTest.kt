@@ -22,6 +22,14 @@ class HHQrShowTest {
         assertEquals("", hhQrFields("sip:201@pbx.am", "201", "p", "", "", "")!!.authUser)
     }
 
+    @Test fun showableOnlyWhatHHPhoneAccepts() {
+        val ok = HHAccountQr(user = "201", pass = "p", domain = "pbx.am")
+        assertEquals(ok, hhShowableQr(ok))
+        assertNull(hhShowableQr(ok.copy(authUser = "201@pbx.am")))      // upstream разрешает, наш разбор — нет
+        assertNull(hhShowableQr(ok.copy(pass = "a;b")))
+        assertNull(hhShowableQr(ok.copy(name = "x".repeat(50))))
+    }
+
     @Test fun noPasswordNoQr() {
         assertNull(hhQrFields("sip:201@pbx.am", "", "", "", "", ""))
         assertNull(hhQrFields("sip:201@pbx.am", "", NO_AUTH_PASS, "", "", ""))

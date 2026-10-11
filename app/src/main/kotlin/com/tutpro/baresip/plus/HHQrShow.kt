@@ -50,6 +50,9 @@ fun hhQrFromAccount(acc: Account): HHAccountQr? =
     hhQrFields(acc.aor, acc.authUser, BaresipService.aorPasswords[acc.aor] ?: acc.authPass,
         acc.outbound.firstOrNull() ?: "", acc.mediaEnc, acc.nickName)
 
+/** QR, который HHPhone сам примет при сканировании, или null (правила разбора — только в HHQr). */
+fun hhShowableQr(qr: HHAccountQr): HHAccountQr? = qr.takeIf { HHQr.parse(HHQr.encode(it)) is HHQrResult.Ok }
+
 fun hhQrMatrix(text: String, size: Int): BitMatrix =
     QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, size, size, mapOf(EncodeHintType.MARGIN to 4))   // стандартная тихая зона 4 модуля: камеры телефонов читают надёжнее
 
@@ -66,9 +69,11 @@ fun HHShowQrButton(aor: String) {
     var open by remember { mutableStateOf(false) }
     IconButton(onClick = { open = true }) { Icon(Icons.Outlined.QrCode2, contentDescription = stringResource(R.string.hh_show_qr)) }
     if (!open) return
-    val base = Account.ofAor(aor)?.let { hhQrFromAccount(it) }
+    val fromAccount = Account.ofAor(aor)?.let { hhQrFromAccount(it) }
+    val base = fromAccount?.let { hhShowableQr(it) }
     if (base == null) {
-        AlertDialog(onDismissRequest = { open = false }, text = { Text(stringResource(R.string.hh_no_password)) },
+        val why = if (fromAccount == null) R.string.hh_no_password else R.string.hh_qr_unsupported
+        AlertDialog(onDismissRequest = { open = false }, text = { Text(stringResource(why)) },
             confirmButton = { TextButton(onClick = { open = false }) { Text(stringResource(R.string.ok)) } })
         return
     }

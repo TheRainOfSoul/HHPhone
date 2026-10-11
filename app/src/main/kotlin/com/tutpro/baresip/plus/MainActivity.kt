@@ -314,7 +314,7 @@ class MainActivity : ComponentActivity() {
                     chatsScreenRoute(navController)
                     chatScreenRoute(navController, viewModel)
                 }
-                HHHost()
+                HHHost(navController)
             }
         }
 

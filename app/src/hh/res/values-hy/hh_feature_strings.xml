@@ -19,5 +19,5 @@
     <string name="hh_replace_account">%1$s հաշիվն արդեն կա։ Փոխարինե՞լ։</string>
     <string name="hh_no_password">Հաշվում պահված գաղտնաբառ չկա, QR ստեղծել հնարավոր չէ։</string>
     <string name="hh_need_pin_digits">Մուտքագրեք 4–8 թվանշանից PIN</string>
-    <string name="hh_service_not_running">HHPhone-ը դեռ գործարկված չէ։ Բացեք հավելվածը և նորից սկանավորեք։</string>
+    <string name="hh_qr_unsupported">Այս հաշիվը հնարավոր չէ փոխանցել QR-ով (մուտքանվան, գաղտնաբառի կամ կեղծանվան մեջ կան չաջակցվող նշաններ)։</string>
 </resources>

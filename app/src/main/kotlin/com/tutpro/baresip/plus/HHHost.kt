@@ -27,25 +27,29 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.delay
+import androidx.navigation.NavController
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /** Вход QR: deep link hhphone://add и встроенный сканер кладут строку в pending. */
 object HHProvisioning {
     val pending = MutableStateFlow<String?>(null)
-    val scanRequests = MutableStateFlow(0)
-    /** Ставит BaresipService.started(): baresip готов принимать учётки (isServiceRunning — раньше, при запуске потока). */
-    val baresipReady = MutableStateFlow(false)
+    /** Одноразовые запросы сканера: без replay, чтобы пересоздание Activity не открывало камеру снова. */
+    val scanRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /** Забирает hhphone:// из intent и гасит его action, чтобы upstream не принял ссылку за звонок. */
     fun offer(intent: Intent?): Boolean {
         val data = intent?.data ?: return false
         if (data.scheme != "hhphone") return false
-        pending.value = data.toString()
+        // Гасим и action, и data: иначе пересоздание Activity (тема, язык) или запуск из «Недавних»
+        // повторно применили бы старый QR. Из «Недавних» ссылку не принимаем вовсе.
+        if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) pending.value = data.toString()
         intent.action = null
+        intent.data = null
         return true
     }
 
-    fun requestScan() { scanRequests.value++ }
+    fun requestScan() { scanRequests.tryEmit(Unit) }
 }
 
 data class HHPinPrompt(val onOk: () -> Unit)
@@ -58,10 +62,9 @@ object HHUi {
 
 /** Наши диалоги поверх любого экрана; вызывается один раз в MainActivity после NavHost. */
 @Composable
-fun HHHost() {
+fun HHHost(navController: NavController) {
     val ctx = LocalContext.current
     val pending by HHProvisioning.pending.collectAsState()
-    val scans by HHProvisioning.scanRequests.collectAsState()
     val message by HHUi.message.collectAsState()
     val confirm by HHUi.confirm.collectAsState()
     val pinPrompt by HHUi.pinPrompt.collectAsState()
@@ -69,21 +72,29 @@ fun HHHost() {
     val scanner = androidx.activity.compose.rememberLauncherForActivityResult(ScanContract()) { r ->
         r.contents?.let { HHProvisioning.pending.value = it }
     }
-    LaunchedEffect(scans) {
-        if (scans > 0) scanner.launch(
-            ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE).setBeepEnabled(false)
-                .setOrientationLocked(false).setPrompt(ctx.getString(R.string.hh_add_by_qr))
-        )
+    LaunchedEffect(Unit) {
+        HHProvisioning.scanRequests.collect {
+            scanner.launch(
+                ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE).setBeepEnabled(false)
+                    .setOrientationLocked(false).setPrompt(ctx.getString(R.string.hh_add_by_qr))
+            )
+        }
+    }
+
+    // Конец сессии админа: убрать открытые им экраны (настройки, учётки) и его незавершённые диалоги
+    val restricted by HHStaff.restricted.collectAsState()
+    LaunchedEffect(restricted) {
+        if (!restricted) return@LaunchedEffect
+        HHUi.confirm.value = null
+        navController.popBackStack("main", inclusive = false)
     }
 
     LaunchedEffect(pending) {
         val link = pending ?: return@LaunchedEffect
-        // Холодный старт по deep link: учётку можно создать только после старта сервиса baresip
-        repeat(100) { if (!HHProvisioning.baresipReady.value) delay(200) }
+        // Холодный старт по deep link: учётку можно создать только когда baresip готов (started()).
+        // Без таймаута: на свежем телефоне сотрудник сначала отвечает на запросы разрешений.
+        while (!BaresipService.isNativeReady) delay(200)
         HHProvisioning.pending.value = null
-        if (!HHProvisioning.baresipReady.value) {
-            HHUi.message.value = ctx.getString(R.string.hh_service_not_running); return@LaunchedEffect
-        }
         startProvision(ctx, link)
     }
 
