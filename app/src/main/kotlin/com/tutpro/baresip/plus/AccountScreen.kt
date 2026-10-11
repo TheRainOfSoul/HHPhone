@@ -188,6 +188,7 @@ private fun AccountScreen(
                     },
                     windowInsets = WindowInsets(0, 0, 0, 0),
                     actions = {
+                        HHShowQrButton(aor)
                         IconButton(onClick = checkOnClick) {
                             Icon(imageVector = Icons.Filled.Check, contentDescription = "Check")
                         }
