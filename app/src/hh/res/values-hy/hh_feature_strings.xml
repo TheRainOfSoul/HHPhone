@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hh_add_by_qr">Ավելացնել QR-ով</string>
+    <string name="hh_show_qr">Ցույց տալ QR</string>
+    <string name="hh_qr_lock">Արգելափակել աշխատակցի մոտ</string>
+    <string name="hh_pin">PIN (4–8 թվանշան)</string>
+    <string name="hh_qr_warning">QR-ը պարունակում է գաղտնաբառը․ մի՛ հրապարակեք այն։</string>
+    <string name="hh_admin">Ադմինիստրատոր</string>
+    <string name="hh_enter_pin">Մուտքագրեք ադմինիստրատորի PIN-ը</string>
+    <string name="hh_wrong_pin">Սխալ PIN</string>
+    <string name="hh_pin_locked_out">Չափազանց շատ փորձեր։ Կրկնեք %1$d րոպեից։</string>
+    <string name="hh_unlock_device">Հանել արգելափակումը</string>
+    <string name="hh_lock_removed">Արգելափակումը հանված է</string>
+    <string name="hh_admin_only">Հասանելի է միայն ադմինիստրատորին</string>
+    <string name="hh_qr_not_hhphone">Սա HHPhone-ի հաշվի QR չէ։</string>
+    <string name="hh_qr_invalid">QR-ը վնասված է կամ պարունակում է սխալ տվյալներ։</string>
+    <string name="hh_qr_newer">QR-ը HHPhone-ի ավելի նոր տարբերակից է։ Թարմացրեք հավելվածը։</string>
+    <string name="hh_account_added">%1$s հաշիվն ավելացված է</string>
+    <string name="hh_replace_account">%1$s հաշիվն արդեն կա։ Փոխարինե՞լ։</string>
+    <string name="hh_no_password">Հաշվում պահված գաղտնաբառ չկա, QR ստեղծել հնարավոր չէ։</string>
+    <string name="hh_need_pin_digits">Մուտքագրեք 4–8 թվանշանից PIN</string>
+    <string name="hh_service_not_running">HHPhone-ը դեռ գործարկված չէ։ Բացեք հավելվածը և նորից սկանավորեք։</string>
+</resources>

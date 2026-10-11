@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hh_add_by_qr">Добавить по QR</string>
+    <string name="hh_show_qr">Показать QR</string>
+    <string name="hh_qr_lock">Блокировать у сотрудника</string>
+    <string name="hh_pin">PIN (4–8 цифр)</string>
+    <string name="hh_qr_warning">QR содержит пароль — не публикуйте его.</string>
+    <string name="hh_admin">Администратор</string>
+    <string name="hh_enter_pin">Введите PIN администратора</string>
+    <string name="hh_wrong_pin">Неверный PIN</string>
+    <string name="hh_pin_locked_out">Слишком много попыток. Повторите через %1$d мин.</string>
+    <string name="hh_unlock_device">Снять блокировку</string>
+    <string name="hh_lock_removed">Блокировка снята</string>
+    <string name="hh_admin_only">Доступно только администратору</string>
+    <string name="hh_qr_not_hhphone">Это не QR учётной записи HHPhone.</string>
+    <string name="hh_qr_invalid">QR повреждён или содержит неверные данные.</string>
+    <string name="hh_qr_newer">QR от более новой версии HHPhone. Обновите приложение.</string>
+    <string name="hh_account_added">Учётная запись %1$s добавлена</string>
+    <string name="hh_replace_account">Учётная запись %1$s уже есть. Заменить?</string>
+    <string name="hh_no_password">В учётной записи нет сохранённого пароля — QR создать нельзя.</string>
+    <string name="hh_need_pin_digits">Введите PIN из 4–8 цифр</string>
+    <string name="hh_service_not_running">HHPhone ещё не запущен. Откройте приложение и отсканируйте снова.</string>
+</resources>

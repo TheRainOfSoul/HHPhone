@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hh_add_by_qr">Add by QR</string>
+    <string name="hh_show_qr">Show QR</string>
+    <string name="hh_qr_lock">Lock for employee</string>
+    <string name="hh_pin">PIN (4–8 digits)</string>
+    <string name="hh_qr_warning">The QR code contains the password. Do not publish it.</string>
+    <string name="hh_admin">Administrator</string>
+    <string name="hh_enter_pin">Enter the administrator PIN</string>
+    <string name="hh_wrong_pin">Wrong PIN</string>
+    <string name="hh_pin_locked_out">Too many attempts. Try again in %1$d min.</string>
+    <string name="hh_unlock_device">Remove lock</string>
+    <string name="hh_lock_removed">Lock removed</string>
+    <string name="hh_admin_only">Available to the administrator only</string>
+    <string name="hh_qr_not_hhphone">This QR code is not an HHPhone account.</string>
+    <string name="hh_qr_invalid">The QR code is damaged or contains invalid data.</string>
+    <string name="hh_qr_newer">This QR code is from a newer HHPhone version. Update the app.</string>
+    <string name="hh_account_added">Account %1$s added</string>
+    <string name="hh_replace_account">Account %1$s already exists. Replace it?</string>
+    <string name="hh_no_password">The account has no saved password, a QR code cannot be created.</string>
+    <string name="hh_need_pin_digits">Enter a PIN of 4–8 digits</string>
+    <string name="hh_service_not_running">HHPhone is not running yet. Open the app and scan again.</string>
+</resources>
