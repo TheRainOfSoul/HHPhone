@@ -778,7 +778,7 @@ private fun TopAppBar(
                     if (VERSION.SDK_INT >= 29) MenuItem(logcat, Icons.AutoMirrored.Outlined.ReceiptLong) else null,
                     MenuItem(restart, Icons.Outlined.RestartAlt),
                     MenuItem(quit, Icons.AutoMirrored.Filled.Logout)
-                ), hidden = setOf(settings, accounts, backup, restore, logcat)),
+                ), hidden = setOf(settings, accounts, backup, restore, logcat, quit)),
                 onItemClick = { selectedItem ->
                     menuExpanded = false
                     if (hhMenuClick(ctx, selectedItem)) return@DropdownMenu
