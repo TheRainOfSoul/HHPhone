@@ -35,4 +35,7 @@
     <string name="hh_update_no_connection">Не удалось проверить обновления: нет связи.</string>
     <string name="hh_update_failed">Не удалось скачать обновление. Попробуйте позже.</string>
     <string name="hh_update_allow">Разрешите HHPhone устанавливать приложения и нажмите «Обновить» ещё раз.</string>
+    <string name="hh_confirm_add">Добавить на этот телефон учётную запись %1$s?</string>
+    <string name="hh_confirm_add_lock">Добавить на этот телефон учётную запись %1$s? Телефон будет заблокирован PIN-кодом администратора.</string>
+    <string name="hh_confirm_claim">Получить учётную запись с АТС %1$s? Подтверждайте, только если этот QR дал вам администратор.</string>
 </resources>

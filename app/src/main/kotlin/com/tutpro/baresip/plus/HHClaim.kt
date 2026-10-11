@@ -91,6 +91,8 @@ object HHClaim {
                 HHClaimOutcome.BadCert else HHClaimOutcome.NoConnection
         } catch (e: IOException) {
             HHClaimOutcome.NoConnection
+        } catch (e: Exception) {   // неожиданное — не ронять приложение (корутина в MainScope без обработчика)
+            HHClaimOutcome.NoConnection
         } finally {
             conn.disconnect()
         }

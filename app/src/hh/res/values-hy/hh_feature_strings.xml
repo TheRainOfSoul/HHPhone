@@ -35,4 +35,7 @@
     <string name="hh_update_no_connection">Չհաջողվեց ստուգել թարմացումները․ կապ չկա։</string>
     <string name="hh_update_failed">Չհաջողվեց ներբեռնել թարմացումը։ Փորձեք ավելի ուշ։</string>
     <string name="hh_update_allow">Թույլատրեք HHPhone-ին տեղադրել հավելվածներ և կրկին սեղմեք «Թարմացնել»։</string>
+    <string name="hh_confirm_add">Ավելացնե՞լ %1$s հաշիվն այս հեռախոսում։</string>
+    <string name="hh_confirm_add_lock">Ավելացնե՞լ %1$s հաշիվն այս հեռախոսում։ Հեռախոսը կարգելափակվի ադմինիստրատորի PIN-ով։</string>
+    <string name="hh_confirm_claim">Ստանա՞լ հաշիվ %1$s ԱՀԿ-ից։ Հաստատեք միայն, եթե այս QR-ը ձեզ տվել է ադմինիստրատորը։</string>
 </resources>

@@ -61,9 +61,10 @@ object HHProvisioning {
         val prefs = ctx.getSharedPreferences("hh_update", Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
         if (!manual && !HHUpdate.due(prefs.getLong("last", 0), now)) return
-        prefs.edit().putLong("last", now).apply()
         scope.launch {
             val latest = withContext(Dispatchers.IO) { HHUpdate.check() }
+            // время пишем только после ответа: без сети при старте проверка повторится при следующем возврате
+            if (latest != null) prefs.edit().putLong("last", now).apply()
             when {
                 latest != null && latest.newerThan(BuildConfig.VERSION_CODE) -> HHUi.update.value = latest
                 manual && latest == null -> HHUi.message.value = ctx.getString(R.string.hh_update_no_connection)
@@ -215,14 +216,20 @@ private fun startProvision(ctx: Context, link: String) {
         HHQrResult.Invalid -> { HHUi.message.value = ctx.getString(R.string.hh_qr_invalid); return }
         is HHQrResult.Claim -> {
             val go = { claim(ctx, r) }
-            // спека: на заблокированном телефоне — сначала PIN, потом обмен (иначе отмена PIN сожгла бы токен)
-            if (HHStaff.state().locked && !HHStaff.adminSession.value) HHUi.pinPrompt.value = HHPinPrompt(go) else go()
+            // Ссылку могут подсунуть на чужой веб-странице: сначала явное согласие с адресом АТС.
+            // Затем, на заблокированном телефоне, PIN — до обмена (иначе отмена PIN сожгла бы токен).
+            HHUi.confirm.value = ctx.getString(R.string.hh_confirm_claim, r.server.removePrefix("https://")) to {
+                if (HHStaff.state().locked && !HHStaff.adminSession.value) HHUi.pinPrompt.value = HHPinPrompt(go) else go()
+            }
             return
         }
     }
     val proceed = { replaceIfNeeded(ctx, qr, R.string.hh_replace_account) { hhApplyQrLock(HHStaff.state(), qr) } }
-    if (hhQrNeedsPin(HHStaff.state(), HHStaff.adminSession.value, qr)) HHUi.pinPrompt.value = HHPinPrompt(proceed)
-    else proceed()
+    val question = if (qr.lock) R.string.hh_confirm_add_lock else R.string.hh_confirm_add
+    HHUi.confirm.value = ctx.getString(question, HHQr.aor(qr).removePrefix("sip:")) to {
+        if (hhQrNeedsPin(HHStaff.state(), HHStaff.adminSession.value, qr)) HHUi.pinPrompt.value = HHPinPrompt(proceed)
+        else proceed()
+    }
 }
 
 /** QR из панели HHPBX: один раз забрать учётку по токену (сеть — в фоне). */
