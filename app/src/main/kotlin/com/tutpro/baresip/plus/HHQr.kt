@@ -29,10 +29,19 @@ sealed interface HHQrResult {
     data object NotHHPhone : HHQrResult
     data object Newer : HHQrResult
     data object Invalid : HHQrResult
+    data class Claim(val server: String, val token: String, val spki: String) : HHQrResult
 }
+
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+private data class HHClaimQr(@EncodeDefault val v: Int = 1, val server: String, val token: String, val spki: String)
 
 object HHQr {
     private const val PREFIX = "hhphone://add?c="
+    private const val CLAIM_PREFIX = "hhphone://claim?c="
+    private val SERVER = Regex("""https://[A-Za-z0-9.\-]{1,253}(:\d{1,5})?""")
+    private val TOKEN = Regex("""[A-Za-z0-9_\-]{43}""")
+    private val SPKI = Regex("""[A-Za-z0-9+/]{43}=""")
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
     private val TRANSPORTS = setOf("udp", "tcp", "tls")
     private val MEDIA_ENC = setOf("", "srtp", "srtp-mand", "srtp-mandf", "dtls_srtp", "dtls_srtpf", "zrtp")
@@ -47,6 +56,17 @@ object HHQr {
 
     fun parse(text: String): HHQrResult {
         val t = text.trim()
+        if (t.startsWith(CLAIM_PREFIX)) {
+            val c = try {
+                val raw = String(Base64.getUrlDecoder().decode(t.removePrefix(CLAIM_PREFIX).substringBefore('&')), Charsets.UTF_8)
+                json.decodeFromString(HHClaimQr.serializer(), raw)
+            } catch (e: Exception) {
+                return HHQrResult.Invalid
+            }
+            if (c.v > 1) return HHQrResult.Newer
+            return if (c.v == 1 && SERVER.matches(c.server) && TOKEN.matches(c.token) && SPKI.matches(c.spki))
+                HHQrResult.Claim(c.server, c.token, c.spki) else HHQrResult.Invalid
+        }
         if (!t.startsWith(PREFIX)) return HHQrResult.NotHHPhone
         val qr = try {
             val raw = String(Base64.getUrlDecoder().decode(t.removePrefix(PREFIX).substringBefore('&')), Charsets.UTF_8)
@@ -55,10 +75,10 @@ object HHQr {
             return HHQrResult.Invalid
         }
         if (qr.v > 1) return HHQrResult.Newer
-        return if (valid(qr)) HHQrResult.Ok(qr) else HHQrResult.Invalid
+        return if (validAccount(qr)) HHQrResult.Ok(qr) else HHQrResult.Invalid
     }
 
-    private fun valid(q: HHAccountQr): Boolean =
+    internal fun validAccount(q: HHAccountQr): Boolean =
         q.v == 1 &&
             USER.matches(q.user) && DOMAIN.matches(q.domain) &&
             q.pass.length in 1..64 && !UNSAFE.containsMatchIn(q.pass) &&

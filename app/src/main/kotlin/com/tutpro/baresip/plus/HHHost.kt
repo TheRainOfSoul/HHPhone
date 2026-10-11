@@ -155,6 +155,7 @@ private fun startProvision(ctx: Context, link: String) {
         HHQrResult.NotHHPhone -> { HHUi.message.value = ctx.getString(R.string.hh_qr_not_hhphone); return }
         HHQrResult.Newer -> { HHUi.message.value = ctx.getString(R.string.hh_qr_newer); return }
         HHQrResult.Invalid -> { HHUi.message.value = ctx.getString(R.string.hh_qr_invalid); return }
+        is HHQrResult.Claim -> { HHUi.message.value = ctx.getString(R.string.hh_qr_newer); return }   // временно: обмен — Task 3
     }
     val proceed = { replaceIfNeeded(ctx, qr) }
     if (hhQrNeedsPin(HHStaff.state(), HHStaff.adminSession.value, qr)) HHUi.pinPrompt.value = HHPinPrompt(proceed)
