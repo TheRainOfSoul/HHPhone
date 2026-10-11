@@ -2042,6 +2042,7 @@ class BaresipService: Service() {
     @Suppress("unused")
     @Keep
     fun started() {
+        HHProvisioning.baresipReady.value = true
         Log.d(TAG, "Received 'started' from baresip")
 
         Handler(Looper.getMainLooper()).post {

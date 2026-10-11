@@ -1,4 +1,6 @@
 [versions]
+zxingCore = "3.5.3"
+zxingEmbedded = "4.3.0"
 junit = "4.13.2"
 swiperefreshlayout = "1.2.0"
 cardview = "1.0.0"
@@ -32,6 +34,8 @@ uiText = "1.12.1"
 mmslib = "1.0.0"
 
 [libraries]
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxingCore" }
+zxing-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxingEmbedded" }
 junit = { module = "junit:junit", version.ref = "junit" }
 androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-process", version.ref = "lifecycleProcess" }
 androidx-swiperefreshlayout = { module = "androidx.swiperefreshlayout:swiperefreshlayout", version.ref = "swiperefreshlayout" }

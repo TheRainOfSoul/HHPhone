@@ -769,7 +769,7 @@ private fun TopAppBar(
             DropdownMenu(
                 expanded = menuExpanded,
                 onDismissRequest = { menuExpanded = false },
-                menuItems = listOfNotNull(
+                menuItems = hhMenu(listOfNotNull(
                     MenuItem(about, Icons.Outlined.Info),
                     MenuItem(settings, Icons.Outlined.Settings),
                     MenuItem(accounts, Icons.Outlined.ManageAccounts),
@@ -778,9 +778,10 @@ private fun TopAppBar(
                     if (VERSION.SDK_INT >= 29) MenuItem(logcat, Icons.AutoMirrored.Outlined.ReceiptLong) else null,
                     MenuItem(restart, Icons.Outlined.RestartAlt),
                     MenuItem(quit, Icons.AutoMirrored.Filled.Logout)
-                ),
+                ), hidden = setOf(settings, accounts, backup, restore, logcat)),
                 onItemClick = { selectedItem ->
                     menuExpanded = false
+                    if (hhMenuClick(ctx, selectedItem)) return@DropdownMenu
                     if (checkLockedAndToast(ctx)) return@DropdownMenu
                     when (selectedItem) {
                         about -> { navController.navigate("about") }

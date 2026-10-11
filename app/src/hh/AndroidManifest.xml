@@ -3,5 +3,18 @@
     xmlns:tools="http://schemas.android.com/tools">
     <application
         android:localeConfig="@xml/locales_config"
-        tools:replace="android:localeConfig" />
+        tools:replace="android:localeConfig">
+        <activity android:name="com.tutpro.baresip.plus.MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="hhphone" android:host="add" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="fullSensor"
+            tools:replace="android:screenOrientation" />
+    </application>
 </manifest>

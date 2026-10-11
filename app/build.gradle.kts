@@ -127,6 +127,8 @@ dependencies {
     implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.compose.ui.text)
     implementation(libs.mmslib)
+    implementation(libs.zxing.core)
+    implementation(libs.zxing.embedded)
     testImplementation(libs.junit)
 }
 

@@ -1,0 +1,187 @@
+package com.tutpro.baresip.plus
+
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.QrCodeScanner
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+
+/** Вход QR: deep link hhphone://add и встроенный сканер кладут строку в pending. */
+object HHProvisioning {
+    val pending = MutableStateFlow<String?>(null)
+    val scanRequests = MutableStateFlow(0)
+    /** Ставит BaresipService.started(): baresip готов принимать учётки (isServiceRunning — раньше, при запуске потока). */
+    val baresipReady = MutableStateFlow(false)
+
+    /** Забирает hhphone:// из intent и гасит его action, чтобы upstream не принял ссылку за звонок. */
+    fun offer(intent: Intent?): Boolean {
+        val data = intent?.data ?: return false
+        if (data.scheme != "hhphone") return false
+        pending.value = data.toString()
+        intent.action = null
+        return true
+    }
+
+    fun requestScan() { scanRequests.value++ }
+}
+
+data class HHPinPrompt(val onOk: () -> Unit)
+
+object HHUi {
+    val pinPrompt = MutableStateFlow<HHPinPrompt?>(null)
+    val message = MutableStateFlow<String?>(null)
+    val confirm = MutableStateFlow<Pair<String, () -> Unit>?>(null)
+}
+
+/** Наши диалоги поверх любого экрана; вызывается один раз в MainActivity после NavHost. */
+@Composable
+fun HHHost() {
+    val ctx = LocalContext.current
+    val pending by HHProvisioning.pending.collectAsState()
+    val scans by HHProvisioning.scanRequests.collectAsState()
+    val message by HHUi.message.collectAsState()
+    val confirm by HHUi.confirm.collectAsState()
+    val pinPrompt by HHUi.pinPrompt.collectAsState()
+
+    val scanner = androidx.activity.compose.rememberLauncherForActivityResult(ScanContract()) { r ->
+        r.contents?.let { HHProvisioning.pending.value = it }
+    }
+    LaunchedEffect(scans) {
+        if (scans > 0) scanner.launch(
+            ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE).setBeepEnabled(false)
+                .setOrientationLocked(false).setPrompt(ctx.getString(R.string.hh_add_by_qr))
+        )
+    }
+
+    LaunchedEffect(pending) {
+        val link = pending ?: return@LaunchedEffect
+        // Холодный старт по deep link: учётку можно создать только после старта сервиса baresip
+        repeat(100) { if (!HHProvisioning.baresipReady.value) delay(200) }
+        HHProvisioning.pending.value = null
+        if (!HHProvisioning.baresipReady.value) {
+            HHUi.message.value = ctx.getString(R.string.hh_service_not_running); return@LaunchedEffect
+        }
+        startProvision(ctx, link)
+    }
+
+    message?.let { text ->
+        AlertDialog(
+            onDismissRequest = { HHUi.message.value = null },
+            text = { Text(text) },
+            confirmButton = { TextButton(onClick = { HHUi.message.value = null }) { Text(stringResource(R.string.ok)) } },
+        )
+    }
+    confirm?.let { (text, onYes) ->
+        AlertDialog(
+            onDismissRequest = { HHUi.confirm.value = null },
+            text = { Text(text) },
+            confirmButton = { TextButton(onClick = { HHUi.confirm.value = null; onYes() }) { Text(stringResource(R.string.yes)) } },
+            dismissButton = { TextButton(onClick = { HHUi.confirm.value = null }) { Text(stringResource(R.string.no)) } },
+        )
+    }
+    pinPrompt?.let { prompt -> PinDialog(ctx, prompt) }
+}
+
+@Composable
+private fun PinDialog(ctx: Context, prompt: HHPinPrompt) {
+    var pin by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = { HHUi.pinPrompt.value = null },
+        title = { Text(stringResource(R.string.hh_enter_pin)) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = pin, onValueChange = { pin = it.filter(Char::isDigit).take(8) },
+                    label = { Text(stringResource(R.string.hh_pin)) }, singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                )
+                if (error.isNotEmpty()) Text(error)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val (r, s) = HHPin.check(HHStaff.state(), pin, System.currentTimeMillis())
+                HHStaff.save(s)
+                when (r) {
+                    HHPinCheck.Ok -> { HHUi.pinPrompt.value = null; prompt.onOk() }
+                    HHPinCheck.Wrong -> { error = ctx.getString(R.string.hh_wrong_pin); pin = "" }
+                    is HHPinCheck.LockedOut -> { error = ctx.getString(R.string.hh_pin_locked_out, r.minutesLeft); pin = "" }
+                }
+            }) { Text(stringResource(R.string.ok)) }
+        },
+        dismissButton = { TextButton(onClick = { HHUi.pinPrompt.value = null }) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
+private fun startProvision(ctx: Context, link: String) {
+    val qr = when (val r = HHQr.parse(link)) {
+        is HHQrResult.Ok -> r.qr
+        HHQrResult.NotHHPhone -> { HHUi.message.value = ctx.getString(R.string.hh_qr_not_hhphone); return }
+        HHQrResult.Newer -> { HHUi.message.value = ctx.getString(R.string.hh_qr_newer); return }
+        HHQrResult.Invalid -> { HHUi.message.value = ctx.getString(R.string.hh_qr_invalid); return }
+    }
+    val proceed = { replaceIfNeeded(ctx, qr) }
+    if (hhQrNeedsPin(HHStaff.state(), HHStaff.adminSession.value, qr)) HHUi.pinPrompt.value = HHPinPrompt(proceed)
+    else proceed()
+}
+
+private fun replaceIfNeeded(ctx: Context, qr: HHAccountQr) {
+    val aor = HHQr.aor(qr)
+    val existing = UserAgent.ofAor(aor)
+    if (existing == null) { addAccount(ctx, qr); return }
+    HHUi.confirm.value = ctx.getString(R.string.hh_replace_account, aor.removePrefix("sip:")) to {
+        existing.remove()
+        Api.ua_destroy(existing.uap)
+        addAccount(ctx, qr)
+    }
+}
+
+private fun addAccount(ctx: Context, qr: HHAccountQr) {
+    val uap = UserAgent.uaAlloc(HHQr.accountLine(qr))
+    if (uap == 0L) { HHUi.message.value = ctx.getString(R.string.account_allocation_failure); return }
+    val ua = UserAgent(uap)
+    ua.add()
+    ua.account.checkOrigin = true
+    Account.saveAccounts()
+    ua.reRegister()
+    HHStaff.save(hhApplyQrLock(HHStaff.state(), qr))
+    Toast.makeText(ctx, ctx.getString(R.string.hh_account_added, HHQr.aor(qr).removePrefix("sip:")), Toast.LENGTH_LONG).show()
+}
+
+/** Пункты меню HHPhone: прячет запрещённые в режиме сотрудника и добавляет наши. */
+@Composable
+fun hhMenu(items: List<MenuItem>, hidden: Set<String>): List<MenuItem> {
+    val restricted by HHStaff.restricted.collectAsState()
+    val addByQr = stringResource(R.string.hh_add_by_qr)
+    val shown = if (restricted) items.filter { it.text !in hidden } else items
+    return listOf(MenuItem(addByQr, Icons.Outlined.QrCodeScanner)) + shown
+}
+
+/** true — пункт наш и обработан. */
+fun hhMenuClick(ctx: Context, item: String): Boolean = when (item) {
+    ctx.getString(R.string.hh_add_by_qr) -> { HHProvisioning.requestScan(); true }
+    else -> false
+}

@@ -174,6 +174,7 @@ class MainActivity : ComponentActivity() {
 
         atStartup = intent.hasExtra("onStartup")
 
+        HHProvisioning.offer(intent)
         when (intent?.action) {
             ACTION_DIAL, ACTION_CALL, ACTION_VIEW ->
                 if (BaresipService.isServiceRunning)
@@ -313,6 +314,7 @@ class MainActivity : ComponentActivity() {
                     chatsScreenRoute(navController)
                     chatScreenRoute(navController, viewModel)
                 }
+                HHHost()
             }
         }
 
@@ -389,6 +391,7 @@ class MainActivity : ComponentActivity() {
 
         Log.d(TAG, "onNewIntent action/type/data: ${intent.action}/${intent.type}/${intent.data}")
 
+        HHProvisioning.offer(intent)
         when {
             isCallLogIntent(intent) -> handleCallLogIntent()
             intent.action in listOf(ACTION_DIAL, ACTION_CALL, ACTION_VIEW) ->
