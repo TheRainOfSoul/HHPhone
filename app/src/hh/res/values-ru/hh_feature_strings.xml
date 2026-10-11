@@ -26,4 +26,13 @@
     <string name="hh_claim_used">Этот QR уже использован или отозван.</string>
     <string name="hh_claim_bad_data">АТС вернула неверные данные учётной записи.</string>
     <string name="hh_replace_account_spent">Учётная запись %1$s уже есть. Заменить? QR в любом случае уже потрачен.</string>
+    <string name="hh_check_updates">Проверить обновления</string>
+    <string name="hh_update_available">Доступна версия %1$s</string>
+    <string name="hh_update_now">Обновить</string>
+    <string name="hh_update_later">Позже</string>
+    <string name="hh_update_downloading">Скачивание %1$d%%…</string>
+    <string name="hh_update_none">Установлена последняя версия.</string>
+    <string name="hh_update_no_connection">Не удалось проверить обновления: нет связи.</string>
+    <string name="hh_update_failed">Не удалось скачать обновление. Попробуйте позже.</string>
+    <string name="hh_update_allow">Разрешите HHPhone устанавливать приложения и нажмите «Обновить» ещё раз.</string>
 </resources>

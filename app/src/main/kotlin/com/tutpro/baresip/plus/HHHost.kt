@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.QrCodeScanner
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -55,6 +56,37 @@ object HHProvisioning {
     }
 
     fun requestScan() { scanRequests.tryEmit(Unit) }
+
+    fun checkUpdate(ctx: Context, manual: Boolean) {
+        val prefs = ctx.getSharedPreferences("hh_update", Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        if (!manual && !HHUpdate.due(prefs.getLong("last", 0), now)) return
+        prefs.edit().putLong("last", now).apply()
+        scope.launch {
+            val latest = withContext(Dispatchers.IO) { HHUpdate.check() }
+            when {
+                latest != null && latest.newerThan(BuildConfig.VERSION_CODE) -> HHUi.update.value = latest
+                manual && latest == null -> HHUi.message.value = ctx.getString(R.string.hh_update_no_connection)
+                manual -> HHUi.message.value = ctx.getString(R.string.hh_update_none)
+            }
+        }
+    }
+
+    fun installUpdate(ctx: Context) {
+        if (!ctx.packageManager.canRequestPackageInstalls()) {
+            HHUi.message.value = ctx.getString(R.string.hh_update_allow)
+            ctx.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, android.net.Uri.parse("package:${ctx.packageName}"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            return   // повторный экран настроек сам не открываем: пользователь снова нажмёт «Обновить»
+        }
+        val apk = java.io.File(ctx.filesDir, "update/HHPhone.apk")
+        HHUi.downloading.value = 0
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) { HHUpdate.download(apk) { p -> HHUi.downloading.value = p } }
+            HHUi.downloading.value = null
+            if (ok) ctx.startActivity(HHUpdate.installIntent(ctx, apk)) else HHUi.message.value = ctx.getString(R.string.hh_update_failed)
+        }
+    }
 }
 
 data class HHPinPrompt(val onOk: () -> Unit)
@@ -63,6 +95,8 @@ object HHUi {
     val pinPrompt = MutableStateFlow<HHPinPrompt?>(null)
     val message = MutableStateFlow<String?>(null)
     val confirm = MutableStateFlow<Pair<String, () -> Unit>?>(null)
+    val update = MutableStateFlow<HHLatest?>(null)
+    val downloading = MutableStateFlow<Int?>(null)
 }
 
 /** Наши диалоги поверх любого экрана; вызывается один раз в MainActivity после NavHost. */
@@ -119,6 +153,25 @@ fun HHHost(navController: NavController) {
         )
     }
     pinPrompt?.let { prompt -> PinDialog(ctx, prompt) }
+
+    // автопроверка при запуске и возврате в приложение (не чаще раза в 6 ч)
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_START) HHProvisioning.checkUpdate(ctx, manual = false) }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
+    val update by HHUi.update.collectAsState()
+    val downloading by HHUi.downloading.collectAsState()
+    update?.let { u ->
+        AlertDialog(
+            onDismissRequest = { HHUi.update.value = null },
+            title = { Text(stringResource(R.string.hh_update_available, u.versionName)) },
+            text = { Text(if (downloading != null) stringResource(R.string.hh_update_downloading, downloading!!) else u.notes) },
+            confirmButton = { TextButton(enabled = downloading == null, onClick = { HHProvisioning.installUpdate(ctx) }) { Text(stringResource(R.string.hh_update_now)) } },
+            dismissButton = { TextButton(onClick = { HHUi.update.value = null }) { Text(stringResource(R.string.hh_update_later)) } },
+        )
+    }
 }
 
 @Composable
@@ -217,15 +270,17 @@ fun hhMenu(items: List<MenuItem>, hidden: Set<String>): List<MenuItem> {
     val addByQr = MenuItem(stringResource(R.string.hh_add_by_qr), Icons.Outlined.QrCodeScanner)
     val adminItem = MenuItem(stringResource(R.string.hh_admin), Icons.Outlined.AdminPanelSettings)
     val unlockItem = MenuItem(stringResource(R.string.hh_unlock_device), Icons.Outlined.LockOpen)
+    val updates = MenuItem(stringResource(R.string.hh_check_updates), Icons.Outlined.SystemUpdate)
     return when {
-        restricted -> listOf(addByQr) + items.filter { it.text !in hidden } + adminItem
-        admin -> listOf(addByQr) + items + unlockItem
-        else -> listOf(addByQr) + items
+        restricted -> listOf(addByQr) + items.filter { it.text !in hidden } + updates + adminItem
+        admin -> listOf(addByQr) + items + updates + unlockItem
+        else -> listOf(addByQr) + items + updates
     }
 }
 
 fun hhMenuClick(ctx: Context, item: String): Boolean = when (item) {
     ctx.getString(R.string.hh_add_by_qr) -> { HHProvisioning.requestScan(); true }
+    ctx.getString(R.string.hh_check_updates) -> { HHProvisioning.checkUpdate(ctx, manual = true); true }
     ctx.getString(R.string.hh_admin) -> { HHUi.pinPrompt.value = HHPinPrompt { HHStaff.setAdminSession(true) }; true }
     ctx.getString(R.string.hh_unlock_device) -> {
         HHStaff.save(HHLockState()); HHStaff.setAdminSession(false)

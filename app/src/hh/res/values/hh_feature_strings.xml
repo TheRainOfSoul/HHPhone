@@ -26,4 +26,13 @@
     <string name="hh_claim_used">This QR code has already been used or revoked.</string>
     <string name="hh_claim_bad_data">The PBX returned invalid account data.</string>
     <string name="hh_replace_account_spent">Account %1$s already exists. Replace it? The QR code has already been used either way.</string>
+    <string name="hh_check_updates">Check for updates</string>
+    <string name="hh_update_available">Version %1$s is available</string>
+    <string name="hh_update_now">Update</string>
+    <string name="hh_update_later">Later</string>
+    <string name="hh_update_downloading">Downloading %1$d%%…</string>
+    <string name="hh_update_none">You have the latest version.</string>
+    <string name="hh_update_no_connection">Cannot check for updates: no connection.</string>
+    <string name="hh_update_failed">Could not download the update. Try again later.</string>
+    <string name="hh_update_allow">Allow HHPhone to install apps, then tap Update again.</string>
 </resources>

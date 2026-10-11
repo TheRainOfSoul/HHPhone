@@ -26,4 +26,13 @@
     <string name="hh_claim_used">Այս QR-ն արդեն օգտագործված է կամ չեղարկված։</string>
     <string name="hh_claim_bad_data">ԱՀԿ-ն վերադարձրեց հաշվի սխալ տվյալներ։</string>
     <string name="hh_replace_account_spent">%1$s հաշիվն արդեն կա։ Փոխարինե՞լ։ QR-ն ամեն դեպքում արդեն ծախսված է։</string>
+    <string name="hh_check_updates">Ստուգել թարմացումները</string>
+    <string name="hh_update_available">Հասանելի է %1$s տարբերակը</string>
+    <string name="hh_update_now">Թարմացնել</string>
+    <string name="hh_update_later">Ավելի ուշ</string>
+    <string name="hh_update_downloading">Ներբեռնում %1$d%%…</string>
+    <string name="hh_update_none">Տեղադրված է վերջին տարբերակը։</string>
+    <string name="hh_update_no_connection">Չհաջողվեց ստուգել թարմացումները․ կապ չկա։</string>
+    <string name="hh_update_failed">Չհաջողվեց ներբեռնել թարմացումը։ Փորձեք ավելի ուշ։</string>
+    <string name="hh_update_allow">Թույլատրեք HHPhone-ին տեղադրել հավելվածներ և կրկին սեղմեք «Թարմացնել»։</string>
 </resources>
