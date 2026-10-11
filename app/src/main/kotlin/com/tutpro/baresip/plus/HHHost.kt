@@ -6,6 +6,8 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AdminPanelSettings
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
@@ -175,13 +177,23 @@ private fun addAccount(ctx: Context, qr: HHAccountQr) {
 @Composable
 fun hhMenu(items: List<MenuItem>, hidden: Set<String>): List<MenuItem> {
     val restricted by HHStaff.restricted.collectAsState()
-    val addByQr = stringResource(R.string.hh_add_by_qr)
-    val shown = if (restricted) items.filter { it.text !in hidden } else items
-    return listOf(MenuItem(addByQr, Icons.Outlined.QrCodeScanner)) + shown
+    val admin by HHStaff.adminSession.collectAsState()
+    val addByQr = MenuItem(stringResource(R.string.hh_add_by_qr), Icons.Outlined.QrCodeScanner)
+    val adminItem = MenuItem(stringResource(R.string.hh_admin), Icons.Outlined.AdminPanelSettings)
+    val unlockItem = MenuItem(stringResource(R.string.hh_unlock_device), Icons.Outlined.LockOpen)
+    return when {
+        restricted -> listOf(addByQr) + items.filter { it.text !in hidden } + adminItem
+        admin -> listOf(addByQr) + items + unlockItem
+        else -> listOf(addByQr) + items
+    }
 }
 
-/** true — пункт наш и обработан. */
 fun hhMenuClick(ctx: Context, item: String): Boolean = when (item) {
     ctx.getString(R.string.hh_add_by_qr) -> { HHProvisioning.requestScan(); true }
+    ctx.getString(R.string.hh_admin) -> { HHUi.pinPrompt.value = HHPinPrompt { HHStaff.setAdminSession(true) }; true }
+    ctx.getString(R.string.hh_unlock_device) -> {
+        HHStaff.save(HHLockState()); HHStaff.setAdminSession(false)
+        Toast.makeText(ctx, ctx.getString(R.string.hh_lock_removed), Toast.LENGTH_SHORT).show(); true
+    }
     else -> false
 }

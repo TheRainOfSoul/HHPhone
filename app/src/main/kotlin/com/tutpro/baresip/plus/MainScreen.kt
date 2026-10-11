@@ -1356,7 +1356,7 @@ private fun AccountSpinner(ctx: Context, viewModel: ViewModel, navController: Na
     if (selected == "") {
         OutlinedButton(
             onClick = {
-                if (checkLockedAndToast(ctx)) return@OutlinedButton
+                if (checkLockedAndToast(ctx) || HHStaff.blockedAndToast(ctx)) return@OutlinedButton
                 navController.navigate("accounts")
             },
             modifier = Modifier.padding(horizontal = 4.dp).height(50.dp).fillMaxWidth(),
@@ -1387,6 +1387,7 @@ private fun AccountSpinner(ctx: Context, viewModel: ViewModel, navController: Na
                                 expanded = true
                         },
                         onLongPress = {
+                            if (HHStaff.blockedAndToast(ctx)) return@detectTapGestures
                             val ua = UserAgent.ofAor(selected)
                             if (ua != null) {
                                 val acc = ua.account
@@ -1424,7 +1425,7 @@ private fun AccountSpinner(ctx: Context, viewModel: ViewModel, navController: Na
                 modifier = Modifier
                     .padding(end = 10.dp)
                     .clickable(onClick = {
-                        if (checkLockedAndToast(ctx)) return@clickable
+                        if (checkLockedAndToast(ctx) || HHStaff.blockedAndToast(ctx)) return@clickable
                         navController.navigate("account/$selected/old")
                     })
             )
@@ -1442,6 +1443,7 @@ private fun AccountSpinner(ctx: Context, viewModel: ViewModel, navController: Na
                                 expanded = true
                         },
                         onLongClick = {
+                            if (HHStaff.blockedAndToast(ctx)) return@combinedClickable
                             val ua = UserAgent.ofAor(selected)
                             if (ua != null) {
                                 val acc = ua.account
