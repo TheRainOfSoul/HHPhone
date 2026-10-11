@@ -15,7 +15,9 @@ SIP-звонилка для Android: HHPBX и любые SIP-АТС. Голос 
     powershell -File scripts\fetch-native.ps1
     gradlew assembleHhDebug
 
-Выпуск: `gradlew assembleHhRelease` (ключ `%USERPROFILE%\.hhphone\keystore.properties`, см. app/build.gradle.kts).
+Выпуск: `powershell -File scripts\release.ps1 -Notes "что нового"` (`-Prerelease` — тестовый выпуск, телефоны его не видят).
+Ключ подписи — `%USERPROFILE%\.hhphone\keystore.properties`. Телефоны с 0.3.0 обновляются сами (GitHub Releases, раз в 6 часов);
+0.2.0 и ниже — вручную.
 Пересборка нативных библиотек — `docs/native.md`. Проверка — `docs/testing.md`.
 
 ## Обновление из upstream
