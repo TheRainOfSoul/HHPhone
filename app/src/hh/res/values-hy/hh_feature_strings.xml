@@ -20,4 +20,10 @@
     <string name="hh_no_password">Հաշվում պահված գաղտնաբառ չկա, QR ստեղծել հնարավոր չէ։</string>
     <string name="hh_need_pin_digits">Մուտքագրեք 4–8 թվանշանից PIN</string>
     <string name="hh_qr_unsupported">Այս հաշիվը հնարավոր չէ փոխանցել QR-ով (մուտքանվան, գաղտնաբառի կամ կեղծանվան մեջ կան չաջակցվող նշաններ)։</string>
+    <string name="hh_claiming">Հաշիվը ստանում եմ ԱՀԿ-ից…</string>
+    <string name="hh_claim_no_connection">ԱՀԿ-ի հետ կապ չկա։ QR-ը չի ծախսվել՝ փորձեք կրկին։</string>
+    <string name="hh_claim_bad_cert">ԱՀԿ սերվերը չանցավ անվտանգության ստուգումը։</string>
+    <string name="hh_claim_used">Այս QR-ն արդեն օգտագործված է կամ չեղարկված։</string>
+    <string name="hh_claim_bad_data">ԱՀԿ-ն վերադարձրեց հաշվի սխալ տվյալներ։</string>
+    <string name="hh_replace_account_spent">%1$s հաշիվն արդեն կա։ Փոխարինե՞լ։ QR-ն ամեն դեպքում արդեն ծախսված է։</string>
 </resources>

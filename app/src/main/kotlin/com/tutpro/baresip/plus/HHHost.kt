@@ -26,13 +26,18 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.navigation.NavController
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /** Вход QR: deep link hhphone://add и встроенный сканер кладут строку в pending. */
 object HHProvisioning {
+    val scope = MainScope()
     val pending = MutableStateFlow<String?>(null)
     /** Одноразовые запросы сканера: без replay, чтобы пересоздание Activity не открывало камеру снова. */
     val scanRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -155,25 +160,44 @@ private fun startProvision(ctx: Context, link: String) {
         HHQrResult.NotHHPhone -> { HHUi.message.value = ctx.getString(R.string.hh_qr_not_hhphone); return }
         HHQrResult.Newer -> { HHUi.message.value = ctx.getString(R.string.hh_qr_newer); return }
         HHQrResult.Invalid -> { HHUi.message.value = ctx.getString(R.string.hh_qr_invalid); return }
-        is HHQrResult.Claim -> { HHUi.message.value = ctx.getString(R.string.hh_qr_newer); return }   // временно: обмен — Task 3
+        is HHQrResult.Claim -> {
+            val go = { claim(ctx, r) }
+            // спека: на заблокированном телефоне — сначала PIN, потом обмен (иначе отмена PIN сожгла бы токен)
+            if (HHStaff.state().locked && !HHStaff.adminSession.value) HHUi.pinPrompt.value = HHPinPrompt(go) else go()
+            return
+        }
     }
-    val proceed = { replaceIfNeeded(ctx, qr) }
+    val proceed = { replaceIfNeeded(ctx, qr, R.string.hh_replace_account) { hhApplyQrLock(HHStaff.state(), qr) } }
     if (hhQrNeedsPin(HHStaff.state(), HHStaff.adminSession.value, qr)) HHUi.pinPrompt.value = HHPinPrompt(proceed)
     else proceed()
 }
 
-private fun replaceIfNeeded(ctx: Context, qr: HHAccountQr) {
-    val aor = HHQr.aor(qr)
-    val existing = UserAgent.ofAor(aor)
-    if (existing == null) { addAccount(ctx, qr); return }
-    HHUi.confirm.value = ctx.getString(R.string.hh_replace_account, aor.removePrefix("sip:")) to {
-        existing.remove()
-        Api.ua_destroy(existing.uap)
-        addAccount(ctx, qr)
+/** QR из панели HHPBX: один раз забрать учётку по токену (сеть — в фоне). */
+private fun claim(ctx: Context, c: HHQrResult.Claim) {
+    Toast.makeText(ctx, ctx.getString(R.string.hh_claiming), Toast.LENGTH_SHORT).show()
+    HHProvisioning.scope.launch {
+        when (val outcome = withContext(Dispatchers.IO) { HHClaim.exchange(c) }) {
+            is HHClaimOutcome.Ok -> replaceIfNeeded(ctx, outcome.answer.account, R.string.hh_replace_account_spent) { hhApplyServerLock(outcome.answer) }
+            HHClaimOutcome.NoConnection -> HHUi.message.value = ctx.getString(R.string.hh_claim_no_connection)
+            HHClaimOutcome.BadCert -> HHUi.message.value = ctx.getString(R.string.hh_claim_bad_cert)
+            HHClaimOutcome.Used -> HHUi.message.value = ctx.getString(R.string.hh_claim_used)
+            HHClaimOutcome.BadData -> HHUi.message.value = ctx.getString(R.string.hh_claim_bad_data)
+        }
     }
 }
 
-private fun addAccount(ctx: Context, qr: HHAccountQr) {
+private fun replaceIfNeeded(ctx: Context, qr: HHAccountQr, question: Int, newLock: () -> HHLockState) {
+    val aor = HHQr.aor(qr)
+    val existing = UserAgent.ofAor(aor)
+    if (existing == null) { addAccount(ctx, qr, newLock); return }
+    HHUi.confirm.value = ctx.getString(question, aor.removePrefix("sip:")) to {
+        existing.remove()
+        Api.ua_destroy(existing.uap)
+        addAccount(ctx, qr, newLock)
+    }
+}
+
+private fun addAccount(ctx: Context, qr: HHAccountQr, newLock: () -> HHLockState) {
     val uap = UserAgent.uaAlloc(HHQr.accountLine(qr))
     if (uap == 0L) { HHUi.message.value = ctx.getString(R.string.account_allocation_failure); return }
     val ua = UserAgent(uap)
@@ -181,7 +205,7 @@ private fun addAccount(ctx: Context, qr: HHAccountQr) {
     ua.account.checkOrigin = true
     Account.saveAccounts()
     ua.reRegister()
-    HHStaff.save(hhApplyQrLock(HHStaff.state(), qr))
+    HHStaff.save(newLock())
     Toast.makeText(ctx, ctx.getString(R.string.hh_account_added, HHQr.aor(qr).removePrefix("sip:")), Toast.LENGTH_LONG).show()
 }
 

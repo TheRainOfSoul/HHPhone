@@ -10,6 +10,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="hhphone" android:host="add" />
+                <data android:scheme="hhphone" android:host="claim" />
             </intent-filter>
         </activity>
         <activity

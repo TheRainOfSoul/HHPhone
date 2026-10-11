@@ -20,4 +20,10 @@
     <string name="hh_no_password">В учётной записи нет сохранённого пароля — QR создать нельзя.</string>
     <string name="hh_need_pin_digits">Введите PIN из 4–8 цифр</string>
     <string name="hh_qr_unsupported">Эту учётную запись нельзя передать по QR (неподдерживаемые символы в логине, пароле или нике).</string>
+    <string name="hh_claiming">Получаю учётную запись с АТС…</string>
+    <string name="hh_claim_no_connection">Нет связи с АТС. QR не потрачен — попробуйте снова.</string>
+    <string name="hh_claim_bad_cert">Сервер АТС не прошёл проверку безопасности.</string>
+    <string name="hh_claim_used">Этот QR уже использован или отозван.</string>
+    <string name="hh_claim_bad_data">АТС вернула неверные данные учётной записи.</string>
+    <string name="hh_replace_account_spent">Учётная запись %1$s уже есть. Заменить? QR в любом случае уже потрачен.</string>
 </resources>
