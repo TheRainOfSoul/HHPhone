@@ -2,6 +2,7 @@
 
 SIP-звонилка для Android: HHPBX и любые SIP-АТС. Голос и видео, несколько учёток, TLS/SRTP.
 Языки: русский, армянский, английский. Android 9+.
+Учётки сотрудникам — по QR с блокировкой PIN (`docs/qr.md`).
 
 Основан на [baresip+](https://github.com/juha-h/baresip-studio/tree/video) (TutPro Inc., BSD 3-Clause)
 и библиотеке [baresip](https://github.com/baresip/baresip). Нативные библиотеки включают GPL-компоненты

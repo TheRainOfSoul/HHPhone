@@ -8,6 +8,7 @@
    `fs_cli -x "originate {origination_caller_id_number=101}user/100@192.168.109.132 &park()"` — уведомление «is calling», ответ, сброс с телефона.
 5. Исходящий на `*9196` (эхо), видеовызов на `*9196` — на экране эхо камеры.
 6. Языки: `adb shell cmd locale set-app-locales am.dgsolutions.hhphone --locales hy|ru|en`; при системном языке не из трёх — русский.
+7. QR: ссылка через `adb shell am start -a android.intent.action.VIEW -d 'hhphone://add?c=…'` (сборка ссылки — план 2, Task 3 Step 5); блокировка и «Администратор» — план 2, Task 4 Step 3.
 
 ### Особенности стенда (не ошибки приложения)
 - **Эмулятор за двойным NAT** (10.0.2.16 → 192.168.109.1). АТС не видит NAT (источник из её локальной сети) и шлёт INVITE на 10.0.2.16 —
