@@ -9,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.QrCodeScanner
-import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -98,6 +97,7 @@ object HHUi {
     val confirm = MutableStateFlow<Pair<String, () -> Unit>?>(null)
     val update = MutableStateFlow<HHLatest?>(null)
     val downloading = MutableStateFlow<Int?>(null)
+    val mainAction = MutableStateFlow<HHMainAction?>(null)   // из «Обслуживания» в «Настройках» на главный экран
 }
 
 /** Наши диалоги поверх любого экрана; вызывается один раз в MainActivity после NavHost. */
@@ -277,17 +277,15 @@ fun hhMenu(items: List<MenuItem>, hidden: Set<String>): List<MenuItem> {
     val addByQr = MenuItem(stringResource(R.string.hh_add_by_qr), Icons.Outlined.QrCodeScanner)
     val adminItem = MenuItem(stringResource(R.string.hh_admin), Icons.Outlined.AdminPanelSettings)
     val unlockItem = MenuItem(stringResource(R.string.hh_unlock_device), Icons.Outlined.LockOpen)
-    val updates = MenuItem(stringResource(R.string.hh_check_updates), Icons.Outlined.SystemUpdate)
     return when {
-        restricted -> listOf(addByQr) + items.filter { it.text !in hidden } + updates + adminItem
-        admin -> listOf(addByQr) + items + updates + unlockItem
-        else -> listOf(addByQr) + items + updates
+        restricted -> listOf(addByQr) + items.filter { it.text !in hidden } + adminItem
+        admin -> listOf(addByQr) + items + unlockItem
+        else -> listOf(addByQr) + items
     }
 }
 
 fun hhMenuClick(ctx: Context, item: String): Boolean = when (item) {
     ctx.getString(R.string.hh_add_by_qr) -> { HHProvisioning.requestScan(); true }
-    ctx.getString(R.string.hh_check_updates) -> { HHProvisioning.checkUpdate(ctx, manual = true); true }
     ctx.getString(R.string.hh_admin) -> { HHUi.pinPrompt.value = HHPinPrompt { HHStaff.setAdminSession(true) }; true }
     ctx.getString(R.string.hh_unlock_device) -> {
         HHStaff.save(HHLockState()); HHStaff.setAdminSession(false)

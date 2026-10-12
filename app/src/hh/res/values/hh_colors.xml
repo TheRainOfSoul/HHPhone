@@ -3,4 +3,7 @@
     <color name="ic_launcher_background">#7A0C2A</color>
     <color name="colorPrimary">#7A0C2A</color>
     <color name="colorSecondary">#424242</color>
+    <!-- кнопки звонка/отбоя: зелёный и красный HHDesign (белый значок на них читается в обеих темах) -->
+    <color name="colorTrafficGreen">#107C10</color>
+    <color name="colorTrafficRed">#C50F1F</color>
 </resources>

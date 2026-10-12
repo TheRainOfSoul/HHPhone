@@ -105,7 +105,7 @@ private fun CallDetailsScreen(navController: NavController, callRow: CallRow) {
                         )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
+                        containerColor = hhHeader,
                         navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary,
                     ),

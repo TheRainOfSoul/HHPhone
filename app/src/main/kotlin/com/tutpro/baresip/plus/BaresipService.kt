@@ -993,14 +993,7 @@ class BaresipService: Service() {
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        val currentNightMode = newConfig.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        when (currentNightMode) {
-            Configuration.UI_MODE_NIGHT_NO ->
-                darkTheme.value = Preferences(this).displayTheme == AppCompatDelegate.MODE_NIGHT_YES
-            Configuration.UI_MODE_NIGHT_YES ->
-                darkTheme.value = true
-        }
+        super.onConfigurationChanged(newConfig)   // тему «как на телефоне» Compose отслеживает сам
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -3711,8 +3704,8 @@ class BaresipService: Service() {
         val androidContacts = mutableStateOf(emptyList<Contact.AndroidContact>())
         val contactNames = mutableStateOf(emptyList<String>())
 
-        val darkTheme = mutableStateOf(false)
-        val dynamicColors = mutableStateOf(false)
+        // Preferences.displayTheme: MODE_NIGHT_FOLLOW_SYSTEM (как на телефоне) / MODE_NIGHT_NO / MODE_NIGHT_YES
+        val themeMode = mutableStateOf(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
         var messages by mutableStateOf(emptyList<Message>())
         val messageUpdate = MutableLiveData<Long>()
         val registrationUpdate = MutableLiveData<Long>()

@@ -75,7 +75,7 @@ fun AccountsScreen(navController: NavController) {
                 TopAppBar(
                     title = { Text(text = stringResource(R.string.accounts), fontWeight = FontWeight.Bold) },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
+                        containerColor = hhHeader,
                         navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary,
                     ),

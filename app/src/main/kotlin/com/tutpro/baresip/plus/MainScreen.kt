@@ -476,7 +476,7 @@ fun DefaultLayout(ctx: Context, navController: NavController, viewModel: ViewMod
                 type = "application/octet-stream"
                 putExtra(
                     Intent.EXTRA_TITLE,
-                    "baresip+_" + SimpleDateFormat(
+                    "hhphone_" + SimpleDateFormat(
                         "yyyy_MM_dd_HH_mm_ss",
                         Locale.getDefault()
                     ).format(Date())
@@ -558,7 +558,7 @@ fun DefaultLayout(ctx: Context, navController: NavController, viewModel: ViewMod
                 type = "text/plain"
                 putExtra(
                     Intent.EXTRA_TITLE,
-                    "baresip+_logcat_" + SimpleDateFormat(
+                    "hhphone_log_" + SimpleDateFormat(
                         "yyyy_MM_dd_HH_mm_ss",
                         Locale.getDefault()
                     ).format(Date())
@@ -572,6 +572,18 @@ fun DefaultLayout(ctx: Context, navController: NavController, viewModel: ViewMod
         }
     }
 
+    // «Обслуживание» в «Настройках» просит главный экран: лаунчеры выбора файла живут здесь
+    val mainAction by HHUi.mainAction.collectAsState()
+    LaunchedEffect(mainAction) {
+        when (mainAction) {
+            HHMainAction.BACKUP -> launchBackupRequest()
+            HHMainAction.RESTORE -> launchRestoreRequest()
+            HHMainAction.LOGCAT -> launchLogcatRequest()
+            null -> return@LaunchedEffect
+        }
+        HHUi.mainAction.value = null
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize().imePadding(),
         containerColor = MaterialTheme.colorScheme.background,
@@ -581,10 +593,6 @@ fun DefaultLayout(ctx: Context, navController: NavController, viewModel: ViewMod
                 TopAppBar(
                     viewModel = viewModel,
                     navController = navController,
-                    onBackupClick = { launchBackupRequest() },
-                    onRestoreClick = { launchRestoreRequest() },
-                    onLogcatClick = { launchLogcatRequest() },
-                    onRestartClick = onRestartClick,
                     onQuitClick = onQuitClick
                 )
             }
@@ -599,10 +607,6 @@ fun DefaultLayout(ctx: Context, navController: NavController, viewModel: ViewMod
 private fun TopAppBar(
     viewModel: ViewModel,
     navController: NavController,
-    onBackupClick: () -> Unit,
-    onRestoreClick: () -> Unit,
-    onLogcatClick: () -> Unit,
-    onRestartClick: () -> Unit,
     onQuitClick: () -> Unit
 ) {
     val ctx = LocalContext.current
@@ -614,13 +618,8 @@ private fun TopAppBar(
     val isSpeakerOn by viewModel.isSpeakerOn.collectAsState()
     var menuExpanded by remember { mutableStateOf(false) }
 
-    val about = stringResource(R.string.about)
     val settings = stringResource(R.string.configuration)
     val accounts = stringResource(R.string.accounts)
-    val backup = stringResource(R.string.backup)
-    val restore = stringResource(R.string.restore)
-    val logcat = stringResource(R.string.logcat)
-    val restart = stringResource(R.string.restart)
     val quit = stringResource(R.string.quit)
 
     TopAppBar(
@@ -632,7 +631,7 @@ private fun TopAppBar(
             )
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary,
+            containerColor = hhHeader,
             titleContentColor = MaterialTheme.colorScheme.onPrimary,
             actionIconContentColor = MaterialTheme.colorScheme.onPrimary
         ),
@@ -769,28 +768,19 @@ private fun TopAppBar(
             DropdownMenu(
                 expanded = menuExpanded,
                 onDismissRequest = { menuExpanded = false },
-                menuItems = hhMenu(listOfNotNull(
-                    MenuItem(about, Icons.Outlined.Info),
-                    MenuItem(settings, Icons.Outlined.Settings),
+                // редкие действия (обновления, бэкап, журнал, перезапуск, «О приложении») — в «Настройках», раздел «Обслуживание»
+                menuItems = hhMenu(listOf(
                     MenuItem(accounts, Icons.Outlined.ManageAccounts),
-                    MenuItem(backup, Icons.Outlined.Upload),
-                    MenuItem(restore, Icons.Outlined.Download),
-                    if (VERSION.SDK_INT >= 29) MenuItem(logcat, Icons.AutoMirrored.Outlined.ReceiptLong) else null,
-                    MenuItem(restart, Icons.Outlined.RestartAlt),
+                    MenuItem(settings, Icons.Outlined.Settings),
                     MenuItem(quit, Icons.AutoMirrored.Filled.Logout)
-                ), hidden = setOf(settings, accounts, backup, restore, logcat, quit)),
+                ), hidden = setOf(settings, accounts, quit)),
                 onItemClick = { selectedItem ->
                     menuExpanded = false
                     if (hhMenuClick(ctx, selectedItem)) return@DropdownMenu
                     if (checkLockedAndToast(ctx)) return@DropdownMenu
                     when (selectedItem) {
-                        about -> { navController.navigate("about") }
                         settings -> { navController.navigate("settings") }
                         accounts -> { navController.navigate("accounts") }
-                        backup -> onBackupClick()
-                        restore -> onRestoreClick()
-                        logcat -> onLogcatClick()
-                        restart -> onRestartClick()
                         quit -> onQuitClick()
                     }
                 }

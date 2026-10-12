@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#C8445F</color>
+    <color name="colorPrimary">#E0607A</color>
+    <!-- кнопки звонка/отбоя: зелёный и красный HHDesign (белый значок на них читается в обеих темах) -->
+    <color name="colorTrafficGreen">#107C10</color>
+    <color name="colorTrafficRed">#C50F1F</color>
 </resources>

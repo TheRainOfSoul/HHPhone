@@ -172,7 +172,7 @@ private fun SettingsScreen(
                         Text(text = stringResource(R.string.configuration), fontWeight = FontWeight.Bold)
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
+                        containerColor = hhHeader,
                         navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary,
                         actionIconContentColor = MaterialTheme.colorScheme.onPrimary
@@ -798,6 +798,7 @@ private fun SettingsContent(
 
     @Composable
     fun VideoSize() {
+        if (Config.videoSizes.isEmpty()) return   // камера не дала размеров (нет камеры/разрешения): было падение настроек
         Row(
             Modifier.fillMaxWidth().padding(top = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -828,7 +829,7 @@ private fun SettingsContent(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.clickable { isDropDownExpanded.value = true }
                 ) {
-                    Text(text = frameSizes[itemPosition.intValue])
+                    Text(text = frameSizes.getOrElse(itemPosition.intValue) { videoSize })
                     Icon(
                         imageVector = Icons.Filled.ArrowDropDown,
                         contentDescription = null,
@@ -936,56 +937,61 @@ private fun SettingsContent(
     }
 
     @Composable
-    fun DarkTheme() {
-        val darkThemeTitle = stringResource(R.string.dark_theme)
-        val darkThemeHelp = stringResource(R.string.dark_theme_help)
+    fun ThemeMode() {
+        val themeTitle = stringResource(R.string.hh_theme)
+        val themeHelp = stringResource(R.string.hh_theme_help)
         Row(
             Modifier.fillMaxWidth().padding(end = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-            Text(text = darkThemeTitle,
+            Text(text = themeTitle,
                 modifier = Modifier
                     .weight(1f)
                     .clickable {
-                        alertTitle.value = darkThemeTitle
-                        alertMessage.value = darkThemeHelp
+                        alertTitle.value = themeTitle
+                        alertMessage.value = themeHelp
                         showAlert.value = true
                     },
                 fontSize = 18.sp
             )
-            val darkTheme by viewModel.darkTheme.collectAsState()
-            Switch(
-                checked = darkTheme,
-                onCheckedChange = { viewModel.darkTheme.value = it }
-            )
-        }
-    }
-
-    @Composable
-    fun DynamicColors() {
-        val dynamicColorsTitle = stringResource(R.string.dynamic_colors)
-        val dynamicColorsHelp = stringResource(R.string.dynamic_colors_help)
-        Row(
-            Modifier.fillMaxWidth().padding(end = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
-        ) {
-            Text(text = dynamicColorsTitle,
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable {
-                        alertTitle.value = dynamicColorsTitle
-                        alertMessage.value = dynamicColorsHelp
-                        showAlert.value = true
-                    },
-                fontSize = 18.sp
-            )
-            val dynamicColors by viewModel.dynamicColors.collectAsState()
-            Switch(
-                checked = dynamicColors,
-                onCheckedChange = { viewModel.dynamicColors.value = it }
-            )
+            val isDropDownExpanded = remember { mutableStateOf(false) }
+            val modeNames = listOf(stringResource(R.string.hh_theme_system), stringResource(R.string.hh_theme_light),
+                stringResource(R.string.hh_theme_dark))
+            val modeValues = listOf(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM, AppCompatDelegate.MODE_NIGHT_NO,
+                AppCompatDelegate.MODE_NIGHT_YES)
+            val themeMode by viewModel.themeMode.collectAsState()
+            Box {
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { isDropDownExpanded.value = true }
+                ) {
+                    Text(text = modeNames[modeValues.indexOf(themeMode).coerceAtLeast(0)])
+                    Icon(
+                        imageVector = Icons.Filled.ArrowDropDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = isDropDownExpanded.value,
+                    onDismissRequest = { isDropDownExpanded.value = false },
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    modeNames.forEachIndexed { index, name ->
+                        DropdownMenuItem(
+                            text = { Text(text = name) },
+                            onClick = {
+                                isDropDownExpanded.value = false
+                                viewModel.themeMode.value = modeValues[index]
+                            })
+                        if (index < modeNames.size - 1)
+                            HorizontalDivider(thickness = 1.dp)
+                    }
+                }
+            }
         }
     }
 
@@ -1418,14 +1424,14 @@ private fun SettingsContent(
         }
         else
             BatteryOptimizations()
-        DarkTheme()
-        if (VERSION.SDK_INT >= 31) DynamicColors()
+        ThemeMode()
         ColorBlind()
         ProximitySensing()
         Debug()
         val debug by viewModel.debug.collectAsState()
         if (debug) SipTrace()
         Reset(onRestartApp)
+        HHMaintenance(navController, onRestartApp)
     }
 }
 
@@ -1554,23 +1560,16 @@ private fun checkOnClick(ctx: Context, viewModel: SettingsViewModel): Boolean {
         viewModel.restart = true
     }
 
-    val darkTheme = viewModel.darkTheme.value
-    val newDisplayTheme = if (darkTheme)
-        AppCompatDelegate.MODE_NIGHT_YES
-    else
-        AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-    if (Preferences(ctx).displayTheme == AppCompatDelegate.MODE_NIGHT_YES != darkTheme) {
-        Preferences(ctx).displayTheme = newDisplayTheme
-        BaresipService.darkTheme.value = darkTheme
-        AppCompatDelegate.setDefaultNightMode(newDisplayTheme)
-        Config.replaceVariable("dark_theme", if (darkTheme) "yes" else "no")
-        viewModel.save = true
-    }
-
-    val dynamicColors = viewModel.dynamicColors.value
-    if (BaresipService.dynamicColors.value != dynamicColors) {
-        BaresipService.dynamicColors.value = dynamicColors
-        Config.replaceVariable("dynamic_colors", if (dynamicColors) "yes" else "no")
+    val themeMode = viewModel.themeMode.value
+    if (Preferences(ctx).displayTheme != themeMode) {
+        Preferences(ctx).displayTheme = themeMode
+        BaresipService.themeMode.value = themeMode
+        AppCompatDelegate.setDefaultNightMode(themeMode)
+        Config.replaceVariable("dark_theme", when (themeMode) {
+            AppCompatDelegate.MODE_NIGHT_YES -> "yes"
+            AppCompatDelegate.MODE_NIGHT_NO -> "light"
+            else -> "no"
+        })
         viewModel.save = true
     }
 

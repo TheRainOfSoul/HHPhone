@@ -1620,12 +1620,6 @@ object Utils {
         }
     }
 
-    fun isThemeDark(ctx: Context) : Boolean {
-        return Preferences(ctx).displayTheme == AppCompatDelegate.MODE_NIGHT_YES ||
-                ctx.resources?.configuration?.uiMode?.and(Configuration.UI_MODE_NIGHT_MASK) ==
-                Configuration.UI_MODE_NIGHT_YES
-    }
-
     fun aecAgcNsCheck() {
         val sessionId = Api.AAudio_open_stream()
         if (sessionId <= 0) {

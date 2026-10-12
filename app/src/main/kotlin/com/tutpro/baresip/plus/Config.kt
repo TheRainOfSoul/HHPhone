@@ -152,26 +152,16 @@ object Config {
         else
             "${config}sip_cuser_random yes\n"
 
+        // dark_theme: yes — тёмная, light — светлая, иначе как на телефоне; динамических цветов нет (только HHDesign)
         val darkTheme = previousVariable("dark_theme")
-        Preferences(ctx).displayTheme = if (darkTheme == "yes") {
-            config = "${config}dark_theme yes\n"
-            BaresipService.darkTheme.value = true
-            AppCompatDelegate.MODE_NIGHT_YES
+        Preferences(ctx).displayTheme = when (darkTheme) {
+            "yes" -> AppCompatDelegate.MODE_NIGHT_YES
+            "light" -> AppCompatDelegate.MODE_NIGHT_NO
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
         }
-        else {
-            BaresipService.darkTheme.value = false
-            AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        }
-
-        val dynamicColors = previousVariable("dynamic_colors")
-        BaresipService.dynamicColors.value = if (dynamicColors == "yes") {
-            config = "${config}dynamic_colors yes\n"
-            true
-        }
-        else {
-            AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-            false
-        }
+        if (darkTheme == "yes" || darkTheme == "light")
+            config = "${config}dark_theme $darkTheme\n"
+        BaresipService.themeMode.value = Preferences(ctx).displayTheme
 
         val colorblind = previousVariable("colorblind")
         config = if (colorblind != "")

@@ -74,7 +74,7 @@ fun AboutScreen(onBack: () -> Unit) {
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
+                        containerColor = hhHeader,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary,
                         navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
                     ),

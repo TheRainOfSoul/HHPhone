@@ -38,4 +38,15 @@
     <string name="hh_confirm_add">Добавить на этот телефон учётную запись %1$s?</string>
     <string name="hh_confirm_add_lock">Добавить на этот телефон учётную запись %1$s? Телефон будет заблокирован PIN-кодом администратора.</string>
     <string name="hh_confirm_claim">Получить учётную запись с АТС %1$s? Подтверждайте, только если этот QR дал вам администратор.</string>
+    <string name="hh_theme">Тема</string>
+    <string name="hh_theme_help">Светлая, тёмная или как на телефоне</string>
+    <string name="hh_theme_system">Как на телефоне</string>
+    <string name="hh_theme_light">Светлая</string>
+    <string name="hh_theme_dark">Тёмная</string>
+    <string name="hh_maintenance">Обслуживание</string>
+    <string name="accounts">Учётные записи</string>
+    <string name="logcat">Журнал</string>
+    <string name="restart">Перезапуск</string>
+    <string name="colorblind">Для дальтоников</string>
+    <string name="default_messaging_app">Приложение для SMS по умолчанию</string>
 </resources>

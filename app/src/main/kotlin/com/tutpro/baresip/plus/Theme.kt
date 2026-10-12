@@ -9,35 +9,38 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+
+/** Цвет шапок экранов (текст на них — onPrimary, белый): светлая #7A0C2A, тёмная #3D0717. */
+val hhHeader: Color
+    @Composable @ReadOnlyComposable
+    get() = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) HeaderDark else Header
 
 @Composable
 fun AppTheme(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    val useDarkTheme by remember { BaresipService.darkTheme }
-    val useDynamicColors by remember { BaresipService.dynamicColors }
-
-    val useActualDynamicColors = useDynamicColors && VERSION.SDK_INT >= 31
-    val isDark = useDarkTheme || isSystemInDarkTheme()
+    val themeMode by remember { BaresipService.themeMode }
+    val isDark = when (themeMode) {
+        AppCompatDelegate.MODE_NIGHT_YES -> true
+        AppCompatDelegate.MODE_NIGHT_NO -> false
+        else -> isSystemInDarkTheme()
+    }
 
     val colorScheme = when {
-        useActualDynamicColors ->
-            if (isDark)
-                dynamicDarkColorScheme(context)
-            else
-                dynamicLightColorScheme(context)
         isDark -> darkColorScheme(
             primary = PrimaryDark,
             onPrimary = OnPrimaryDark,

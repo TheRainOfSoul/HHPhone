@@ -34,7 +34,9 @@ val SurfaceContainerHighest = Color(0xFFE0E0E0)
 val Outline = Color(0xFF8A8A8A)
 val OutlineVariant = Color(0xFFD1D1D1)
 
-val PrimaryDark = Color(0xFFC8445F)  // один primary и для шапок, и для текста: белый на нём 4.7:1, он на фоне 3.5:1
+val PrimaryDark = Color(0xFFE0607A)  // HHDesign --colorBrandForeground1: акценты, переключатели, текст-ссылки; шапки — HeaderDark
+val Header = Color(0xFF7A0C2A)       // шапки экранов: --hh-sidebar HHDesign (как меню HHPBX)
+val HeaderDark = Color(0xFF3D0717)
 val OnPrimaryDark = Color(0xFFFFFFFF)
 val PrimaryContainerDark = Color(0xFF9E1B3A)
 val OnPrimaryContainerDark = Color(0xFFFFFFFF)

@@ -29,8 +29,7 @@ class SettingsViewModel: ViewModel() {
     val videoSize = MutableStateFlow("")
     val videoFps = MutableStateFlow("")
     val batteryOptimizations = MutableStateFlow(false)
-    val darkTheme = MutableStateFlow(false)
-    val dynamicColors = MutableStateFlow(false)
+    val themeMode = MutableStateFlow(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
     val colorblind = MutableStateFlow(false)
     val proximitySensing = MutableStateFlow(false)
     val defaultDialer = MutableStateFlow(false)
@@ -75,9 +74,7 @@ class SettingsViewModel: ViewModel() {
         val powerManager = ctx.getSystemService(POWER_SERVICE) as PowerManager
         batteryOptimizations.value = !powerManager.isIgnoringBatteryOptimizations(ctx.packageName)
 
-        darkTheme.value = Preferences(ctx).displayTheme == AppCompatDelegate.MODE_NIGHT_YES
-
-        dynamicColors.value = BaresipService.dynamicColors.value
+        themeMode.value = Preferences(ctx).displayTheme
 
         colorblind.value = Config.variable("colorblind") == "yes"
 

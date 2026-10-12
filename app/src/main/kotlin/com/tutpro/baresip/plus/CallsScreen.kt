@@ -172,7 +172,7 @@ private fun TopAppBar(navController: NavController, ua: UserAgent, callHistory: 
             )
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary,
+            containerColor = hhHeader,
             navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
             titleContentColor = MaterialTheme.colorScheme.onPrimary,
             actionIconContentColor = MaterialTheme.colorScheme.onPrimary
