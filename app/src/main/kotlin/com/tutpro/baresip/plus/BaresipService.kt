@@ -981,6 +981,8 @@ class BaresipService: Service() {
 
             if (!aecAvailable) toast(getString(R.string.no_aec), Toast.LENGTH_LONG)
 
+            // запуск от push или SIM-звонка идёт без MainActivity, где камеры проверялись, — проверить здесь
+            if (!supportedCameras) supportedCameras = Utils.supportedCameras(applicationContext).isNotEmpty()
             if (!supportedCameras) toast(getString(R.string.no_cameras), Toast.LENGTH_LONG)
 
             if (VERSION.SDK_INT >= 29) {
