@@ -2804,7 +2804,7 @@ fun VideoLayout(ctx: Context, viewModel: ViewModel, onCloseVideo: () -> Unit) {
     }
 }
 
-private fun spinToAor(viewModel: ViewModel, aor: String, call: Call? = null) {
+internal fun spinToAor(viewModel: ViewModel, aor: String, call: Call? = null) {
     val aorChanged = aor != viewModel.selectedAor.value
     val callChanged = call != viewModel.focusedCall.value
     val statusChanged = call != null && call.status.value != viewModel.focusedCall.value?.status?.value
@@ -2883,7 +2883,7 @@ fun videoClick(ctx: Context, call: Call) {
     showVideoLayout.value = true
 }
 
-private fun makeCall(ctx: Context, viewModel: ViewModel, uriText: String,
+internal fun makeCall(ctx: Context, viewModel: ViewModel, uriText: String,
                      dialerState: ViewModel.DialerState, videoCall: Boolean, onHoldCallp: Long = 0L) {
     val aor = viewModel.selectedAor.value
     val ua = UserAgent.ofAor(aor)!!
@@ -3016,7 +3016,7 @@ private fun makeCall(ctx: Context, viewModel: ViewModel, uriText: String,
     }
 }
 
-private fun answer(ctx: Context, call: Call, videoCall: Boolean) {
+internal fun answer(ctx: Context, call: Call, videoCall: Boolean) {
     Log.d(TAG, "AoR ${call.ua.account.aor} answering call from ${call.callUri.value}")
     if (videoCall) {
         val videoDir = if (Utils.isCameraAvailable(ctx))
@@ -3046,7 +3046,7 @@ private fun reject(call: Call) {
     call.reject()
 }
 
-private fun transfer(ctx: Context, viewModel: ViewModel, ua: UserAgent, uriText: String, attended: Boolean) {
+internal fun transfer(ctx: Context, viewModel: ViewModel, ua: UserAgent, uriText: String, attended: Boolean) {
     val uri = if (Utils.isTelUri(uriText))
         Utils.telToSip(uriText, ua.account)
     else
