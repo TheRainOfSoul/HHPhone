@@ -1302,7 +1302,9 @@ object Utils {
                     PackageManager.PERMISSION_GRANTED &&
                 (roleManager.isRoleHeld(RoleManager.ROLE_DIALER) || roleManager.isRoleHeld(RoleManager.ROLE_SMS))) {
             val tm = ctx.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-            val preferredHandle: PhoneAccountHandle? = tm.userSelectedOutgoingPhoneAccount
+            // с ролью SMS без роли звонилки Android 16 требует READ_PRIVILEGED_PHONE_STATE — падение при каждом запуске
+            val preferredHandle: PhoneAccountHandle? =
+                try { tm.userSelectedOutgoingPhoneAccount } catch (e: SecurityException) { Log.w(TAG, "userSelectedOutgoingPhoneAccount: $e"); null }
             if (preferredHandle != null) return preferredHandle
             val baresipHandle = BaresipService.getPhoneAccountHandle(ctx)
             val phoneAccounts = tm.callCapablePhoneAccounts.filter { it != baresipHandle }
