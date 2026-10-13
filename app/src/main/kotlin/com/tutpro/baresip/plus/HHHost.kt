@@ -266,7 +266,16 @@ private fun addAccount(ctx: Context, qr: HHAccountQr, station: Pair<String, Stri
     ua.add()
     ua.account.checkOrigin = true
     Account.saveAccounts()
-    station?.let { (server, spki) -> HHPush.remember(ua.account.aor, server, spki); Thread { HHPush.sync() }.start() }
+    station?.let { (server, spki) ->
+        HHPush.remember(ua.account.aor, server, spki)
+        Thread { HHPush.sync() }.start()
+        // push на Samsung и др. опаздывает под оптимизацией батареи: системный запрос «разрешить работу в фоне» (отказ не мешает)
+        val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        if (!pm.isIgnoringBatteryOptimizations(ctx.packageName)) try {
+            ctx.startActivity(Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, android.net.Uri.parse("package:${ctx.packageName}"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (_: android.content.ActivityNotFoundException) {}
+    }
     ua.reRegister()
     HHStaff.save(newLock())
     Toast.makeText(ctx, ctx.getString(R.string.hh_account_added, HHQr.aor(qr).removePrefix("sip:")), Toast.LENGTH_LONG).show()
