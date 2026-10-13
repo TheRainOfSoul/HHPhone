@@ -11,6 +11,7 @@ class BaresipApp : Application() {
         HHLocale.apply(this)
         HHStaff.init(this)
         HHPush.init(this)
+        HHColleagues.init(this)
 
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->

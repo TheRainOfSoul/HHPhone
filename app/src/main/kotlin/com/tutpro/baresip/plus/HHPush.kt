@@ -26,7 +26,10 @@ object HHPush {
     fun remember(aor: String, server: String, spki: String) =
         prefs.edit { putString("s|$aor", "$server\n$spki"); remove("ok|$aor") }
 
-    private fun station(aor: String): Pair<String, String>? =
+    /** Учётки станций HHPBX (есть адрес и SPKI) — для коллег. */
+    fun stations(): List<String> = prefs.all.keys.filter { it.startsWith("s|") }.map { it.removePrefix("s|") }
+
+    internal fun station(aor: String): Pair<String, String>? =
         prefs.getString("s|$aor", null)?.split("\n")?.takeIf { it.size == 2 }?.let { it[0] to it[1] }
 
     fun isPush(aor: String): Boolean = token.let { it != null && prefs.getString("ok|$aor", null) == it }
