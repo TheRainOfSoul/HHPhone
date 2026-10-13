@@ -16,6 +16,7 @@
     <string name="hh_qr_invalid">QR-ը վնասված է կամ պարունակում է սխալ տվյալներ։</string>
     <string name="hh_qr_newer">QR-ը HHPhone-ի ավելի նոր տարբերակից է։ Թարմացրեք հավելվածը։</string>
     <string name="hh_account_added">%1$s հաշիվն ավելացված է</string>
+    <string name="hh_fsi_needed">Կողպված էկրանին զանգեր ընդունելու համար հաջորդ էկրանին թույլատրեք HHPhone-ին լիաէկրան ծանուցումներ։</string>
     <string name="hh_replace_account">%1$s հաշիվն արդեն կա։ Փոխարինե՞լ։</string>
     <string name="hh_no_password">Հաշվում պահված գաղտնաբառ չկա, QR ստեղծել հնարավոր չէ։</string>
     <string name="hh_need_pin_digits">Մուտքագրեք 4–8 թվանշանից PIN</string>

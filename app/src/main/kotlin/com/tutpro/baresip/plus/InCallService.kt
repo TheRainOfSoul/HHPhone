@@ -28,14 +28,18 @@ class InCallService : InCallService() {
             Log.d(TAG, "InCallService: Identified as PSTN call from $handle")
             val aor = call.details.intentExtras?.getString("aor")
 
+            if (BaresipService.isNativeReady) {
+                BaresipService.instance?.handleExternalCall(call, aor)
+                return
+            }
+            // HHPhone спал (push) или ещё стартует: звонок разберёт started()
+            synchronized(pending) { pending.add(call to aor) }
             if (BaresipService.instance == null) {
                 Log.i(TAG, "InCallService: BaresipService not running, starting it")
                 val intent = Intent(this, BaresipService::class.java)
                 intent.action = "Start"
                 androidx.core.content.ContextCompat.startForegroundService(this, intent)
             }
-
-            BaresipService.instance?.handleExternalCall(call, aor)
         }
     }
 
@@ -52,6 +56,7 @@ class InCallService : InCallService() {
 
     companion object {
         private const val TAG = "Baresip"
+        val pending = mutableListOf<Pair<Call, String?>>()
         private var _instance = WeakReference<InCallService>(null)
         var instance: InCallService?
             get() = _instance.get()

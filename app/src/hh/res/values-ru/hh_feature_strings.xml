@@ -16,6 +16,7 @@
     <string name="hh_qr_invalid">QR повреждён или содержит неверные данные.</string>
     <string name="hh_qr_newer">QR от более новой версии HHPhone. Обновите приложение.</string>
     <string name="hh_account_added">Учётная запись %1$s добавлена</string>
+    <string name="hh_fsi_needed">Чтобы принимать звонки на заблокированном экране, разрешите HHPhone полноэкранные уведомления на следующем экране.</string>
     <string name="hh_replace_account">Учётная запись %1$s уже есть. Заменить?</string>
     <string name="hh_no_password">В учётной записи нет сохранённого пароля — QR создать нельзя.</string>
     <string name="hh_need_pin_digits">Введите PIN из 4–8 цифр</string>

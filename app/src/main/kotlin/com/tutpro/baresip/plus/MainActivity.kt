@@ -30,11 +30,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.Observer
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import kotlin.system.exitProcess
+
+private var fsiAsked = false   // спрашиваем раз за запуск процесса
 
 class MainActivity : ComponentActivity() {
 
@@ -359,6 +362,15 @@ class MainActivity : ComponentActivity() {
             val baresipService = Intent(this, BaresipService::class.java)
             baresipService.action = "Check Roles"
             startService(baresipService)
+        }
+        // без «полноэкранных уведомлений» звонок на заблокированном экране не принять (Android 14+, не из Play — запрещено)
+        if (Build.VERSION.SDK_INT >= 34 && !fsiAsked && !nm.canUseFullScreenIntent()) {
+            fsiAsked = true
+            handleDialog(this, getString(R.string.notice), getString(R.string.hh_fsi_needed)) {
+                try {
+                    startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, "package:$packageName".toUri()))
+                } catch (_: android.content.ActivityNotFoundException) {}
+            }
         }
     }
 

@@ -2057,6 +2057,13 @@ class BaresipService: Service() {
                     pendingMessages.clear()
                 }
 
+            synchronized(InCallService.pending) {
+                for ((c, aor) in InCallService.pending)
+                    @Suppress("DEPRECATION")
+                    if (c.state != android.telecom.Call.STATE_DISCONNECTED) handleExternalCall(c, aor)
+                InCallService.pending.clear()
+            }
+
             // Process any calls that arrived while baresip is starting
             pendingCallIntent?.let { intent ->
                 val callUap = intent.getLongExtra("uap", 0L)
