@@ -13,7 +13,7 @@ data class HHLine(val aor: String, val mobile: Boolean, val registered: Boolean)
 object HHUiLogic {
     fun peerKey(uri: String): String {
         val s = uri.removePrefix("sip:").removePrefix("tel:").substringBefore(";").substringBefore("@")
-        return if (s.any { it.isLetter() }) s.lowercase() else s.filter { it.isDigit() || it == '+' }
+        return if (s.any { it.isLetter() }) s else s.filter { it.isDigit() || it == '+' }
     }
 
     fun group(entries: List<HHLogEntry>): List<HHLogGroup> {
@@ -45,6 +45,35 @@ object HHUiLogic {
 
     fun lines(all: List<HHLine>): List<HHLine> =
         all.distinctBy { it.aor }.sortedBy { if (it.mobile) 0 else 1 }
+
+    fun missed(e: HHLogEntry) = e.dir == "in" && e.start == null && !e.rejected
+
+    /**
+     * Куда и что набрать для собеседника журнала/контакта: sip: — только через станцию (лучше preferred, затем с тем же
+     * доменом), полный URI; номер — preferred, иначе SIM, иначе станция. Анонимный/пустой/нет линий — null.
+     */
+    fun dialTarget(peer: String, lines: List<HHLine>, preferredAor: String?): Pair<String, String>? {
+        val p = peer.trim()
+        val user = peerKey(p)
+        if (user.isEmpty() || user.equals("anonymous", true) || user.equals("unknown", true)) return null
+        if (p.startsWith("sip:")) {
+            val uri = p.substringBefore(";")
+            val dom = uri.substringAfter("@", "")
+            val st = lines.filter { !it.mobile }
+            val line = st.firstOrNull { it.aor == preferredAor } ?: st.firstOrNull { it.aor.substringAfter("@") == dom } ?: st.firstOrNull()
+            return line?.let { it.aor to uri }
+        }
+        val line = lines.firstOrNull { it.aor == preferredAor } ?: lines.firstOrNull { it.mobile } ?: lines.firstOrNull()
+        return line?.let { it.aor to user }
+    }
+
+    /** Коллега — только через свою станцию (никогда не через SIM). */
+    fun dialColleague(number: String, stationAor: String, lines: List<HHLine>): Pair<String, String>? =
+        lines.firstOrNull { it.aor == stationAor && !it.mobile }?.let { it.aor to number }
+
+    /** Кнопки вызова: до двух линий — по кнопке; больше — первая и кнопка выбора остальных. */
+    fun callButtons(lines: List<HHLine>): List<List<HHLine>> =
+        if (lines.size <= 2) lines.map { listOf(it) } else listOf(listOf(lines[0]), lines.drop(1))
 
     fun screenFor(callStatuses: List<String>, video: Boolean): String {
         val open = callStatuses.filter { it != "closed" }

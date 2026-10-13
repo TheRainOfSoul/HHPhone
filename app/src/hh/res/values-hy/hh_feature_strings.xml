@@ -77,4 +77,11 @@
     <string name="hh_add_to">Ում զանգել</string>
     <string name="hh_no_chats">Զրույցներ չկան</string>
     <string name="hh_menu">Ընտրացանկ</string>
+    <string name="hh_backspace">Ջնջել</string>
+    <string name="hh_favorite">Ընտրյալ</string>
+    <string name="hh_registered">կապի մեջ է</string>
+    <string name="hh_not_registered">կապ չկա</string>
+    <string name="hh_add_account">Ավելացնել հաշիվ</string>
+    <string name="hh_no_line">Այս համարի համար գիծ չկա</string>
+    <string name="hh_hide_keypad">Թաքցնել ստեղները</string>
 </resources>

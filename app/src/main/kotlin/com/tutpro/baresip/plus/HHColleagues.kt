@@ -44,14 +44,22 @@ object HHColleagues {
                 val c = HHClaim.open(server, spki, "/app/hhphone/directory.php")
                 try {
                     c.outputStream.use { it.write(HHPush.form("user" to user, "domain" to domain, "pass" to pass).toByteArray()) }
-                    if (c.responseCode == 200) c.inputStream.bufferedReader().use { it.readText() } else null
+                    val code = c.responseCode
+                    // станция ответила (и 403/404) — следующий запрос через сутки: не копить неудачи в её лимите (общий IP отеля)
+                    prefs.edit { putLong("t|$aor", now) }
+                    if (code == 200) c.inputStream.bufferedReader().use { it.readText() } else null
                 } finally { c.disconnect() }
             } catch (e: Exception) { Log.w(TAG, "directory.php: ${e.message}"); null }
             // старая HHPBX (404) или ошибка — кэш остаётся
-            if (body != null && HHUiLogic.parseDirectory(body).isNotEmpty())
-                prefs.edit { putString("d|$aor", body); putLong("t|$aor", now) }
+            if (body != null && HHUiLogic.parseDirectory(body).isNotEmpty()) prefs.edit { putString("d|$aor", body) }
         }
         list.value = load()
+    }
+
+    /** Учётка удалена — её коллег больше не показываем. */
+    fun forget(aor: String) {
+        prefs.edit { remove("d|$aor"); remove("t|$aor") }
+        list.value = load().filter { it.aor != aor }
     }
 
     fun isStar(number: String) = number in stars.value

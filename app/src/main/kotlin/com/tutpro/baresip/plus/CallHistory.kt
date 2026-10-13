@@ -32,6 +32,7 @@ class CallHistoryNew(val aor: String, val peerUri: String, val direction: String
             }
         }
         save()
+        HHHistory.bump()   // новый журнал HHPhone перечитывает список
     }
 
     companion object {
@@ -59,6 +60,7 @@ class CallHistoryNew(val aor: String, val peerUri: String, val direction: String
                 }
             }
             save()
+            HHHistory.bump()
         }
 
         fun remove(startTime: GregorianCalendar?, stopTime: GregorianCalendar) {
@@ -73,6 +75,7 @@ class CallHistoryNew(val aor: String, val peerUri: String, val direction: String
                 }
             }
             save()
+            HHHistory.bump()
         }
 
         fun save() {
@@ -100,6 +103,10 @@ class CallHistoryNew(val aor: String, val peerUri: String, val direction: String
         }
 
         fun restore() {
+            try { restoreFile() } finally { HHHistory.bump() }   // экран мог прочитать журнал до загрузки
+        }
+
+        private fun restoreFile() {
             val file = File(BaresipService.filesPath + "/call_history")
             if (file.exists()) {
                 val content = file.readText()

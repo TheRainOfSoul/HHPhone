@@ -77,4 +77,11 @@
     <string name="hh_add_to">Call</string>
     <string name="hh_no_chats">No chats</string>
     <string name="hh_menu">Menu</string>
+    <string name="hh_backspace">Delete</string>
+    <string name="hh_favorite">Favorite</string>
+    <string name="hh_registered">registered</string>
+    <string name="hh_not_registered">not registered</string>
+    <string name="hh_add_account">Add account</string>
+    <string name="hh_no_line">No line for this number</string>
+    <string name="hh_hide_keypad">Hide keypad</string>
 </resources>

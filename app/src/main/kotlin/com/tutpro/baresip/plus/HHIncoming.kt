@@ -45,6 +45,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -111,7 +114,10 @@ private fun HHAnswerSlider(onAnswer: () -> Unit, onReject: () -> Unit) {
     val dark = hhDark()
     val scope = rememberCoroutineScope()
     val x = remember { Animatable(0f) }
-    BoxWithConstraints(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 28.dp).height(72.dp)) {
+    val answer = stringResource(R.string.hh_answer)
+    val decline = stringResource(R.string.hh_decline)
+    BoxWithConstraints(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 28.dp).height(72.dp)
+        .semantics { customActions = listOf(CustomAccessibilityAction(answer) { onAnswer(); true }, CustomAccessibilityAction(decline) { onReject(); true }) }) {
         val half = with(LocalDensity.current) { (maxWidth / 2 - 36.dp).toPx() }
         Row(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(red, red.copy(alpha = 0.25f), green.copy(alpha = 0.25f), green)), RoundedCornerShape(36.dp)),
             verticalAlignment = Alignment.CenterVertically) {

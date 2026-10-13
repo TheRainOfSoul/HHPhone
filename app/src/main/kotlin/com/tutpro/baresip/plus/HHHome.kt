@@ -2,6 +2,9 @@ package com.tutpro.baresip.plus
 
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -144,10 +147,10 @@ private fun lineLabel(ctx: Context, l: HHLine): String =
 
 @Composable
 private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: ViewModel) {
-    val calls by viewModel.calls.collectAsState()
+    val history by HHHistory.version.collectAsState()
     val colleagues by HHColleagues.list.collectAsState()
-    val log = remember(calls.size, colleagues) {
-        HHUiLogic.group(BaresipService.callHistory.map {
+    val log = remember(history, colleagues) {
+        HHUiLogic.group(HHHistory.snapshot().map {
             HHLogEntry(it.peerUri, it.aor, it.direction, it.startTime?.timeInMillis, it.stopTime.timeInMillis, it.rejected)
         })
     }
@@ -164,8 +167,7 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
             }
             items(log, key = { "${it.peer}|${it.last.stop}" }) { g ->
                 HHLogRow(ctx, g) {
-                    val aor = lines.firstOrNull { it.aor == g.aor }?.aor ?: lines.firstOrNull()?.aor ?: return@HHLogRow
-                    HHCalls.dial(ctx, viewModel, aor, HHUiLogic.peerKey(g.peer))
+                    HHUiLogic.dialTarget(g.peer, lines, g.aor)?.let { (aor, n) -> HHCalls.dial(ctx, viewModel, aor, n) }
                 }
                 HorizontalDivider(Modifier.padding(start = 72.dp), color = MaterialTheme.colorScheme.outlineVariant)
             }
@@ -177,7 +179,7 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                         Text(number, Modifier.weight(1f), fontSize = 30.sp, maxLines = 1, overflow = TextOverflow.StartEllipsis,
                             color = MaterialTheme.colorScheme.onSurface)
                         if (number.isNotEmpty()) IconButton(onClick = { number = number.dropLast(1) }) {
-                            Icon(Icons.AutoMirrored.Outlined.Backspace, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(Icons.AutoMirrored.Outlined.Backspace, stringResource(R.string.hh_backspace), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     HHSuggestions(number) { number = it }
@@ -196,21 +198,38 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                     }
                     Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (lines.isEmpty())
-                            Text(stringResource(R.string.hh_no_lines), Modifier.weight(1f).padding(8.dp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-                        lines.take(2).forEach { l ->
-                            Surface(onClick = {
-                                if (!keypad) keypad = true
-                                else if (number.isNotBlank()) { HHCalls.dial(ctx, viewModel, l.aor, number); number = "" }
-                            }, shape = RoundedCornerShape(28.dp), color = green, modifier = Modifier.weight(1f).height(52.dp)) {
-                                Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Call, null, tint = Color.White)
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(lineLabel(ctx, l), color = Color.White, fontWeight = FontWeight.Medium, maxLines = 1)
-                                    if (!l.mobile) {
+                            Surface(onClick = { if (!checkLockedAndToast(ctx)) navController.navigate("accounts") },
+                                shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.weight(1f).height(52.dp)) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(stringResource(R.string.hh_add_account), color = MaterialTheme.colorScheme.onPrimary, maxLines = 1)
+                                }
+                            }
+                        HHUiLogic.callButtons(lines).forEach { group ->
+                            var choose by remember { mutableStateOf(false) }
+                            Box(Modifier.weight(1f)) {
+                                Surface(onClick = {
+                                    if (!keypad) keypad = true
+                                    else if (group.size > 1) choose = true
+                                    else if (number.isNotBlank() && HHCalls.dial(ctx, viewModel, group[0].aor, number)) number = ""
+                                }, shape = RoundedCornerShape(28.dp), color = green, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                                    Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Call, null, tint = Color.White)
                                         Spacer(Modifier.width(6.dp))
-                                        Box(Modifier.size(8.dp).background(if (l.registered) Color.White else Color.White.copy(alpha = 0.35f), CircleShape))
+                                        val l = group[0]
+                                        Text(if (group.size > 1) "HH ▾" else lineLabel(ctx, l), color = Color.White, fontWeight = FontWeight.Medium, maxLines = 1)
+                                        if (group.size == 1 && !l.mobile) {
+                                            Spacer(Modifier.width(6.dp))
+                                            // точка регистрации: цвет + подпись для TalkBack
+                                            Box(Modifier.size(8.dp).background(if (l.registered) Color.White else Color.White.copy(alpha = 0.35f), CircleShape)
+                                                .semantics { contentDescription = ctx.getString(if (l.registered) R.string.hh_registered else R.string.hh_not_registered) })
+                                        }
                                     }
+                                }
+                                CustomElements.DropdownMenu(expanded = choose, onDismissRequest = { choose = false },
+                                    items = group.map { lineLabel(ctx, it) }) { label ->
+                                    choose = false
+                                    group.firstOrNull { lineLabel(ctx, it) == label }?.let { if (HHCalls.dial(ctx, viewModel, it.aor, number)) number = "" }
                                 }
                             }
                         }
@@ -249,7 +268,7 @@ private fun HHSuggestions(number: String, onPick: (String) -> Unit) {
 private fun HHLogRow(ctx: Context, g: HHLogGroup, onClick: () -> Unit) {
     val name = hhName(g.peer)
     val e = g.last
-    val missed = e.dir == "in" && e.start == null
+    val missed = HHUiLogic.missed(e)
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         HHAvatar(name, g.peer, 44.dp)
@@ -284,10 +303,9 @@ private fun HHPeopleTab(ctx: Context, viewModel: ViewModel, favoritesOnly: Boole
     val stars by HHColleagues.stars.collectAsState()
     var q by rememberSaveable { mutableStateOf("") }
     val lines = hhLines()
-    fun call(number: String, station: String?) {
-        val aor = station?.takeIf { s -> lines.any { it.aor == s } } ?: lines.firstOrNull { !HHUiLogic.peerKey(number).startsWith("+") && it.mobile }?.aor
-            ?: lines.firstOrNull()?.aor ?: return
-        HHCalls.dial(ctx, viewModel, aor, number)
+    fun call(target: Pair<String, String>?) {
+        if (target == null) Toast.makeText(ctx, R.string.hh_no_line, Toast.LENGTH_SHORT).show()
+        else HHCalls.dial(ctx, viewModel, target.first, target.second)
     }
     val col = colleagues.filter { (!favoritesOnly || it.number in stars) && (q.isEmpty() || it.name.contains(q, true) || it.number.contains(q)) }
     val con = BaresipService.contacts.filter { (!favoritesOnly || it.favorite()) && (q.isEmpty() || it.name().contains(q, true)) }
@@ -299,13 +317,13 @@ private fun HHPeopleTab(ctx: Context, viewModel: ViewModel, favoritesOnly: Boole
         if (col.isNotEmpty()) item { HHSection(stringResource(R.string.hh_colleagues)) }
         items(col, key = { "c${it.aor}|${it.number}" }) { c ->
             HHPersonRow(c.name.ifBlank { c.number }, "sip:${c.number}@x", c.number, starred = c.number in stars,
-                onStar = { HHColleagues.toggleStar(c.number) }) { call(c.number, c.aor) }
+                onStar = { HHColleagues.toggleStar(c.number) }) { call(HHUiLogic.dialColleague(c.number, c.aor, lines)) }
         }
         if (con.isNotEmpty()) item { HHSection(stringResource(R.string.hh_tab_contacts)) }
         items(con, key = { "p${it.id()}" }) { c ->
             val uri = c.uris().firstOrNull()?.uri ?: return@items
             HHPersonRow(c.name(), uri, c.uris().firstOrNull()?.label?.ifBlank { null } ?: HHUiLogic.peerKey(uri),
-                starred = c.favorite(), onStar = null) { call(HHUiLogic.peerKey(uri), null) }
+                starred = c.favorite(), onStar = null) { call(HHUiLogic.dialTarget(uri, lines, null)) }
         }
     }
 }
@@ -326,7 +344,7 @@ private fun HHPersonRow(name: String, peer: String, sub: String, starred: Boolea
             Text(sub, fontSize = 13.sp, maxLines = 1, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (onStar != null) IconButton(onClick = onStar) {
-            Icon(if (starred) Icons.Filled.Star else Icons.Outlined.StarOutline, null,
+            Icon(if (starred) Icons.Filled.Star else Icons.Outlined.StarOutline, stringResource(R.string.hh_favorite),
                 tint = if (starred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

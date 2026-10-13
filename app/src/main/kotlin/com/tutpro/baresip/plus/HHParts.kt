@@ -29,6 +29,14 @@ import coil.compose.AsyncImage
 import java.text.DateFormat
 import java.util.Date
 
+/** Версия журнала звонков: CallHistoryNew — обычный ArrayList, Compose его изменений не видит. */
+object HHHistory {
+    val version = kotlinx.coroutines.flow.MutableStateFlow(0)
+    fun bump() { version.value++ }
+    /** Копия под замком: журнал пишется и из фонового потока. */
+    fun snapshot(): List<CallHistoryNew> = synchronized(BaresipService.callHistory) { ArrayList(BaresipService.callHistory) }
+}
+
 /** Палитра кружков — приглушённые тона, совместимые с бордо HHDesign. */
 private val hhAvatarColors = listOf(
     Color(0xFF7A0C2A), Color(0xFF424242), Color(0xFF0F6C6C), Color(0xFF2E7D32),

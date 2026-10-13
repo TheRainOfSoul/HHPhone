@@ -102,7 +102,7 @@ fun HHInCall(call: Call, others: List<Call>, viewModel: ViewModel) {
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 HHKeypad(onKey = { dtmf += it; HHCalls.dtmf(call, it) }, light = fg)
                 TextButton(onClick = { keypad = false }, Modifier.align(Alignment.CenterHorizontally)) {
-                    Text("✕", color = fg, fontSize = 22.sp)
+                    Text(stringResource(R.string.hh_hide_keypad), color = fg)
                 }
             } else {
                 val connected = status == "connected" || status == "answered"   // как baresip: answered — уже разговор
@@ -134,7 +134,7 @@ fun HHInCall(call: Call, others: List<Call>, viewModel: ViewModel) {
         ModalBottomSheet(onDismissRequest = { picker = null }) {
             HHNumberPicker(stringResource(if (mode == "transfer") R.string.hh_transfer_to else R.string.hh_add_to)) { n ->
                 picker = null
-                if (mode == "transfer") HHCalls.transfer(ctx, viewModel, call, n) else HHCalls.add(ctx, viewModel, call, n)
+                if (mode == "transfer") HHCalls.transfer(ctx, call, n) else HHCalls.add(ctx, viewModel, call, n)
             }
         }
     }
@@ -164,7 +164,7 @@ private fun HHNumberPicker(title: String, onPick: (String) -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(q, { q = it }, Modifier.weight(1f).padding(vertical = 8.dp), singleLine = true,
                 placeholder = { Text(stringResource(R.string.hh_search)) }, shape = RoundedCornerShape(24.dp))
-            if (q.any { it.isDigit() }) TextButton(onClick = { onPick(q.filter { it.isDigit() || it == '+' }) }) { Text("OK") }
+            if (q.isNotBlank() && q.none { it == ' ' }) TextButton(onClick = { onPick(q.trim()) }) { Text(stringResource(R.string.ok)) }
         }
         val people = colleagues.map { it.name.ifBlank { it.number } to it.number } +
             BaresipService.contacts.flatMap { c -> c.uris().map { c.name() to HHUiLogic.peerKey(it.uri) } }

@@ -77,4 +77,48 @@ class HHUiLogicTest {
             HHUiLogic.parseDirectory("""{"ok":true,"items":[{"n":"200","name":"Ресепшн"},{"n":"201","name":"A \"B\""}]}"""))
         assertEquals(emptyList<Pair<String, String>>(), HHUiLogic.parseDirectory("<html>"))
     }
+
+    private val sim = HHLine("sip:mobile@pstn", true, true)
+    private val st1 = HHLine("sip:101@pbx.hotel", false, true)
+    private val st2 = HHLine("sip:7@other.org", false, true)
+
+    @Test fun dialSipPeerViaMatchingStationKeepsUri() {
+        assertEquals("sip:7@other.org" to "sip:alice@other.org",
+            HHUiLogic.dialTarget("sip:alice@other.org;transport=tcp", listOf(sim, st1, st2), null))
+        assertEquals("sip:101@pbx.hotel" to "sip:200@pbx.hotel", HHUiLogic.dialTarget("sip:200@pbx.hotel", listOf(sim, st1), null))
+    }
+
+    @Test fun dialSipPeerNeverViaSim() = assertEquals(null, HHUiLogic.dialTarget("sip:200@pbx.hotel", listOf(sim), null))
+
+    @Test fun dialNumberPrefersGivenLineElseSim() {
+        assertEquals("sip:101@pbx.hotel" to "200", HHUiLogic.dialTarget("tel:200", listOf(sim, st1), "sip:101@pbx.hotel"))
+        assertEquals("sip:mobile@pstn" to "+37493015454", HHUiLogic.dialTarget("tel:+374 93 015454", listOf(sim, st1), null))
+        assertEquals("sip:101@pbx.hotel" to "093015454", HHUiLogic.dialTarget("093015454", listOf(st1), null))
+    }
+
+    @Test fun dialAnonymousIsNull() {
+        assertEquals(null, HHUiLogic.dialTarget("sip:anonymous@anonymous.invalid", listOf(sim, st1), null))
+        assertEquals(null, HHUiLogic.dialTarget("", listOf(sim, st1), null))
+        assertEquals(null, HHUiLogic.dialTarget("tel:200", emptyList(), null))
+    }
+
+    @Test fun colleagueOnlyViaItsStation() {
+        assertEquals("sip:101@pbx.hotel" to "200", HHUiLogic.dialColleague("200", "sip:101@pbx.hotel", listOf(sim, st1)))
+        assertEquals(null, HHUiLogic.dialColleague("200", "sip:101@pbx.hotel", listOf(sim)))
+    }
+
+    @Test fun callButtons() {
+        assertEquals(listOf(listOf(sim)), HHUiLogic.callButtons(listOf(sim)))
+        assertEquals(listOf(listOf(sim), listOf(st1)), HHUiLogic.callButtons(listOf(sim, st1)))
+        assertEquals(listOf(listOf(sim), listOf(st1, st2)), HHUiLogic.callButtons(listOf(sim, st1, st2)))
+        assertEquals(listOf(listOf(st1), listOf(st2, HHLine("sip:9@x", false, false))),
+            HHUiLogic.callButtons(listOf(st1, st2, HHLine("sip:9@x", false, false))))
+        assertEquals(emptyList<List<HHLine>>(), HHUiLogic.callButtons(emptyList()))
+    }
+
+    @Test fun missedOnlyWhenNotDeclined() {
+        assertTrue(HHUiLogic.missed(HHLogEntry("tel:1", "a", "in", null, 1, false)))
+        assertEquals(false, HHUiLogic.missed(HHLogEntry("tel:1", "a", "in", null, 1, true)))
+        assertEquals(false, HHUiLogic.missed(HHLogEntry("tel:1", "a", "out", null, 1, false)))
+    }
 }
