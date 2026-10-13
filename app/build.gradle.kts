@@ -13,6 +13,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     id("com.android.application")
 }
+apply(plugin = "com.google.gms.google-services")   // HH push: app/src/hh/google-services.json
 
 configure<ApplicationExtension> {
     compileSdk = 37
@@ -98,6 +99,8 @@ composeCompiler {
 }
 
 dependencies {
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.cardview)
     implementation(libs.androidx.swiperefreshlayout)
