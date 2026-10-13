@@ -3366,6 +3366,7 @@ class BaresipService: Service() {
             if (t != HHPush.token) HHPush.token = t
             Thread { HHPush.sync() }.start()
         }
+        Thread { HHColleagues.refresh() }.start()
         HHPush.touch()
         hhHandler.removeCallbacks(hhIdle)
         hhHandler.postDelayed(hhIdle, 15_000)

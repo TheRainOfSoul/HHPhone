@@ -26,7 +26,10 @@ object HHPush {
     fun remember(aor: String, server: String, spki: String) =
         prefs.edit { putString("s|$aor", "$server\n$spki"); remove("ok|$aor") }
 
-    private fun station(aor: String): Pair<String, String>? =
+    /** Учётки станций HHPBX (есть адрес и SPKI) — для коллег. */
+    fun stations(): List<String> = prefs.all.keys.filter { it.startsWith("s|") }.map { it.removePrefix("s|") }
+
+    internal fun station(aor: String): Pair<String, String>? =
         prefs.getString("s|$aor", null)?.split("\n")?.takeIf { it.size == 2 }?.let { it[0] to it[1] }
 
     fun isPush(aor: String): Boolean = token.let { it != null && prefs.getString("ok|$aor", null) == it }
@@ -59,6 +62,7 @@ object HHPush {
         val pass = Account.ofAor(aor)?.authPass
         val t = token
         prefs.edit { remove("s|$aor"); remove("ok|$aor") }
+        HHColleagues.forget(aor)
         if (st == null || pass == null || t == null) return
         val (user, domain) = userDomain(aor)
         Thread { post(st.first, st.second, form("op" to "del", "user" to user, "domain" to domain, "pass" to pass, "token" to t)) }.start()

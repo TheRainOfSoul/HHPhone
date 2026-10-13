@@ -268,7 +268,7 @@ private fun addAccount(ctx: Context, qr: HHAccountQr, station: Pair<String, Stri
     Account.saveAccounts()
     station?.let { (server, spki) ->
         HHPush.remember(ua.account.aor, server, spki)
-        Thread { HHPush.sync() }.start()
+        Thread { HHPush.sync(); HHColleagues.refresh(force = true) }.start()
         // push на Samsung и др. опаздывает под оптимизацией батареи: системный запрос «разрешить работу в фоне» (отказ не мешает)
         val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
         if (!pm.isIgnoringBatteryOptimizations(ctx.packageName)) try {
