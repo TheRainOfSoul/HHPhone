@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "928948616073",
+    "project_id": "hhphone-e23d1",
+    "storage_bucket": "hhphone-e23d1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:928948616073:android:1e98ac1ed7a22a53123f58",
+        "android_client_info": {
+          "package_name": "am.dgsolutions.hhphone"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlUX5j-cbH4cmli38FnmAX1K-klZ0MaZ0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

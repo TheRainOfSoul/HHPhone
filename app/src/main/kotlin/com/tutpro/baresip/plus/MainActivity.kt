@@ -30,6 +30,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.Observer
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -359,6 +360,16 @@ class MainActivity : ComponentActivity() {
             val baresipService = Intent(this, BaresipService::class.java)
             baresipService.action = "Check Roles"
             startService(baresipService)
+        }
+        // без «полноэкранных уведомлений» звонок на заблокированном экране не принять (Android 14+, не из Play — запрещено)
+        val hh = getSharedPreferences("hh_push", MODE_PRIVATE)   // спрашиваем один раз, и не поверх звонка
+        if (Build.VERSION.SDK_INT >= 34 && !hh.getBoolean("fsi_asked", false) && !Call.inCall() && !nm.canUseFullScreenIntent()) {
+            hh.edit().putBoolean("fsi_asked", true).apply()
+            handleDialog(this, getString(R.string.notice), getString(R.string.hh_fsi_needed)) {
+                try {
+                    startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, "package:$packageName".toUri()))
+                } catch (_: android.content.ActivityNotFoundException) {}
+            }
         }
     }
 

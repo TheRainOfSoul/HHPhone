@@ -13,6 +13,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     id("com.android.application")
 }
+apply(plugin = "com.google.gms.google-services")   // HH push: app/src/hh/google-services.json
 
 configure<ApplicationExtension> {
     compileSdk = 37
@@ -41,8 +42,8 @@ configure<ApplicationExtension> {
         create("hh") {
             dimension = "brand"
             applicationId = "am.dgsolutions.hhphone"
-            versionCode = 5
-            versionName = "0.3.2"
+            versionCode = 6
+            versionName = "0.4.0"
             androidResources.localeFilters += listOf("en", "ru", "hy")
         }
     }
@@ -98,6 +99,8 @@ composeCompiler {
 }
 
 dependencies {
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.cardview)
     implementation(libs.androidx.swiperefreshlayout)

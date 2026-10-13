@@ -147,6 +147,7 @@ fun AccountsContent(contentPadding: PaddingValues, navController: NavController)
                         onClick = {
                             message.value = String.format(deleteAccountMessage, text)
                             lastAction.value = {
+                                HHPush.forget(aor)
                                 CallHistoryNew.clear(aor)
                                 Message.clearMessagesOfAor(aor)
                                 Blocked.clear(aor)

@@ -66,19 +66,24 @@ object HHClaim {
         return HHClaimAnswer(acc, j.lock, j.pinHash, j.pinSalt)
     }
 
-    /** Блокирующий обмен; вызывать на Dispatchers.IO. */
-    fun exchange(c: HHQrResult.Claim): HHClaimOutcome {
+    /** HTTPS POST к HHPBX с ключом, закреплённым QR: claim.php и push.php. */
+    fun open(server: String, spki: String, path: String): HttpsURLConnection {
         val system = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
             .apply { init(null as KeyStore?) }.trustManagers.filterIsInstance<X509TrustManager>().first()
-        val trust = HHPinningTrust(c.spki, system)
+        val trust = HHPinningTrust(spki, system)
         val ssl = SSLContext.getInstance("TLS").apply { init(null, arrayOf(trust), null) }
-        val conn = (URL("${c.server}/app/hhphone/claim.php").openConnection() as HttpsURLConnection).apply {
+        return (URL("$server$path").openConnection() as HttpsURLConnection).apply {
             sslSocketFactory = ssl.socketFactory
             val standard = HttpsURLConnection.getDefaultHostnameVerifier()
             hostnameVerifier = javax.net.ssl.HostnameVerifier { host, session -> trust.pinned || standard.verify(host, session) }
             requestMethod = "POST"; connectTimeout = 10_000; readTimeout = 10_000; doOutput = true; instanceFollowRedirects = false
             setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
         }
+    }
+
+    /** Блокирующий обмен; вызывать на Dispatchers.IO. */
+    fun exchange(c: HHQrResult.Claim): HHClaimOutcome {
+        val conn = open(c.server, c.spki, "/app/hhphone/claim.php")
         return try {
             conn.outputStream.use { it.write("token=${URLEncoder.encode(c.token, "UTF-8")}".toByteArray()) }
             when (conn.responseCode) {

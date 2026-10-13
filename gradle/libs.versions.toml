@@ -1,4 +1,6 @@
 [versions]
+googleServices = "4.4.4"
+firebaseBom = "34.4.0"
 zxingCore = "3.5.3"
 zxingEmbedded = "4.3.0"
 junit = "4.13.2"
@@ -34,6 +36,9 @@ uiText = "1.12.1"
 mmslib = "1.0.0"
 
 [libraries]
+google-services = { group = "com.google.gms", name = "google-services", version.ref = "googleServices" }
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxingCore" }
 zxing-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxingEmbedded" }
 junit = { module = "junit:junit", version.ref = "junit" }
