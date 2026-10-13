@@ -237,7 +237,7 @@ private fun claim(ctx: Context, c: HHQrResult.Claim) {
     Toast.makeText(ctx, ctx.getString(R.string.hh_claiming), Toast.LENGTH_SHORT).show()
     HHProvisioning.scope.launch {
         when (val outcome = withContext(Dispatchers.IO) { HHClaim.exchange(c) }) {
-            is HHClaimOutcome.Ok -> replaceIfNeeded(ctx, outcome.answer.account, R.string.hh_replace_account_spent) { hhApplyServerLock(outcome.answer) }
+            is HHClaimOutcome.Ok -> replaceIfNeeded(ctx, outcome.answer.account, R.string.hh_replace_account_spent, c.server to c.spki) { hhApplyServerLock(outcome.answer) }
             HHClaimOutcome.NoConnection -> HHUi.message.value = ctx.getString(R.string.hh_claim_no_connection)
             HHClaimOutcome.BadCert -> HHUi.message.value = ctx.getString(R.string.hh_claim_bad_cert)
             HHClaimOutcome.Used -> HHUi.message.value = ctx.getString(R.string.hh_claim_used)
@@ -246,24 +246,27 @@ private fun claim(ctx: Context, c: HHQrResult.Claim) {
     }
 }
 
-private fun replaceIfNeeded(ctx: Context, qr: HHAccountQr, question: Int, newLock: () -> HHLockState) {
+/** station — сервер и SPKI HHPBX из QR (claim): с ними учётка получает push; null — QR с паролем, постоянная связь. */
+private fun replaceIfNeeded(ctx: Context, qr: HHAccountQr, question: Int, station: Pair<String, String>? = null, newLock: () -> HHLockState) {
     val aor = HHQr.aor(qr)
     val existing = UserAgent.ofAor(aor)
-    if (existing == null) { addAccount(ctx, qr, newLock); return }
+    if (existing == null) { addAccount(ctx, qr, station, newLock); return }
     HHUi.confirm.value = ctx.getString(question, aor.removePrefix("sip:")) to {
+        HHPush.forget(aor)
         existing.remove()
         Api.ua_destroy(existing.uap)
-        addAccount(ctx, qr, newLock)
+        addAccount(ctx, qr, station, newLock)
     }
 }
 
-private fun addAccount(ctx: Context, qr: HHAccountQr, newLock: () -> HHLockState) {
+private fun addAccount(ctx: Context, qr: HHAccountQr, station: Pair<String, String>?, newLock: () -> HHLockState) {
     val uap = UserAgent.uaAlloc(HHQr.accountLine(qr))
     if (uap == 0L) { HHUi.message.value = ctx.getString(R.string.account_allocation_failure); return }
     val ua = UserAgent(uap)
     ua.add()
     ua.account.checkOrigin = true
     Account.saveAccounts()
+    station?.let { (server, spki) -> HHPush.remember(ua.account.aor, server, spki); Thread { HHPush.sync() }.start() }
     ua.reRegister()
     HHStaff.save(newLock())
     Toast.makeText(ctx, ctx.getString(R.string.hh_account_added, HHQr.aor(qr).removePrefix("sip:")), Toast.LENGTH_LONG).show()

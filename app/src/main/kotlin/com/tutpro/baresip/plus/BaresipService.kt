@@ -2039,6 +2039,7 @@ class BaresipService: Service() {
 
         Handler(Looper.getMainLooper()).post {
             isNativeReady = true
+            hhPushStart()
             addMobileUserAgent()
             Account.saveAccounts()
             CallHistoryNew.save()
@@ -3346,6 +3347,14 @@ class BaresipService: Service() {
     fun isSimReady(): Boolean {
         val tm = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
         return tm.simState == TelephonyManager.SIM_STATE_READY
+    }
+
+    /** HH push: актуальный FCM-токен — станциям HHPBX-учёток (спека 2026-10-13). */
+    private fun hhPushStart() {
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnSuccessListener { t ->
+            if (t != HHPush.token) HHPush.token = t
+            Thread { HHPush.sync() }.start()
+        }
     }
 
     private fun cleanService() {
