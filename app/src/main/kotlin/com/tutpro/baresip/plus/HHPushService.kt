@@ -15,7 +15,13 @@ class HHPushService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         if (message.data["t"] != "call") return
         HHPush.touch()
-        if (BaresipService.isServiceRunning) return   // уже на связи
+        if (BaresipService.isServiceRunning) {
+            // уже на связи — перерегистрироваться: станция ждёт свежую регистрацию (старая могла остаться от убитого процесса)
+            if (BaresipService.isNativeReady) android.os.Handler(android.os.Looper.getMainLooper()).post {
+                BaresipService.uas.value.filter { HHPush.isPush(it.account.aor) }.forEach { it.reRegister() }
+            }
+            return
+        }
         ContextCompat.startForegroundService(this, Intent(this, BaresipService::class.java).setAction("Start"))
     }
 }
