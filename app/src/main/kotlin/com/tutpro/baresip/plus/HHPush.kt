@@ -34,17 +34,22 @@ object HHPush {
     fun touch() { lastActive = SystemClock.elapsedRealtime() }
     fun idleMs(): Long = SystemClock.elapsedRealtime() - lastActive
 
-    /** Отправить токен станциям, которые его ещё не приняли. Сеть — вызывать не из UI-потока. */
+    /**
+     * Отправить токен станциям — при каждом старте: строку на станции могли потерять (номер пересоздан,
+     * БД восстановлена, ключ удалён). Станция без ключа отвечает push:false — учётка держит связь. Сеть — не из UI-потока.
+     */
     @Synchronized fun sync() {
         val t = token ?: return
         for (key in prefs.all.keys.filter { it.startsWith("s|") }) {
             val aor = key.removePrefix("s|")
-            if (prefs.getString("ok|$aor", null) == t) continue
             val (server, spki) = station(aor) ?: continue
             val acc = Account.ofAor(aor) ?: continue
             val (user, domain) = userDomain(aor)
-            if (post(server, spki, form("op" to "set", "user" to user, "domain" to domain, "pass" to acc.authPass, "token" to t)))
-                prefs.edit { putString("ok|$aor", t) }
+            when (post(server, spki, form("op" to "set", "user" to user, "domain" to domain, "pass" to acc.authPass, "token" to t))) {
+                true -> prefs.edit { putString("ok|$aor", t) }
+                false -> prefs.edit { remove("ok|$aor") }
+                null -> {}   // нет связи со станцией — прежнее решение в силе
+            }
         }
     }
 
@@ -65,8 +70,15 @@ object HHPush {
     internal fun form(vararg kv: Pair<String, String>): String =
         kv.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
 
-    private fun post(server: String, spki: String, body: String): Boolean = try {
+    /** Ответ push.php на set: true — станция будит, false — без ключа, null — ошибка/нет связи. */
+    internal fun accepted(code: Int, body: String): Boolean? = if (code != 200) null else body.contains("\"push\":true")
+
+    private fun post(server: String, spki: String, body: String): Boolean? = try {
         val c = HHClaim.open(server, spki, "/app/hhphone/push.php")
-        try { c.outputStream.use { it.write(body.toByteArray()) }; c.responseCode == 200 } finally { c.disconnect() }
-    } catch (e: Exception) { Log.w(TAG, "push.php: ${e.message}"); false }
+        try {
+            c.outputStream.use { it.write(body.toByteArray()) }
+            val code = c.responseCode
+            accepted(code, if (code == 200) c.inputStream.bufferedReader().use { it.readText() } else "")
+        } finally { c.disconnect() }
+    } catch (e: Exception) { Log.w(TAG, "push.php: ${e.message}"); null }
 }

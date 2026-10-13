@@ -37,8 +37,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import kotlin.system.exitProcess
 
-private var fsiAsked = false   // спрашиваем раз за запуск процесса
-
 class MainActivity : ComponentActivity() {
 
     private lateinit var nm: NotificationManager
@@ -364,8 +362,9 @@ class MainActivity : ComponentActivity() {
             startService(baresipService)
         }
         // без «полноэкранных уведомлений» звонок на заблокированном экране не принять (Android 14+, не из Play — запрещено)
-        if (Build.VERSION.SDK_INT >= 34 && !fsiAsked && !nm.canUseFullScreenIntent()) {
-            fsiAsked = true
+        val hh = getSharedPreferences("hh_push", MODE_PRIVATE)   // спрашиваем один раз, и не поверх звонка
+        if (Build.VERSION.SDK_INT >= 34 && !hh.getBoolean("fsi_asked", false) && !Call.inCall() && !nm.canUseFullScreenIntent()) {
+            hh.edit().putBoolean("fsi_asked", true).apply()
             handleDialog(this, getString(R.string.notice), getString(R.string.hh_fsi_needed)) {
                 try {
                     startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, "package:$packageName".toUri()))
