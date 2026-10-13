@@ -84,4 +84,12 @@
     <string name="hh_add_account">Add account</string>
     <string name="hh_no_line">No line for this number</string>
     <string name="hh_hide_keypad">Hide keypad</string>
+    <string name="hh_merge">Merge</string>
+    <string name="hh_route_phone">Phone</string>
+    <string name="hh_route_bt">Bluetooth</string>
+    <string name="hh_on">on</string>
+    <string name="hh_off">off</string>
+    <string name="hh_back_to_call">Return to call</string>
+    <string name="hh_home">Home</string>
+    <string name="hh_contact_card">Contact</string>
 </resources>

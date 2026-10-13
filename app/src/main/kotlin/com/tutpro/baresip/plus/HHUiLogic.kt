@@ -13,7 +13,7 @@ data class HHLine(val aor: String, val mobile: Boolean, val registered: Boolean)
 object HHUiLogic {
     fun peerKey(uri: String): String {
         val s = uri.removePrefix("sip:").removePrefix("tel:").substringBefore(";").substringBefore("@")
-        return if (s.any { it.isLetter() }) s else s.filter { it.isDigit() || it == '+' }
+        return if (s.any { it.isLetter() }) s else s.filter { it.isDigit() || it in "+*#" }
     }
 
     fun group(entries: List<HHLogEntry>): List<HHLogGroup> {
@@ -31,14 +31,18 @@ object HHUiLogic {
 
     fun avatarColor(name: String): Int = name.lowercase().sumOf { it.code } % 8
 
-    /** (единица, значение): 0 — только что, 1 — минуты, 2 — часы, 3 — вчера, 4 — дата (значение = thenMs). */
-    fun ago(nowMs: Long, thenMs: Long): Pair<Int, Long> {
+    /**
+     * (единица, значение): 0 — только что, 1 — минуты, 2 — часы (тот же день), 3 — вчера (календарный), 4 — дата (thenMs).
+     * tzOffsetMs — смещение часового пояса (TimeZone.getOffset), чтобы «вчера» считалось по местному дню.
+     */
+    fun ago(nowMs: Long, thenMs: Long, tzOffsetMs: Long): Pair<Int, Long> {
         val m = (nowMs - thenMs) / 60_000
+        val days = Math.floorDiv(nowMs + tzOffsetMs, 86_400_000L) - Math.floorDiv(thenMs + tzOffsetMs, 86_400_000L)
         return when {
             m < 1 -> 0 to 0L
             m < 60 -> 1 to m
-            m < 24 * 60 -> 2 to m / 60
-            m < 48 * 60 -> 3 to 0L
+            days == 0L -> 2 to m / 60
+            days == 1L -> 3 to 0L
             else -> 4 to thenMs
         }
     }
@@ -80,7 +84,7 @@ object HHUiLogic {
         return when {
             open.isEmpty() -> "home"
             video -> "video"
-            "incoming" in open && open.none { it == "connected" } -> "incoming"
+            "incoming" in open && open.none { it == "connected" || it == "answered" } -> "incoming"
             else -> "call"
         }
     }

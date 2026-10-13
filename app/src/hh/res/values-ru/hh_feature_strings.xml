@@ -88,4 +88,12 @@
     <string name="hh_add_account">Добавить учётку</string>
     <string name="hh_no_line">Нет линии для этого номера</string>
     <string name="hh_hide_keypad">Скрыть клавиши</string>
+    <string name="hh_merge">Объединить</string>
+    <string name="hh_route_phone">Телефон</string>
+    <string name="hh_route_bt">Bluetooth</string>
+    <string name="hh_on">включено</string>
+    <string name="hh_off">выключено</string>
+    <string name="hh_back_to_call">Вернуться к звонку</string>
+    <string name="hh_home">Главный экран</string>
+    <string name="hh_contact_card">Контакт</string>
 </resources>

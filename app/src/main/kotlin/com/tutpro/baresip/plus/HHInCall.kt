@@ -1,6 +1,12 @@
 package com.tutpro.baresip.plus
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -59,14 +65,16 @@ val HHEndRed = Color(0xFFC50F1F)
 /** Разговор: имя, таймер, сетка 2×3, второй звонок, «Завершить» (спека 2026-10-13 ui). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HHInCall(call: Call, others: List<Call>, viewModel: ViewModel) {
+fun HHInCall(call: Call, others: List<Call>, viewModel: ViewModel, onHome: () -> Unit) {
     val ctx = LocalContext.current
     val dark = hhDark()
     val fg = if (dark) Color.White else MaterialTheme.colorScheme.onSurface
     val status by call.status
     val onHold by call.callOnHold
     val speaker by viewModel.isSpeakerOn.collectAsState()
-    var muted by remember { mutableStateOf(BaresipService.isMicMuted) }
+    val micIcon by viewModel.micIcon.collectAsState()   // baresip шлёт «mic muted» и при смене из Telecom/Bluetooth
+    val muted = micIcon == Icons.Default.MicOff
+    var routeMenu by remember { mutableStateOf(false) }
     var keypad by remember { mutableStateOf(false) }
     var picker by remember { mutableStateOf<String?>(null) }   // "transfer" | "add"
     var dtmf by remember { mutableStateOf("") }
@@ -80,19 +88,36 @@ fun HHInCall(call: Call, others: List<Call>, viewModel: ViewModel) {
     }
     HHCallBackdrop(call) {
         Column(Modifier.fillMaxSize()) {
-            HHCallTitle(call, state)
+            Box(Modifier.fillMaxWidth()) {
+                HHCallTitle(call, state)
+                IconButton(onClick = onHome, modifier = Modifier.statusBarsPadding().padding(8.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.hh_home), tint = fg)
+                }
+            }
             others.forEach { o ->
                 Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)
                     .background(fg.copy(alpha = 0.08f), RoundedCornerShape(16.dp)).padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     val incoming = o.status.value == "incoming"
-                    Text(hhName(o.peerUri) + " · " + stringResource(if (incoming) R.string.hh_incoming_call else R.string.hh_on_hold),
-                        Modifier.weight(1f), color = fg, maxLines = 1)
-                    if (incoming) {
-                        TextButton(onClick = { HHCalls.reject(o) }) { Text(stringResource(R.string.hh_decline), color = MaterialTheme.colorScheme.error) }
-                        TextButton(onClick = { call.hold(); HHCalls.answer(ctx, o) }) { Text(stringResource(R.string.hh_answer)) }
-                    } else TextButton(onClick = { HHCalls.swap(o) }) {
-                        Icon(Icons.Default.SwapCalls, null); Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.hh_swap))
+                    Column(Modifier.weight(1f)) {
+                        Text(hhName(o.peerUri), color = fg, maxLines = 1, fontWeight = FontWeight.Medium)
+                        Text(stringResource(when {
+                            incoming -> R.string.hh_incoming_call
+                            o.status.value == "outgoing" -> R.string.hh_calling
+                            else -> R.string.hh_on_hold }), color = fg.copy(alpha = 0.7f), fontSize = 13.sp, maxLines = 1)
+                    }
+                    val st = o.status.value
+                    when {
+                        incoming -> {
+                            TextButton(onClick = { HHCalls.reject(o) }) { Text(stringResource(R.string.hh_decline), color = HHEndRed) }
+                            TextButton(onClick = { call.hold(); HHCalls.answer(ctx, o) }) { Text(stringResource(R.string.hh_answer)) }
+                        }
+                        st == "connected" || st == "answered" -> {
+                            TextButton(onClick = { HHCalls.swap(o) }) {
+                                Icon(Icons.Default.SwapCalls, null); Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.hh_swap))
+                            }
+                        }
+                        else -> TextButton(onClick = { HHCalls.hangup(o) }) { Text(stringResource(R.string.hh_end_call), color = HHEndRed) }
                     }
                 }
             }
@@ -110,12 +135,24 @@ fun HHInCall(call: Call, others: List<Call>, viewModel: ViewModel) {
                     HHCallButton(Icons.AutoMirrored.Filled.PhoneForwarded, R.string.hh_transfer, false, fg,
                         enabled = connected && HHCalls.canTransfer(call)) { picker = "transfer" }
                     HHCallButton(Icons.Default.Pause, R.string.hh_hold, onHold, fg, enabled = connected) { HHCalls.toggleHold(call) }
-                    HHCallButton(Icons.Default.MicOff, R.string.hh_mute, muted, fg) { HHCalls.toggleMute(viewModel); muted = BaresipService.isMicMuted }
+                    HHCallButton(Icons.Default.MicOff, R.string.hh_mute, muted, fg) { HHCalls.toggleMute(viewModel) }
                 }
                 Spacer(Modifier.height(20.dp))
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     HHCallButton(Icons.Default.AddIcCall, R.string.hh_add_call, false, fg, enabled = connected && others.isEmpty()) { picker = "add" }
-                    HHCallButton(Icons.AutoMirrored.Filled.VolumeUp, R.string.hh_speaker, speaker, fg) { HHCalls.toggleSpeaker() }
+                    Box(Modifier.weight(1f)) {
+                        Row {
+                            HHCallButton(Icons.AutoMirrored.Filled.VolumeUp, R.string.hh_speaker, speaker, fg) {
+                                if (HHCalls.btAvailable(ctx)) routeMenu = true else HHCalls.toggleSpeaker()
+                            }
+                        }
+                        val routes = listOf("phone" to R.string.hh_route_phone, "speaker" to R.string.hh_speaker, "bt" to R.string.hh_route_bt)
+                        val labels = routes.map { stringResource(it.second) }
+                        CustomElements.DropdownMenu(expanded = routeMenu, onDismissRequest = { routeMenu = false }, items = labels) { l ->
+                            routeMenu = false
+                            HHCalls.route(ctx, call, routes[labels.indexOf(l)].first)
+                        }
+                    }
                     HHCallButton(Icons.Default.Dialpad, R.string.hh_keypad, false, fg, enabled = connected) { keypad = true }
                 }
             }
@@ -144,7 +181,9 @@ fun HHInCall(call: Call, others: List<Call>, viewModel: ViewModel) {
 private fun androidx.compose.foundation.layout.RowScope.HHCallButton(icon: ImageVector, label: Int, active: Boolean, fg: Color,
                                                                      enabled: Boolean = true, onClick: () -> Unit) {
     val a = if (enabled) 1f else 0.35f
-    Column(Modifier.weight(1f).clickable(enabled = enabled, onClick = onClick).padding(vertical = 6.dp),
+    val state = stringResource(if (active) R.string.hh_on else R.string.hh_off)
+    Column(Modifier.weight(1f).clickable(enabled = enabled, onClick = onClick).semantics(mergeDescendants = true) { stateDescription = state }
+        .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(shape = CircleShape, color = if (active) fg else fg.copy(alpha = 0.10f), modifier = Modifier.size(60.dp)) {
             Icon(icon, null, Modifier.padding(16.dp), tint = (if (active) MaterialTheme.colorScheme.background else fg).copy(alpha = a))
@@ -166,8 +205,11 @@ private fun HHNumberPicker(title: String, onPick: (String) -> Unit) {
                 placeholder = { Text(stringResource(R.string.hh_search)) }, shape = RoundedCornerShape(24.dp))
             if (q.isNotBlank() && q.none { it == ' ' }) TextButton(onClick = { onPick(q.trim()) }) { Text(stringResource(R.string.ok)) }
         }
+        val ctx = LocalContext.current
+        val locked = (ctx.getSystemService(android.content.Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked
+        // поверх блокировки — только коллеги: контакты телефона не показываем без разблокировки
         val people = colleagues.map { it.name.ifBlank { it.number } to it.number } +
-            BaresipService.contacts.flatMap { c -> c.uris().map { c.name() to HHUiLogic.peerKey(it.uri) } }
+            (if (locked) emptyList() else BaresipService.contacts.flatMap { c -> c.uris().map { c.name() to HHUiLogic.peerKey(it.uri) } })
         LazyColumn(Modifier.fillMaxWidth().height(360.dp)) {
             items(people.filter { q.isEmpty() || it.first.contains(q, true) || it.second.contains(q) }.distinctBy { it.second }) { (name, n) ->
                 Row(Modifier.fillMaxWidth().clickable { onPick(n) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {

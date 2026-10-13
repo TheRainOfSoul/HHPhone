@@ -62,10 +62,13 @@ object HHColleagues {
         list.value = load().filter { it.aor != aor }
     }
 
-    fun isStar(number: String) = number in stars.value
+    fun key(c: HHColleague) = c.aor + "|" + c.number
 
-    fun toggleStar(number: String) {
-        stars.value = if (number in stars.value) stars.value - number else stars.value + number
+    fun isStar(c: HHColleague) = key(c) in stars.value
+
+    fun toggleStar(c: HHColleague) {
+        val k = key(c)
+        stars.value = if (k in stars.value) stars.value - k else stars.value + k
         prefs.edit { putStringSet("stars", stars.value) }
     }
 }

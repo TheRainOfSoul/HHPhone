@@ -84,4 +84,12 @@
     <string name="hh_add_account">Ավելացնել հաշիվ</string>
     <string name="hh_no_line">Այս համարի համար գիծ չկա</string>
     <string name="hh_hide_keypad">Թաքցնել ստեղները</string>
+    <string name="hh_merge">Միավորել</string>
+    <string name="hh_route_phone">Հեռախոս</string>
+    <string name="hh_route_bt">Bluetooth</string>
+    <string name="hh_on">միացված է</string>
+    <string name="hh_off">անջատված է</string>
+    <string name="hh_back_to_call">Վերադառնալ զանգին</string>
+    <string name="hh_home">Գլխավոր էկրան</string>
+    <string name="hh_contact_card">Կոնտակտ</string>
 </resources>

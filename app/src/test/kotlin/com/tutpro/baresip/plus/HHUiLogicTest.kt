@@ -29,6 +29,8 @@ class HHUiLogicTest {
         assertEquals("200", HHUiLogic.peerKey("sip:200@pbx.local;transport=tcp"))
         assertEquals("+37493015454", HHUiLogic.peerKey("tel:+374 93 015454"))
         assertEquals("093015454", HHUiLogic.peerKey("093-015-454"))
+        assertEquals("*9196", HHUiLogic.peerKey("sip:*9196@pbx"))
+        assertEquals("*21#", HHUiLogic.peerKey("tel:*21#"))
     }
 
     @Test fun avatarLetter() {
@@ -46,13 +48,15 @@ class HHUiLogicTest {
         listOf("", "a", "Արմեն", "093015454", "Иван").forEach { assertTrue(HHUiLogic.avatarColor(it) in 0..7) }
     }
 
-    @Test fun ago() {
-        val now = 1_000_000_000L
-        assertEquals(0 to 0L, HHUiLogic.ago(now, now - 59_000))
-        assertEquals(1 to 1L, HHUiLogic.ago(now, now - 60_000))
-        assertEquals(2 to 23L, HHUiLogic.ago(now, now - 23 * 3_600_000L - 59_000))
-        assertEquals(3, HHUiLogic.ago(now, now - 30 * 3_600_000L).first)
-        assertEquals(4, HHUiLogic.ago(now, now - 50 * 3_600_000L).first)
+    @Test fun agoByCalendarDay() {
+        val day = 86_400_000L
+        val now = 20 * day + 10 * 3_600_000L          // 10:00 (UTC)
+        assertEquals(0 to 0L, HHUiLogic.ago(now, now - 59_000, 0))
+        assertEquals(1 to 30L, HHUiLogic.ago(now, now - 30 * 60_000L, 0))
+        assertEquals(2 to 9L, HHUiLogic.ago(now, 20 * day + 3_600_000L, 0))       // 01:00 того же дня
+        assertEquals(3 to 0L, HHUiLogic.ago(now, 19 * day + 23 * 3_600_000L, 0))   // вчера 23:00
+        assertEquals(4, HHUiLogic.ago(now, 18 * day + 23 * 3_600_000L, 0).first)  // позавчера
+        assertEquals(3 to 0L, HHUiLogic.ago(now, 20 * day + 3_600_000L, -2 * 3_600_000L))  // UTC−2: это ещё вчера 23:00
     }
 
     @Test fun linesSimFirstNoDuplicates() {
@@ -68,6 +72,7 @@ class HHUiLogicTest {
         assertEquals("home", HHUiLogic.screenFor(listOf("closed"), false))
         assertEquals("incoming", HHUiLogic.screenFor(listOf("incoming"), false))
         assertEquals("call", HHUiLogic.screenFor(listOf("connected", "incoming"), false))
+        assertEquals("call", HHUiLogic.screenFor(listOf("answered", "incoming"), false))
         assertEquals("call", HHUiLogic.screenFor(listOf("outgoing"), false))
         assertEquals("video", HHUiLogic.screenFor(listOf("connected"), true))
     }

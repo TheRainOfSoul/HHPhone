@@ -28,6 +28,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -76,7 +78,8 @@ fun HHCallBackdrop(call: Call, content: @Composable () -> Unit) {
 fun HHCallTitle(call: Call, status: String) {
     val dark = hhDark()
     val fg = if (dark) Color.White else MaterialTheme.colorScheme.onSurface
-    val name = hhName(call.peerUri)
+    val colleagues by HHColleagues.list.collectAsState()
+    val name = remember(colleagues, call.peerUri) { hhName(call.peerUri) }
     val number = HHUiLogic.peerKey(call.peerUri)
     val line = if (call.ua.account.isMobile) "SIM" else "HH " + HHPush.userDomain(call.ua.account.aor).first
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 24.dp, start = 24.dp, end = 24.dp),

@@ -1,6 +1,10 @@
 package com.tutpro.baresip.plus
 
 import android.content.Context
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
+import android.os.Build
+import android.telecom.CallAudioState
 import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
@@ -41,6 +45,24 @@ object HHCalls {
     }
 
     fun toggleSpeaker() = BaresipService.instance?.toggleSpeakerphone()
+
+    /** Есть ли Bluetooth-гарнитура для звонка (Android 12+). */
+    fun btAvailable(ctx: Context): Boolean = Build.VERSION.SDK_INT >= 31 &&
+        (ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager).availableCommunicationDevices.any { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO }
+
+    /** Куда вести звук: "phone" | "speaker" | "bt". SIM — через Telecom (InCallService), станция — как baresip. */
+    fun route(ctx: Context, call: Call, to: String) {
+        if (call is Call.ExternalCall) {
+            InCallService.instance?.setAudioRoute(when (to) {
+                "speaker" -> CallAudioState.ROUTE_SPEAKER; "bt" -> CallAudioState.ROUTE_BLUETOOTH; else -> CallAudioState.ROUTE_EARPIECE })
+            return
+        }
+        if ((to == "speaker") != BaresipService.speakerPhone) toggleSpeaker()
+        if (Build.VERSION.SDK_INT >= 31 && to != "speaker") {
+            val am = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            Utils.setCommunicationDevice(am, if (to == "bt") AudioDeviceInfo.TYPE_BLUETOOTH_SCO else AudioDeviceInfo.TYPE_BUILTIN_EARPIECE)
+        }
+    }
 
     fun dtmf(call: Call, c: Char) { call.sendDigit(c) }
 

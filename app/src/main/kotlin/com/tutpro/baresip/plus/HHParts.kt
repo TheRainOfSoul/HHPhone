@@ -70,7 +70,8 @@ fun HHAvatar(name: String, peer: String?, size: Dp) {
 }
 
 fun hhAgo(ctx: Context, thenMs: Long): String {
-    val (unit, v) = HHUiLogic.ago(System.currentTimeMillis(), thenMs)
+    val now = System.currentTimeMillis()
+    val (unit, v) = HHUiLogic.ago(now, thenMs, java.util.TimeZone.getDefault().getOffset(now).toLong())
     return when (unit) {
         0 -> ctx.getString(R.string.hh_just_now)
         1 -> ctx.getString(R.string.hh_min_ago, v.toInt())
@@ -80,21 +81,26 @@ fun hhAgo(ctx: Context, thenMs: Long): String {
     }
 }
 
-private val keys = listOf('1' to "", '2' to "ABC", '3' to "DEF", '4' to "GHI", '5' to "JKL", '6' to "MNO",
-    '7' to "PQRS", '8' to "TUV", '9' to "WXYZ", '*' to "", '0' to "+", '#' to "")
+private val latin = listOf("", "ABC", "DEF", "GHI", "JKL", "MNO", "PQRS", "TUV", "WXYZ")
+private val cyrillic = listOf("", "АБВГ", "ДЕЖЗ", "ИЙКЛ", "МНОП", "РСТУ", "ФХЦЧ", "ШЩЪЫ", "ЬЭЮЯ")
 
-/** Клавиатура 4×3 с буквами; onLong — долгое нажатие (0 → «+», 1 → голосовая почта). */
+/**
+ * Клавиатура 4×3 с буквами (русский интерфейс — кириллица, иначе латиница); onLong возвращает true, если долгое
+ * нажатие обработано (0 → «+», 1 → почта), иначе вводится сама цифра.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun HHKeypad(onKey: (Char) -> Unit, onLong: (Char) -> Unit = {}, modifier: Modifier = Modifier, light: Color? = null) {
+fun HHKeypad(onKey: (Char) -> Unit, onLong: (Char) -> Boolean = { false }, modifier: Modifier = Modifier, light: Color? = null) {
     val fg = light ?: MaterialTheme.colorScheme.onSurface
+    val letters = if (java.util.Locale.getDefault().language == "ru") cyrillic else latin
+    val keys = ('1'..'9').mapIndexed { i, k -> k to letters[i] } + listOf('*' to "", '0' to "+", '#' to "")
     Column(modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         keys.chunked(3).forEach { row ->
             Row(Modifier.fillMaxWidth()) {
                 row.forEach { (k, letters) ->
                     Column(
                         Modifier.weight(1f).height(64.dp).clip(MaterialTheme.shapes.medium)
-                            .combinedClickable(onClick = { onKey(k) }, onLongClick = { onLong(k) }),
+                            .combinedClickable(onClick = { onKey(k) }, onLongClick = { if (!onLong(k)) onKey(k) }),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
                     ) {
                         Text(k.toString(), fontSize = 30.sp, color = fg)
