@@ -481,6 +481,7 @@ class BaresipService: Service() {
                         isServiceRunning = false
                         postServiceEvent(ServiceEvent("stopped", arrayListOf(""), System.nanoTime()))
                         stopSelf()
+                        hhAfterStop()
                         // exitProcess(0)
                     }
                 }
@@ -2123,6 +2124,7 @@ class BaresipService: Service() {
         isServiceRunning = false
         postServiceEvent(ServiceEvent("stopped", arrayListOf(error), System.nanoTime()))
         stopSelf()
+        hhAfterStop()
     }
 
     private fun createNotificationChannels() {
@@ -3349,12 +3351,37 @@ class BaresipService: Service() {
         return tm.simState == TelephonyManager.SIM_STATE_READY
     }
 
-    /** HH push: актуальный FCM-токен — станциям HHPBX-учёток (спека 2026-10-13). */
+    /** HH push: актуальный FCM-токен — станциям HHPBX-учёток, и проверка простоя каждые 15 с (спека 2026-10-13). */
     private fun hhPushStart() {
         com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnSuccessListener { t ->
             if (t != HHPush.token) HHPush.token = t
             Thread { HHPush.sync() }.start()
         }
+        HHPush.touch()
+        hhHandler.removeCallbacks(hhIdle)
+        hhHandler.postDelayed(hhIdle, 15_000)
+    }
+
+    // когда держать связь не нужно — выйти как «Выход»; следующий звонок разбудит push
+    private var hhSleeping = false
+    private val hhHandler = Handler(Looper.getMainLooper())
+    private val hhIdle = object : Runnable {
+        override fun run() {
+            if (!isServiceRunning) return
+            val visible = androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
+            val inCall = calls.isNotEmpty() || InCallService.instance?.calls?.isNotEmpty() == true   // SIP и SIM
+            if (visible || inCall) HHPush.touch()
+            val foreign = uas.value.any { it.account.regint > 0 && !HHPush.isPush(it.account.aor) }
+            if (HHPushPolicy.keep(foreign, visible, inCall, HHPush.idleMs())) { hhHandler.postDelayed(this, 15_000); return }
+            Log.i(TAG, "HHPush: idle, stopping until push")
+            hhSleeping = true
+            startService(Intent(this@BaresipService, BaresipService::class.java).setAction("Stop"))
+        }
+    }
+
+    private fun hhAfterStop() {
+        hhHandler.removeCallbacks(hhIdle)
+        if (hhSleeping) hhHandler.postDelayed({ kotlin.system.exitProcess(0) }, 500)   // процесс уходит, push запустит заново
     }
 
     private fun cleanService() {
