@@ -231,7 +231,7 @@ private val selectItems = CustomElements.selectItems
 private val selectItemAction = CustomElements.selectItemAction
 private val showSelectItemDialog = CustomElements.showSelectItemDialog
 
-private fun checkLockedAndToast(ctx: Context): Boolean {
+internal fun checkLockedAndToast(ctx: Context): Boolean {
     val kgm = ctx.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
     if (kgm.isKeyguardLocked) {
         Toast.makeText(ctx, ctx.getString(R.string.unlock_to_access_full_app), Toast.LENGTH_LONG).show()
@@ -410,7 +410,8 @@ private fun MainScreen(
             }
         )
     else
-        DefaultLayout(ctx, navController, viewModel, onRestartClick, onQuitClick)
+        // HHPhone 0.5.0: свои экраны; видео — прежняя раскладка baresip
+        HHMain(navController, viewModel, onQuitClick) { DefaultLayout(ctx, navController, viewModel, onRestartClick, onQuitClick) }
 }
 
 @Composable
