@@ -129,6 +129,46 @@ object HHUiLogic {
         return if (dom.isNotEmpty() && dom != aor.substringAfter("@")) "$user@$dom" else user
     }
 
+    /** Режим push без постоянной службы: есть станции, у всех push принят, «Постоянное подключение» выключено. */
+    fun pushOnly(stations: List<Boolean>, keepAlive: Boolean) = !keepAlive && stations.isNotEmpty() && stations.all { it }
+
+    /** Адреса MMS (адрес, тип PduHeaders): 137 — от кого, 151/130/129 — кому; свой номер убирается. */
+    fun mmsAddresses(rows: List<Pair<String, Int>>, own: String): Pair<String?, List<String>> {
+        val from = rows.firstOrNull { it.second == 137 }?.first?.takeIf { it.isNotBlank() && it != "insert-address-token" }
+        val to = rows.filter { it.second in setOf(151, 130, 129) }.map { it.first }
+            .filter { it.isNotBlank() && it != "insert-address-token" && !(own.isNotBlank() && samePhone(it, own)) }.distinct()
+        return from to to
+    }
+
+    /** Отметка исходящего SMS: TYPE (2 — отправлено, 5 — ошибка, 4/6 — в очереди), STATUS (0 — доставлено, 64+ — ошибка). */
+    fun deliveryMark(type: Int, status: Int): String = when {
+        type == 5 || (type == 2 && status >= 64) -> "!"
+        type == 2 && status == 0 -> "✓✓"
+        type == 2 -> "✓"
+        type == 4 || type == 6 -> "…"
+        else -> ""
+    }
+
+    /** Международный вид номера (+…); номер с 0 — через код страны SIM; короткие внутренние — null. */
+    fun toE164(number: String, countryCode: String?): String? {
+        val t = number.trim()
+        val d = t.filter { it.isDigit() }
+        val e = when {
+            t.startsWith("+") -> d
+            d.startsWith("00") -> d.drop(2)
+            d.startsWith("0") && !countryCode.isNullOrEmpty() -> countryCode + d.drop(1)
+            d.length >= 11 -> d
+            else -> return null
+        }
+        return if (e.length in 8..15) "+$e" else null
+    }
+
+    /** Ссылки на чат в мессенджерах по номеру в международном виде. */
+    fun messengerLinks(e164: String): Map<String, String> {
+        val d = e164.filter { it.isDigit() }
+        return mapOf("whatsapp" to "https://wa.me/$d", "viber" to "viber://chat?number=%2B$d", "telegram" to "tg://resolve?phone=$d")
+    }
+
     /** Одинаковые номера из разных аккаунтов контакта (Google, SIM…) — одна строка: (представитель, все _ID). */
     fun mergeSame(nums: List<HHNum>, prefer: (HHNum) -> Boolean): List<Pair<HHNum, List<Long>>> {
         val groups = mutableListOf<MutableList<HHNum>>()
@@ -146,7 +186,7 @@ object HHUiLogic {
                 n != o -> out += HHNumOp.Update(o.id, n)
             }
         }
-        new.filter { it.id == 0L && it.number.isNotBlank() }.forEach { out += HHNumOp.Insert(it) }
+        new.filter { it.id <= 0L && it.number.isNotBlank() }.forEach { out += HHNumOp.Insert(it) }   // ≤ 0 — новые (временные id строк правки)
         return out
     }
 
