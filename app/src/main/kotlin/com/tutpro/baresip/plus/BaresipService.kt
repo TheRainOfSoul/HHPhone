@@ -2558,8 +2558,6 @@ class BaresipService: Service() {
         val call = calls.find { it.callp == callp }
         if (call != null) {
             val uap = call.ua.uap
-            val peerUri = call.peerUri
-            val isMobile = call.ua.account.isMobile
             stopRinging()
             stopMediaPlayer()
             if (call.ua.account.callHistory) {
@@ -2575,8 +2573,6 @@ class BaresipService: Service() {
             }
             synchronized(calls) { calls.remove(call) }
             postServiceEvent(ServiceEvent("call closed", arrayListOf(uap, callp), System.nanoTime()))
-            if (isMobile)
-                deleteSystemCallLog(peerUri)
         }
         if (!Call.inCall()) {
             proximitySensing(false)
@@ -2584,34 +2580,6 @@ class BaresipService: Service() {
         }
         updateStatusNotification()
         messageUpdate.postValue(System.currentTimeMillis())
-    }
-
-    private fun deleteSystemCallLog(peerUri: String) {
-        if (!Utils.checkPermissions(this, arrayOf(Manifest.permission.WRITE_CALL_LOG))) {
-            Log.d(TAG, "No WRITE_CALL_LOG permission to delete system call log")
-            return
-        }
-
-        val rawNumber = peerUri.removePrefix("tel:").removePrefix("sip:").split("@")[0]
-        val number = Utils.uriUnescape(rawNumber).trim()
-        if (number.isEmpty()) return
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            try {
-                val cutoffTime = System.currentTimeMillis() - 300000
-                val e164Number = e164Uri(number, "")
-                val selection = "${CallLog.Calls.DATE} >= ? AND (${CallLog.Calls.NUMBER} = ? OR ${CallLog.Calls.NUMBER} = ? OR ${CallLog.Calls.NUMBER} LIKE ?)"
-                val selectionArgs = arrayOf(cutoffTime.toString(), number, e164Number, "%$number%")
-                val deleted = contentResolver.delete(
-                    CallLog.Calls.CONTENT_URI,
-                    selection,
-                    selectionArgs
-                )
-                Log.d(TAG, "Deleted $deleted system call log entry/entries for $number")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to delete system call log for $number: $e")
-            }
-        }, 1500)
     }
 
     fun addMobileUserAgent() {

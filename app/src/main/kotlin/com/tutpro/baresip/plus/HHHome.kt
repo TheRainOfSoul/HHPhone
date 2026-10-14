@@ -14,6 +14,10 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.produceState
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.ui.semantics.contentDescription
@@ -201,10 +205,15 @@ private fun lineLabel(ctx: Context, l: HHLine): String =
 private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: ViewModel) {
     val history by HHHistory.version.collectAsState()
     val colleagues by HHColleagues.list.collectAsState()
-    val log = remember(history, colleagues) {
-        HHUiLogic.group(HHHistory.snapshot().map {
-            HHLogEntry(it.peerUri, it.aor, it.direction, it.startTime?.timeInMillis, it.stopTime.timeInMillis, it.rejected)
-        })
+    DisposableEffect(Unit) { val off = HHCallLog.observe(ctx) { HHHistory.bump() }; onDispose { off() } }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { HHCallLog.migrate(ctx) } }
+    // журнал — системный CallLog; без разрешения — как раньше, из CallHistoryNew
+    val log by produceState(emptyList<HHLogGroup>(), history, colleagues) {
+        value = withContext(Dispatchers.IO) {
+            HHUiLogic.group(HHCallLog.read(ctx) ?: HHHistory.snapshot().map {
+                HHLogEntry(it.peerUri, it.aor, it.direction, it.startTime?.timeInMillis, it.stopTime.timeInMillis, it.rejected)
+            })
+        }
     }
     var number by rememberSaveable { mutableStateOf("") }
     var keypad by rememberSaveable { mutableStateOf(true) }
