@@ -119,4 +119,6 @@
     <string name="hh_number">Համար</string>
     <string name="hh_delete_number">Ջնջել համարը</string>
     <string name="hh_call">Զանգել</string>
+    <string name="hh_status_channel">Վիճակ</string>
+    <string name="hh_sms_delete_role">SMS-ները կարող է ջնջել միայն լռելյայն SMS հավելվածը</string>
 </resources>

@@ -461,7 +461,9 @@ private fun Messages(
                         lastButtonText.value = deleteString
                         lastAction.value = {
                             if (message.smsId != 0L) {
-                                HHSms.delete(ctx, message.smsId)
+                                if (!HHSms.isDefault(ctx))   // провайдер молча игнорирует удаление не SMS-приложению
+                                    Toast.makeText(ctx, ctx.getString(R.string.hh_sms_delete_role), Toast.LENGTH_LONG).show()
+                                else HHSms.delete(ctx, message.smsId)
                                 BaresipService.messages.filter { it.aor == HHSms.MOBILE && it.message == message.message &&
                                     HHUiLogic.samePhone(it.peerUri, message.peerUri) &&
                                     kotlin.math.abs(it.timeStamp - message.timeStamp) < 300_000 }.forEach { it.delete() }

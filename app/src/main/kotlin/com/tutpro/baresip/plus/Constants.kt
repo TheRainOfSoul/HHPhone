@@ -2,6 +2,7 @@ package com.tutpro.baresip.plus
 
 const val TAG = "Baresip+"
 
+const val STATUS_CHANNEL_ID = "com.tutpro.baresip.plus.status"   // HHPhone: тихий канал статуса (IMPORTANCE_MIN)
 const val LOW_CHANNEL_ID = "com.tutpro.baresip.plus.low"
 const val MEDIUM_CHANNEL_ID = "com.tutpro.baresip.plus.medium"
 const val HIGH_CHANNEL_ID = "com.tutpro.baresip.plus.high"

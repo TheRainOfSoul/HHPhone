@@ -123,4 +123,6 @@
     <string name="hh_number">Номер</string>
     <string name="hh_delete_number">Удалить номер</string>
     <string name="hh_call">Позвонить</string>
+    <string name="hh_status_channel">Состояние</string>
+    <string name="hh_sms_delete_role">Удалять SMS может только SMS-приложение по умолчанию</string>
 </resources>

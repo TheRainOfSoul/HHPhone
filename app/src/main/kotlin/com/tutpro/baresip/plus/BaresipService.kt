@@ -189,7 +189,7 @@ class BaresipService: Service() {
 
         nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannels()
-        snb = NotificationCompat.Builder(this, LOW_CHANNEL_ID)
+        snb = NotificationCompat.Builder(this, STATUS_CHANNEL_ID)
 
         pm = getSystemService(POWER_SERVICE) as PowerManager
 
@@ -1799,7 +1799,7 @@ class BaresipService: Service() {
         Log.d(TAG, "Message event for $uap from $sanitizedPeerUri at $timeStamp")
         // HHPhone: SIM-SMS — в системную базу (после блокировки и повтора; MMS с картинками остаются у HHPhone)
         if (ua.account.isMobile && images.isEmpty())
-            HHSms.storeIncoming(this, Utils.uriUserPart(sanitizedPeerUri), decodedText, timeStamp, -1)
+            Utils.uriUserPart(sanitizedPeerUri).let { a -> Thread { HHSms.storeIncoming(this, a, decodedText, timeStamp, -1) }.start() }
         Message(
             aor = aor,
             peerUri = sanitizedPeerUri,
@@ -2151,6 +2151,13 @@ class BaresipService: Service() {
         lowChannel.setShowBadge(false)
         lowChannel.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         nm.createNotificationChannel(lowChannel)
+        // HHPhone: статус в покое — без значка в строке состояния, свёрнутой строкой среди беззвучных
+        val statusChannel = NotificationChannel(STATUS_CHANNEL_ID, getString(R.string.hh_status_channel),
+            NotificationManager.IMPORTANCE_MIN)
+        statusChannel.enableVibration(false)
+        statusChannel.setShowBadge(false)
+        statusChannel.setSound(null, null)
+        nm.createNotificationChannel(statusChannel)
         val ringAttributes = AudioAttributes.Builder()
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
@@ -2250,7 +2257,7 @@ class BaresipService: Service() {
             }
 
             val targetId = if (activeCall != null) CALL_NOTIFICATION_ID else STATUS_NOTIFICATION_ID
-            val builder = NotificationCompat.Builder(this, LOW_CHANNEL_ID)
+            val builder = NotificationCompat.Builder(this, if (activeCall != null) LOW_CHANNEL_ID else STATUS_CHANNEL_ID)
             val intent = Intent(this, MainActivity::class.java)
                 .setAction(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_LAUNCHER)

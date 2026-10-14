@@ -44,7 +44,7 @@ object HHSms {
             put(Sms.READ, 1); put(Sms.SEEN, 1)
         }) else null
         val parts = sm.divideMessage(text)
-        val base = (System.currentTimeMillis() % 1_000_000).toInt() * 16
+        val base = ((row?.lastPathSegment?.toLongOrNull() ?: System.currentTimeMillis()) % 1_000_000).toInt() * 64   // строка базы + часть
         val sent = ArrayList(parts.indices.map { i ->
             PendingIntent.getBroadcast(ctx, base + i, Intent(ctx, HHSmsSentReceiver::class.java).setData(row),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT)
