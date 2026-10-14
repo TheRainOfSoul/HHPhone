@@ -459,7 +459,7 @@ private fun HHChatsTab(ctx: Context, navController: NavController) {
             val sys = HHSms.threads(ctx)
             val own = messages.sortedByDescending { it.timeStamp }.distinctBy { it.aor + "|" + it.peerUri }
                 .filter { m -> sys.isEmpty() || m.aor != HHSms.MOBILE || sys.none { HHUiLogic.samePhone(it.peerUri, m.peerUri) } }
-            (sys + own).sortedByDescending { it.timeStamp }
+            (sys + own).sortedByDescending { it.timeStamp }.distinctBy { it.aor + "|" + it.peerUri }   // ключ LazyColumn
         }
     }
     val lines = hhLines()

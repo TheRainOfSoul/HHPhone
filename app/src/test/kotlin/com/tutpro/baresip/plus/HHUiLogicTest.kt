@@ -180,4 +180,18 @@ class HHUiLogicTest {
         assertTrue(HHUiLogic.sameTime(10_000, 14_999))
         assertEquals(false, HHUiLogic.sameTime(10_000, 15_001))
     }
+
+    @Test fun samePhoneAlphanumericSender() {
+        assertTrue(HHUiLogic.samePhone("tel:Ucom", "Ucom"))
+        assertTrue(HHUiLogic.samePhone("tel:UCOM", "ucom"))
+        assertEquals(false, HHUiLogic.samePhone("tel:Ucom", "Viva"))
+        assertEquals(false, HHUiLogic.samePhone("tel:Ucom", "100"))
+        assertEquals(false, HHUiLogic.samePhone("", ""))
+    }
+    @Test fun sameLoggedCallToleratesRingTime() {
+        // система: DATE = начало звонка (с гудками), DURATION = разговор; у HHPhone start = ответ, stop = конец
+        assertTrue(HHUiLogic.sameLoggedCall(100_000, 160_000, 130_000, 190_000))   // 30 с гудков
+        assertTrue(HHUiLogic.sameLoggedCall(100_000, 100_000, null, 140_000))      // пропущенный, 40 с звонил
+        assertEquals(false, HHUiLogic.sameLoggedCall(100_000, 160_000, 400_000, 460_000))
+    }
 }

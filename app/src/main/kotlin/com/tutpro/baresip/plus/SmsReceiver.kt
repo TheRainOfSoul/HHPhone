@@ -17,9 +17,6 @@ class SmsReceiver : BroadcastReceiver() {
             val timestamp = messages[0].timestampMillis
 
             Log.d(TAG, "Received SMS from $sender, starting service")
-            // HHPhone: сначала в системную базу — сообщение не потеряется, даже если сервис не стартует
-            HHSms.storeIncoming(context, sender, body, timestamp,
-                intent.getIntExtra(android.telephony.SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX, -1))
 
             val serviceIntent = Intent(context, BaresipService::class.java)
             serviceIntent.action = "Start"

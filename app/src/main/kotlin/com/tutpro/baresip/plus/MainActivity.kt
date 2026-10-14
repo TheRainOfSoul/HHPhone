@@ -220,7 +220,7 @@ class MainActivity : ComponentActivity() {
         roleLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             val rm = getSystemService(ROLE_SERVICE) as android.app.role.RoleManager
             val phone = arrayOf(android.Manifest.permission.READ_PHONE_STATE, android.Manifest.permission.READ_PHONE_NUMBERS,
-                android.Manifest.permission.READ_CALL_LOG)
+                android.Manifest.permission.READ_CALL_LOG, android.Manifest.permission.WRITE_CALL_LOG)
             if (rm.isRoleHeld(android.app.role.RoleManager.ROLE_DIALER) && !Utils.checkPermissions(this, phone))
                 phonePermsLauncher.launch(phone)
             startService(Intent(this, BaresipService::class.java).setAction("Check Roles"))
@@ -391,7 +391,7 @@ class MainActivity : ComponentActivity() {
         else if (Build.VERSION.SDK_INT >= 29 && !Call.inCall() && Utils.checkPermissions(this, arrayOf(RECORD_AUDIO))) {
             val rm = getSystemService(ROLE_SERVICE) as android.app.role.RoleManager
             val ui = getSharedPreferences("hh_ui", MODE_PRIVATE)
-            val log = arrayOf(android.Manifest.permission.READ_CALL_LOG)
+            val log = arrayOf(android.Manifest.permission.READ_CALL_LOG, android.Manifest.permission.WRITE_CALL_LOG)
             // обновление с 0.5.x: звонилке по умолчанию новое разрешение журнала само не выдаётся
             if (rm.isRoleHeld(android.app.role.RoleManager.ROLE_DIALER) && !Utils.checkPermissions(this, log) &&
                     !ui.getBoolean("calllog_asked", false)) {

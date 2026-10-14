@@ -80,12 +80,23 @@ object HHSms {
                 }
             }
         } catch (e: Exception) { Log.e(TAG, "SMS threads failed: $e") }
-        return seen.values.toList()
+        // +374… и 0… — разные THREAD_ID в системе, но одна беседа в HHPhone
+        val out = mutableListOf<Message>()
+        for (m in seen.values) {
+            val same = out.firstOrNull { HHUiLogic.samePhone(it.peerUri, m.peerUri) }
+            if (same == null) out += m else if (m.new) same.new = true
+        }
+        return out
     }
 
     private fun threadIds(ctx: Context, peerUri: String): List<Long> {
         val ids = mutableSetOf<Long>()
-        ctx.contentResolver.query(Sms.CONTENT_URI, arrayOf(Sms.THREAD_ID, Sms.ADDRESS), null, null, null)?.use { c ->
+        // сужаем в SQL (последние 8 цифр или буквенный адрес), точное сравнение — samePhone
+        val key = HHUiLogic.peerKey(peerUri)
+        val digits = key.filter { it.isDigit() }
+        val (sel, arg) = if (key.any { it.isLetter() } || digits.isEmpty()) "${Sms.ADDRESS} = ? COLLATE NOCASE" to key
+            else "${Sms.ADDRESS} LIKE ?" to "%" + digits.takeLast(8).toList().joinToString("%")
+        ctx.contentResolver.query(Sms.CONTENT_URI, arrayOf(Sms.THREAD_ID, Sms.ADDRESS), sel, arrayOf(arg), null)?.use { c ->
             while (c.moveToNext()) if (HHUiLogic.samePhone(c.getString(1) ?: "", peerUri)) ids += c.getLong(0)
         }
         return ids.toList()
@@ -126,9 +137,13 @@ object HHSms {
         val p = ctx.getSharedPreferences("hh_ui", Context.MODE_PRIVATE)
         if (p.getBoolean("sms_imported", false) || !HHHistory.restored || !isDefault(ctx) || !canRead(ctx)) return
         val mine = synchronized(BaresipService.messagesLock) { BaresipService.messages.filter { it.aor == MOBILE } }
+        val sysByPeer = HashMap<String, List<Message>>()
         for (m in mine) {
-            if (m.message.isEmpty()) continue   // MMS только с картинками остаются в HHPhone
-            if (thread(ctx, m.peerUri).any { it.message == m.message && HHUiLogic.sameTime(it.timeStamp, m.timeStamp) }) continue
+            if (m.message.isEmpty() || m.images.isNotEmpty()) continue   // MMS остаются в HHPhone
+            if (m.direction == MESSAGE_UP_FAIL || m.direction == MESSAGE_UP_WAIT) continue   // не ушедшие — не «отправленные»
+            val sys = sysByPeer.getOrPut(m.peerUri) { thread(ctx, m.peerUri) }
+            // у входящих HHPhone хранит время SMSC, система — время приёма: окно ±5 мин, как на экране чата
+            if (sys.any { it.message == m.message && kotlin.math.abs(it.timeStamp - m.timeStamp) < 300_000 }) continue
             try {
                 ctx.contentResolver.insert(if (m.direction == MESSAGE_DOWN) Sms.Inbox.CONTENT_URI else Sms.Sent.CONTENT_URI,
                     ContentValues().apply {

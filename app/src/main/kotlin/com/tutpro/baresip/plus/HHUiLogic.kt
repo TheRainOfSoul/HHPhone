@@ -116,13 +116,21 @@ object HHUiLogic {
 
     /** Один номер: цифры совпадают, или у обоих ≥ 8 цифр и совпадают последние 8 (+374 91… = 091…). */
     fun samePhone(a: String, b: String): Boolean {
-        val x = peerKey(a).filter { it.isDigit() }
-        val y = peerKey(b).filter { it.isDigit() }
+        val ka = peerKey(a)
+        val kb = peerKey(b)
+        if (ka.any { it.isLetter() } || kb.any { it.isLetter() })   // буквенный отправитель (Ucom, банк)
+            return ka.isNotEmpty() && ka.equals(kb, ignoreCase = true)
+        val x = ka.filter { it.isDigit() }
+        val y = kb.filter { it.isDigit() }
         if (x.isEmpty() || y.isEmpty()) return false
         return x == y || (x.length >= 8 && y.length >= 8 && x.takeLast(8) == y.takeLast(8))
     }
 
     fun sameTime(a: Long, b: Long) = kotlin.math.abs(a - b) < 5000
+
+    /** Тот же звонок в системном журнале и в CallHistoryNew: система считает от начала гудков, HHPhone — от ответа (±90 с). */
+    fun sameLoggedCall(sysStart: Long, sysStop: Long, start: Long?, stop: Long) =
+        kotlin.math.abs(sysStop - stop) < 90_000 || kotlin.math.abs(sysStart - (start ?: stop)) < 90_000
 
     private val t9 = listOf("ABC" to '2', "DEF" to '3', "GHI" to '4', "JKL" to '5', "MNO" to '6', "PQRS" to '7', "TUV" to '8', "WXYZ" to '9',
         "АБВГ" to '2', "ДЕЁЖЗ" to '3', "ИЙКЛ" to '4', "МНОП" to '5', "РСТУ" to '6', "ФХЦЧ" to '7', "ШЩЪЫ" to '8', "ЬЭЮЯ" to '9')

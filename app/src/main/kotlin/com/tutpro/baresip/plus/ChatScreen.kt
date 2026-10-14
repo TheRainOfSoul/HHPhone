@@ -103,7 +103,9 @@ import com.tutpro.baresip.plus.BaresipService.Companion.circleGreen
 import com.tutpro.baresip.plus.BaresipService.Companion.colorblind
 import com.tutpro.baresip.plus.CustomElements.AlertDialog
 import com.tutpro.baresip.plus.CustomElements.verticalScrollbar
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.lang.String.format
 import java.text.DateFormat
@@ -141,12 +143,14 @@ private fun ChatScreen(
     val aor = account.aor
 
     var chatMessages by remember(aor, peerUri) { mutableStateOf<List<Message>>(emptyList()) }
+    val loadScope = rememberCoroutineScope()   // HHPhone: SIM-беседа читается из системной базы — не в главном потоке
+    val loadChat = { loadScope.launch { chatMessages = withContext(Dispatchers.IO) { loadPeerMessages(ctx, aor, peerUri) } } }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 Log.d(TAG, "Resumed to ChatScreen for AOR: $aor peer $peerUri")
-                chatMessages = loadPeerMessages(ctx, aor, peerUri)
+                loadChat()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -163,9 +167,9 @@ private fun ChatScreen(
         serviceIntent.putExtra("peer", peerUri)
         ctx.startService(serviceIntent)
         Message.updateMessagesFromPearRead(aor, peerUri)
-        if (aor == HHSms.MOBILE) HHSms.markRead(ctx, peerUri)
+        if (aor == HHSms.MOBILE) loadScope.launch(Dispatchers.IO) { HHSms.markRead(ctx, peerUri) }
         account.unreadMessages = Message.unreadMessages(aor)
-        chatMessages = loadPeerMessages(ctx, aor, peerUri)
+        loadChat()
         if (!areMessagesLoaded) areMessagesLoaded = true
     }
 
@@ -456,7 +460,13 @@ private fun Messages(
                         secondButtonText.value = ""
                         lastButtonText.value = deleteString
                         lastAction.value = {
-                            if (message.smsId != 0L) HHSms.delete(ctx, message.smsId) else message.delete()
+                            if (message.smsId != 0L) {
+                                HHSms.delete(ctx, message.smsId)
+                                BaresipService.messages.filter { it.aor == HHSms.MOBILE && it.message == message.message &&
+                                    HHUiLogic.samePhone(it.peerUri, message.peerUri) &&
+                                    kotlin.math.abs(it.timeStamp - message.timeStamp) < 300_000 }.forEach { it.delete() }
+                            }
+                            else message.delete()
                             onMessageDeleted()
                         }
                         showDialog.value = true
@@ -757,8 +767,7 @@ private fun NewMessage(
                                             }
                                             Message.updateMessageStatus(aor, time, msg.direction, msg.responseReason)
                                         }
-                                    (if (HHSms.canRead(ctx)) HHSms.send(ctx, destination, msgText)
-                                        else Utils.sendSms(ctx, destination, msgText)) ->
+                                    Utils.sendSms(ctx, destination, msgText) ->
                                         msg.direction = MESSAGE_UP
                                     else -> {
                                         Toast.makeText(ctx, "$messageFailed!", Toast.LENGTH_SHORT).show()

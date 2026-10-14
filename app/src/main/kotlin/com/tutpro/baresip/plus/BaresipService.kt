@@ -1797,6 +1797,9 @@ class BaresipService: Service() {
         }
 
         Log.d(TAG, "Message event for $uap from $sanitizedPeerUri at $timeStamp")
+        // HHPhone: SIM-SMS — в системную базу (после блокировки и повтора; MMS с картинками остаются у HHPhone)
+        if (ua.account.isMobile && images.isEmpty())
+            HHSms.storeIncoming(this, Utils.uriUserPart(sanitizedPeerUri), decodedText, timeStamp, -1)
         Message(
             aor = aor,
             peerUri = sanitizedPeerUri,

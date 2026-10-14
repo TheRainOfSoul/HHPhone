@@ -16,7 +16,7 @@ object HHCallLog {
 
     /** null — нет разрешения (журнал тогда из CallHistoryNew). */
     fun read(ctx: Context, limit: Int = 500): List<HHLogEntry>? {
-        if (!can(ctx, Manifest.permission.READ_CALL_LOG)) return null
+        if (!can(ctx, Manifest.permission.READ_CALL_LOG) || !can(ctx, Manifest.permission.WRITE_CALL_LOG)) return null
         val args = Bundle().apply {
             putStringArray(ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(Calls.DATE))
             putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
@@ -48,7 +48,7 @@ object HHCallLog {
             put(Calls.PHONE_ACCOUNT_ID, aor)
             if (aor.isNotEmpty())
                 put(Calls.PHONE_ACCOUNT_COMPONENT_NAME, BaresipService.getPhoneAccountHandle(ctx).componentName.flattenToString())
-            put(Calls.NEW, if (type == HHUiLogic.CL_MISSED) 1 else 0)
+            put(Calls.NEW, 0)   // своё уведомление о пропущенном уже есть; NEW=1 дал бы системное после перезагрузки
             put(Calls.NUMBER_PRESENTATION, Calls.PRESENTATION_ALLOWED)
         }
         try { ctx.contentResolver.insert(Calls.CONTENT_URI, v) } catch (e: Exception) { Log.e(TAG, "CallLog write failed: $e") }
@@ -63,7 +63,7 @@ object HHCallLog {
             val start = h.startTime?.timeInMillis
             val stop = h.stopTime.timeInMillis
             if (have.any { HHUiLogic.samePhone(it.peer, h.peerUri) &&
-                    (HHUiLogic.sameTime(it.start ?: it.stop, start ?: stop) || HHUiLogic.sameTime(it.stop, stop)) }) continue
+                    HHUiLogic.sameLoggedCall(it.start ?: it.stop, it.stop, start, stop) }) continue
             write(ctx, if (h.aor.endsWith("@pstn")) "" else h.aor, h.peerUri, h.direction, start, stop, h.rejected)
         }
         p.edit().putBoolean("calllog_imported", true).apply()
