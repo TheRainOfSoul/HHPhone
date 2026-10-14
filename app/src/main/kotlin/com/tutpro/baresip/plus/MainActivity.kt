@@ -215,10 +215,12 @@ class MainActivity : ComponentActivity() {
         // HHPhone: после окна роли — то же, что переключатель в Настройках (номер SIM, SIM-аккаунт)
         phonePermsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
             startService(Intent(this, BaresipService::class.java).setAction("Check Roles"))
+            HHHistory.bump()   // журнал перечитывается уже из системного CallLog
         }
         roleLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             val rm = getSystemService(ROLE_SERVICE) as android.app.role.RoleManager
-            val phone = arrayOf(android.Manifest.permission.READ_PHONE_STATE, android.Manifest.permission.READ_PHONE_NUMBERS)
+            val phone = arrayOf(android.Manifest.permission.READ_PHONE_STATE, android.Manifest.permission.READ_PHONE_NUMBERS,
+                android.Manifest.permission.READ_CALL_LOG)
             if (rm.isRoleHeld(android.app.role.RoleManager.ROLE_DIALER) && !Utils.checkPermissions(this, phone))
                 phonePermsLauncher.launch(phone)
             startService(Intent(this, BaresipService::class.java).setAction("Check Roles"))
@@ -389,7 +391,14 @@ class MainActivity : ComponentActivity() {
         else if (Build.VERSION.SDK_INT >= 29 && !Call.inCall() && Utils.checkPermissions(this, arrayOf(RECORD_AUDIO))) {
             val rm = getSystemService(ROLE_SERVICE) as android.app.role.RoleManager
             val ui = getSharedPreferences("hh_ui", MODE_PRIVATE)
-            for ((role, key) in listOf(android.app.role.RoleManager.ROLE_DIALER to "dialer_asked",
+            val log = arrayOf(android.Manifest.permission.READ_CALL_LOG)
+            // обновление с 0.5.x: звонилке по умолчанию новое разрешение журнала само не выдаётся
+            if (rm.isRoleHeld(android.app.role.RoleManager.ROLE_DIALER) && !Utils.checkPermissions(this, log) &&
+                    !ui.getBoolean("calllog_asked", false)) {
+                ui.edit().putBoolean("calllog_asked", true).apply()
+                phonePermsLauncher.launch(log)
+            }
+            else for ((role, key) in listOf(android.app.role.RoleManager.ROLE_DIALER to "dialer_asked",
                     android.app.role.RoleManager.ROLE_SMS to "sms_asked"))
                 if (rm.isRoleAvailable(role) && !rm.isRoleHeld(role) && !ui.getBoolean(key, false)) {
                     ui.edit().putBoolean(key, true).apply()

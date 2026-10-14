@@ -33,6 +33,8 @@ import java.util.Date
 object HHHistory {
     val version = kotlinx.coroutines.flow.MutableStateFlow(0)
     fun bump() { version.value++ }
+    /** Журнал и сообщения HHPhone загружены из файлов (до этого переносить в систему нечего — флаг переноса не ставим). */
+    @Volatile var restored = false
     /** Копия под замком: журнал пишется и из фонового потока. */
     fun snapshot(): List<CallHistoryNew> = synchronized(BaresipService.callHistory) { ArrayList(BaresipService.callHistory) }
 }
@@ -43,10 +45,15 @@ private val hhAvatarColors = listOf(
     Color(0xFF5C4B8A), Color(0xFFA15C00), Color(0xFFAD1457), Color(0xFF5D6B1E)
 )
 
+/** Контакт по номеру: точное совпадение или тот же номер в другой записи (+374 91… = 091…). */
+fun hhContact(peer: String): Contact? = Contact.findContact(peer)
+    ?: BaresipService.contacts.firstOrNull { c -> c.uris().any { HHUiLogic.samePhone(it.uri, peer) } }
+
 /** Имя для показа: контакт, коллега со станции или номер. */
 fun hhName(peer: String): String {
     val n = Contact.contactName(peer)
     if (n != peer) return n
+    hhContact(peer)?.let { return it.name() }
     val key = HHUiLogic.peerKey(peer)
     return HHColleagues.list.value.firstOrNull { it.number == key }?.name?.takeIf { it.isNotBlank() } ?: key
 }
@@ -54,7 +61,7 @@ fun hhName(peer: String): String {
 /** Фото контакта или первая буква в цветном круге. */
 @Composable
 fun HHAvatar(name: String, peer: String?, size: Dp) {
-    when (val c = peer?.let { Contact.findContact(it) }) {
+    when (val c = peer?.let { hhContact(it) }) {
         is Contact.AndroidContact -> c.thumbnailUri?.let { t ->
             AsyncImage(model = t, contentDescription = null, contentScale = ContentScale.Crop,
                 modifier = Modifier.size(size).clip(CircleShape))

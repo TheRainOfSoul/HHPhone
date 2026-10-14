@@ -55,9 +55,9 @@ object HHCallLog {
     }
 
     /** Один раз: записи CallHistoryNew, которых нет в системном журнале (SIM, удалённые прежними версиями, и станции). */
-    fun migrate(ctx: Context) {
+    @Synchronized fun migrate(ctx: Context) {   // вкладка зовёт на каждый bump — второй вызов ждёт и видит флаг
         val p = ctx.getSharedPreferences("hh_ui", Context.MODE_PRIVATE)
-        if (p.getBoolean("calllog_migrated", false) || !can(ctx, Manifest.permission.WRITE_CALL_LOG)) return
+        if (p.getBoolean("calllog_imported", false) || !HHHistory.restored || !can(ctx, Manifest.permission.WRITE_CALL_LOG)) return
         val have = read(ctx, 5000) ?: return
         for (h in HHHistory.snapshot()) {
             val start = h.startTime?.timeInMillis
@@ -66,7 +66,7 @@ object HHCallLog {
                     (HHUiLogic.sameTime(it.start ?: it.stop, start ?: stop) || HHUiLogic.sameTime(it.stop, stop)) }) continue
             write(ctx, if (h.aor.endsWith("@pstn")) "" else h.aor, h.peerUri, h.direction, start, stop, h.rejected)
         }
-        p.edit().putBoolean("calllog_migrated", true).apply()
+        p.edit().putBoolean("calllog_imported", true).apply()
     }
 
     /** Подписка на изменения журнала; возвращает отписку. */

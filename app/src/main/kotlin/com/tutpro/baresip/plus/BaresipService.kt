@@ -929,6 +929,8 @@ class BaresipService: Service() {
                 Blocked.restore()
                 BlockRule.restore()
                 Message.restore()
+                HHHistory.restored = true   // HHPhone: перенос в системные журнал/SMS — только после загрузки
+                HHHistory.bump()
 
                 val recordings = File(filesDir, "recordings")
 

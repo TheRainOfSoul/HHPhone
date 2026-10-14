@@ -20,7 +20,8 @@ import android.telephony.SmsManager
 object HHSms {
     const val MOBILE = "sip:mobile@pstn"
     fun canRead(ctx: Context) = Utils.checkPermissions(ctx, arrayOf(Manifest.permission.READ_SMS))
-    fun isDefault(ctx: Context) = Sms.getDefaultSmsPackage(ctx) == ctx.packageName
+    /** Роль SMS (RoleManager): getDefaultSmsPackage даёт null, если у приложения нет READ_CELL_BROADCASTS. */
+    fun isDefault(ctx: Context) = Utils.isDefaultSmsApp(ctx)
 
     /** Входящее SMS → Inbox (обязанность SMS-приложения по умолчанию). */
     fun storeIncoming(ctx: Context, address: String, body: String, sentAt: Long, subId: Int) {
@@ -121,9 +122,9 @@ object HHSms {
     }
 
     /** Один раз: SIM-сообщения HHPhone, которых нет в системе, переносятся туда. */
-    fun migrate(ctx: Context) {
+    @Synchronized fun migrate(ctx: Context) {   // вкладка зовёт на каждый bump — второй вызов ждёт и видит флаг
         val p = ctx.getSharedPreferences("hh_ui", Context.MODE_PRIVATE)
-        if (p.getBoolean("sms_migrated", false) || !isDefault(ctx) || !canRead(ctx)) return
+        if (p.getBoolean("sms_imported", false) || !HHHistory.restored || !isDefault(ctx) || !canRead(ctx)) return
         val mine = synchronized(BaresipService.messagesLock) { BaresipService.messages.filter { it.aor == MOBILE } }
         for (m in mine) {
             if (m.message.isEmpty()) continue   // MMS только с картинками остаются в HHPhone
@@ -136,7 +137,7 @@ object HHSms {
                     })
             } catch (e: Exception) { Log.e(TAG, "SMS migrate failed: $e") }
         }
-        p.edit().putBoolean("sms_migrated", true).apply()
+        p.edit().putBoolean("sms_imported", true).apply()
     }
 
     /** Подписка на изменения базы SMS; возвращает отписку. */

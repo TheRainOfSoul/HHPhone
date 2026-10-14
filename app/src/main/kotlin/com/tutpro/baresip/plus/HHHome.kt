@@ -206,7 +206,7 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
     val history by HHHistory.version.collectAsState()
     val colleagues by HHColleagues.list.collectAsState()
     DisposableEffect(Unit) { val off = HHCallLog.observe(ctx) { HHHistory.bump() }; onDispose { off() } }
-    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { HHCallLog.migrate(ctx) } }
+    LaunchedEffect(history) { withContext(Dispatchers.IO) { HHCallLog.migrate(ctx) } }   // ждёт загрузки журнала (bump)
     // журнал — системный CallLog; без разрешения — как раньше, из CallHistoryNew
     val log by produceState(emptyList<HHLogGroup>(), history, colleagues) {
         value = withContext(Dispatchers.IO) {
@@ -231,7 +231,8 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             items(log, key = { "${it.peer}|${it.last.stop}|$tick" }) { g ->
-                HHLogRow(ctx, g, onCard = { navController.navigate("contact/${Uri.encode(HHUiLogic.peerKey(g.peer))}/" + if (Contact.findContact(g.peer) != null) "old" else "new") }) {
+                HHLogRow(ctx, g, onCard = { val c = hhContact(g.peer)
+                    navController.navigate(if (c != null) "contact/${Uri.encode(c.name())}/old" else "contact/${Uri.encode(HHUiLogic.peerKey(g.peer))}/new") }) {
                     HHUiLogic.dialTarget(g.peer, lines, g.aor)?.let { (aor, n) -> HHCalls.dial(ctx, viewModel, aor, n) }
                 }
                 HorizontalDivider(Modifier.padding(start = 72.dp), color = MaterialTheme.colorScheme.outlineVariant)
@@ -369,7 +370,7 @@ private fun HHLogRow(ctx: Context, g: HHLogGroup, onCard: () -> Unit, onClick: (
         }
         Text(hhAgo(ctx, e.stop), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         IconButton(onClick = onCard) {
-            Icon(if (Contact.findContact(g.peer) != null) Icons.Outlined.AccountBox else Icons.Outlined.PersonAdd,
+            Icon(if (hhContact(g.peer) != null) Icons.Outlined.AccountBox else Icons.Outlined.PersonAdd,
                 stringResource(R.string.hh_contact_card), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -447,7 +448,11 @@ private fun HHChatsTab(ctx: Context, navController: NavController) {
     val messages = BaresipService.messages
     var smsVer by remember { mutableStateOf(0) }
     DisposableEffect(Unit) { val off = HHSms.observe(ctx) { smsVer++ }; onDispose { off() } }
-    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { HHSms.migrate(ctx); smsVer++ } }
+    LaunchedEffect(Unit) {
+        while (!HHHistory.restored) delay(300)
+        withContext(Dispatchers.IO) { HHSms.migrate(ctx) }
+        smsVer++
+    }
     // SMS-беседы из системной базы + беседы HHPhone через станцию (и SIM, которых нет в системе)
     val chats by produceState(emptyList<Message>(), messages, smsVer) {
         value = withContext(Dispatchers.IO) {

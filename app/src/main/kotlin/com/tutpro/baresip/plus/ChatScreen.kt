@@ -845,9 +845,10 @@ private fun loadPeerMessages(ctx: Context, aor: String, peerUri: String): List<M
     for (m in BaresipService.messages.reversed())
         if ((m.aor == aor) && (m.peerUri == peerUri)) res.add(m)
     if (aor != HHSms.MOBILE || !HHSms.canRead(ctx)) return res
-    // HHPhone, SIM: переписка из системной базы + свои MMS с картинками и неотправленные без пары в системе
+    // HHPhone, SIM: переписка из системной базы + свои сообщения без пары в системе (MMS с картинками,
+    // неотправленные, не попавшие в базу); пара — тот же текст ±5 мин (у входящих время приёма ≠ времени отправки)
     val sys = HHSms.thread(ctx, peerUri)
-    val own = res.filter { m -> m.images.isNotEmpty() || (m.direction != MESSAGE_DOWN && m.direction != MESSAGE_UP &&
-        sys.none { it.message == m.message && HHUiLogic.sameTime(it.timeStamp, m.timeStamp) }) }
+    val own = res.filter { m -> m.images.isNotEmpty() ||
+        sys.none { it.message == m.message && kotlin.math.abs(it.timeStamp - m.timeStamp) < 300_000 } }
     return (sys + own).sortedByDescending { it.timeStamp }
 }
