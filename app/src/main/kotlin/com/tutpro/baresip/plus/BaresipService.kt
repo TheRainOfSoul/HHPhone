@@ -3740,7 +3740,8 @@ class BaresipService: Service() {
         fun isBlocked(aor: String, uri: String): Boolean {
             for (rule in blockRules)
                 if ((rule.aor == aor || rule.aor == "") && rule.matches(uri)) return true
-            return false
+            // HHPhone: системная блокировка (карточка контакта) — и для звонков/сообщений через станцию
+            return instance?.let { HHBlock.isBlocked(it, HHUiLogic.peerKey(uri)) } ?: false
         }
 
         var contactsMode by mutableStateOf("baresip")

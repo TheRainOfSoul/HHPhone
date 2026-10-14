@@ -76,11 +76,11 @@ fun NavGraphBuilder.hhRoutes(navController: NavController, viewModel: ViewModel)
 }
 
 /** Куда звонить по каждой линии: (подпись, aor, что набрать). */
-private fun lineTargets(peer: String, lines: List<HHLine>): List<Triple<String, String, String>> =
+internal fun hhLineTargets(peer: String, lines: List<HHLine>): List<Triple<String, String, String>> =
     lines.mapNotNull { l -> HHUiLogic.dialTarget(peer, listOf(l), l.aor)?.let { (aor, n) -> Triple(hhLineLabel(l), aor, n) } }
 
 /** Чат с собеседником: номер — SIM-чат (или станция, если SIM нет), sip: — чат станции. */
-private fun chatRoute(peer: String, aor: String, lines: List<HHLine>): String? {
+internal fun hhChatRoute(peer: String, aor: String, lines: List<HHLine>): String? {
     val number = HHUiLogic.peerKey(peer)
     val (a, p) = when {
         peer.startsWith("sip:") -> (lines.firstOrNull { it.aor == aor && !it.mobile } ?: lines.firstOrNull { !it.mobile })?.aor to peer
@@ -127,7 +127,7 @@ fun HHCallSheet(g: HHLogGroup, navController: NavController, viewModel: ViewMode
             }
             if (!anonymous) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    lineTargets(g.peer, lines).forEach { (label, aor, target) ->
+                    hhLineTargets(g.peer, lines).forEach { (label, aor, target) ->
                         Surface(onClick = { onDismiss(); HHCalls.dial(ctx, viewModel, aor, target) }, shape = RoundedCornerShape(26.dp),
                             color = green, modifier = Modifier.weight(1f).height(52.dp)) {
                             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -138,7 +138,7 @@ fun HHCallSheet(g: HHLogGroup, navController: NavController, viewModel: ViewMode
                         }
                     }
                 }
-                chatRoute(g.peer, g.aor, lines)?.let { r ->
+                hhChatRoute(g.peer, g.aor, lines)?.let { r ->
                     SheetItem(Icons.AutoMirrored.Outlined.Chat, stringResource(R.string.hh_sms)) { onDismiss(); navController.navigate(r) }
                 }
             }

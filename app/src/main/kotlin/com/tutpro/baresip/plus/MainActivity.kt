@@ -331,6 +331,7 @@ class MainActivity : ComponentActivity() {
                     chatsScreenRoute(navController)
                     chatScreenRoute(navController, viewModel)
                     hhRoutes(navController, viewModel)
+                    hhContactRoute(navController, viewModel)
                 }
                 HHHost(navController)
             }

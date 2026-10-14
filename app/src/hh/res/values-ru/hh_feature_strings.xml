@@ -108,4 +108,19 @@
     <string name="hh_copied">Номер скопирован</string>
     <string name="hh_delete_from_log">Удалить из журнала</string>
     <string name="hh_back">Назад</string>
+    <string name="hh_save_failed">Не удалось сохранить контакт</string>
+    <string name="hh_name_required">Введите имя или номер</string>
+    <string name="hh_cancel">Отмена</string>
+    <string name="hh_save">Сохранить</string>
+    <string name="hh_edit">Изменить</string>
+    <string name="hh_photo_pick">Выбрать фото</string>
+    <string name="hh_photo_remove">Удалить фото</string>
+    <string name="hh_name">Имя</string>
+    <string name="hh_add_number">Добавить номер</string>
+    <string name="hh_is_blocked">Заблокирован</string>
+    <string name="hh_block">Заблокировать</string>
+    <string name="hh_unblock">Разблокировать</string>
+    <string name="hh_number">Номер</string>
+    <string name="hh_delete_number">Удалить номер</string>
+    <string name="hh_call">Позвонить</string>
 </resources>

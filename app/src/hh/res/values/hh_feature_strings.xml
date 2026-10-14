@@ -104,4 +104,19 @@
     <string name="hh_copied">Number copied</string>
     <string name="hh_delete_from_log">Delete from call log</string>
     <string name="hh_back">Back</string>
+    <string name="hh_save_failed">Could not save the contact</string>
+    <string name="hh_name_required">Enter a name or a number</string>
+    <string name="hh_cancel">Cancel</string>
+    <string name="hh_save">Save</string>
+    <string name="hh_edit">Edit</string>
+    <string name="hh_photo_pick">Choose photo</string>
+    <string name="hh_photo_remove">Remove photo</string>
+    <string name="hh_name">Name</string>
+    <string name="hh_add_number">Add number</string>
+    <string name="hh_is_blocked">Blocked</string>
+    <string name="hh_block">Block</string>
+    <string name="hh_unblock">Unblock</string>
+    <string name="hh_number">Number</string>
+    <string name="hh_delete_number">Delete number</string>
+    <string name="hh_call">Call</string>
 </resources>

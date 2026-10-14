@@ -262,7 +262,7 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                 }
                 Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     HHRoundButton(Icons.Outlined.PersonAdd, stringResource(R.string.hh_add_contact)) {
-                        if (!checkLockedAndToast(ctx)) navController.navigate("contact/${Uri.encode(number)}/new")
+                        if (!checkLockedAndToast(ctx)) navController.navigate("hh_contact/" + Uri.encode("n$number"))
                     }
                     Row(Modifier.weight(1f).padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (lines.isEmpty())

@@ -104,4 +104,19 @@
     <string name="hh_copied">Համարը պատճենված է</string>
     <string name="hh_delete_from_log">Ջնջել մատյանից</string>
     <string name="hh_back">Հետ</string>
+    <string name="hh_save_failed">Չհաջողվեց պահպանել կոնտակտը</string>
+    <string name="hh_name_required">Մուտքագրեք անուն կամ համար</string>
+    <string name="hh_cancel">Չեղարկել</string>
+    <string name="hh_save">Պահպանել</string>
+    <string name="hh_edit">Փոխել</string>
+    <string name="hh_photo_pick">Ընտրել լուսանկար</string>
+    <string name="hh_photo_remove">Ջնջել լուսանկարը</string>
+    <string name="hh_name">Անուն</string>
+    <string name="hh_add_number">Ավելացնել համար</string>
+    <string name="hh_is_blocked">Արգելափակված է</string>
+    <string name="hh_block">Արգելափակել</string>
+    <string name="hh_unblock">Ապաարգելափակել</string>
+    <string name="hh_number">Համար</string>
+    <string name="hh_delete_number">Ջնջել համարը</string>
+    <string name="hh_call">Զանգել</string>
 </resources>
