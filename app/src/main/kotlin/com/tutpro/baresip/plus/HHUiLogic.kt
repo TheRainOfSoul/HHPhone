@@ -89,6 +89,19 @@ object HHUiLogic {
         }
     }
 
+    private val t9 = listOf("ABC" to '2', "DEF" to '3', "GHI" to '4', "JKL" to '5', "MNO" to '6', "PQRS" to '7', "TUV" to '8', "WXYZ" to '9',
+        "АБВГ" to '2', "ДЕЁЖЗ" to '3', "ИЙКЛ" to '4', "МНОП" to '5', "РСТУ" to '6', "ФХЦЧ" to '7', "ШЩЪЫ" to '8', "ЬЭЮЯ" to '9')
+        .flatMap { (ls, d) -> ls.map { it to d } }.toMap()
+
+    /** Подсказка при наборе: цифры номера (и без ведущего 0 — для +374…) или буквы начала слова имени по клавишам. */
+    fun suggestMatch(query: String, name: String, number: String): Boolean {
+        val q = query.filter { it.isDigit() }
+        if (q.isEmpty()) return false
+        val n = number.filter { it.isDigit() }
+        if (n.contains(q) || (q.length > 2 && q[0] == '0' && n.contains(q.drop(1)))) return true
+        return q.length > 1 && name.uppercase().split(' ', '-').any { w -> w.map { t9[it] ?: it }.joinToString("").startsWith(q) }
+    }
+
     private val item = Regex(""""n":"([^"]*)","name":"((?:[^"\\]|\\.)*)"""")
     private val esc = Regex("""\\(u[0-9a-fA-F]{4}|.)""")
 

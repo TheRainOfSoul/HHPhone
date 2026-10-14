@@ -92,4 +92,9 @@
     <string name="hh_back_to_call">Return to call</string>
     <string name="hh_home">Home</string>
     <string name="hh_contact_card">Contact</string>
+    <string name="hh_key_vibration">Vibrate on keypress</string>
+    <string name="hh_contacts_access">Allow access to phone contacts to see and call them here</string>
+    <string name="hh_allow">Allow</string>
+    <string name="hh_new_chat">New chat</string>
+    <string name="hh_no_favorites">No favorites yet. Tap ☆ next to a contact in Contacts</string>
 </resources>

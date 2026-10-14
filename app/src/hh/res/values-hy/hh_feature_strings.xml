@@ -92,4 +92,9 @@
     <string name="hh_back_to_call">Վերադառնալ զանգին</string>
     <string name="hh_home">Գլխավոր էկրան</string>
     <string name="hh_contact_card">Կոնտակտ</string>
+    <string name="hh_key_vibration">Ստեղների թրթռում</string>
+    <string name="hh_contacts_access">Թույլատրեք հեռախոսի կոնտակտների հասանելիությունը՝ դրանք այստեղ տեսնելու և զանգելու համար</string>
+    <string name="hh_allow">Թույլատրել</string>
+    <string name="hh_new_chat">Նոր զրույց</string>
+    <string name="hh_no_favorites">Ընտրյալներ դեռ չկան։ Սեղմեք ☆ կոնտակտի կողքին «Կոնտակտներ» ներդիրում</string>
 </resources>

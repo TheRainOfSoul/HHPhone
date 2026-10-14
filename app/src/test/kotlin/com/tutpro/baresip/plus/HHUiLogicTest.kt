@@ -126,4 +126,21 @@ class HHUiLogicTest {
         assertEquals(false, HHUiLogic.missed(HHLogEntry("tel:1", "a", "in", null, 1, true)))
         assertEquals(false, HHUiLogic.missed(HHLogEntry("tel:1", "a", "out", null, 1, false)))
     }
+
+    @Test fun suggestMatchesNumberDigits() {
+        assertTrue(HHUiLogic.suggestMatch("9112", "Ани", "+374 91 123456"))
+        assertEquals(false, HHUiLogic.suggestMatch("555", "Ани", "+374 91 123456"))
+    }
+
+    @Test fun suggestMatchesNationalZeroPrefix() {
+        assertTrue(HHUiLogic.suggestMatch("0911", "Ани", "+37491123456"))
+    }
+
+    @Test fun suggestMatchesNameLettersByKeypad() {
+        assertTrue(HHUiLogic.suggestMatch("266", "Anna", "100"))            // A2 N6 N6
+        assertEquals(false, HHUiLogic.suggestMatch("264", "Anna", "100"))
+        assertTrue(HHUiLogic.suggestMatch("73", "Hayk Petrosyan", "100"))   // начало второго слова: P7 E3
+        assertTrue(HHUiLogic.suggestMatch("254", "Ани Иванова", "100"))     // кириллица: А2 Н5 И4
+        assertEquals(false, HHUiLogic.suggestMatch("2", "Anna", "100"))     // одна цифра — не ищем по имени
+    }
 }

@@ -1,6 +1,19 @@
 package com.tutpro.baresip.plus
 
 import android.content.Context
+import android.Manifest
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Vibration
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.ui.semantics.contentDescription
@@ -78,7 +91,17 @@ import com.tutpro.baresip.plus.BaresipService.Companion.colorblind
 @Composable
 fun HHHome(navController: NavController, viewModel: ViewModel, onQuitClick: () -> Unit, onReturnToCall: (() -> Unit)? = null) {
     val ctx = LocalContext.current
-    var tab by rememberSaveable { mutableStateOf(1) }
+    val pager = rememberPagerState(initialPage = 1) { 4 }
+    val scope = rememberCoroutineScope()
+    val allowContacts = hhContactsAccess(ctx)
+    LaunchedEffect(Unit) {   // HHPhone заменяет звонилку — контакты телефона нужны сразу; спрашиваем один раз
+        while (!Config.isInitialized()) delay(200)   // первый запуск: config читает сервис
+        val p = ctx.getSharedPreferences("hh_ui", Context.MODE_PRIVATE)
+        if (BaresipService.contactsMode == "baresip" && !p.getBoolean("contacts_asked", false) && !Call.inCall()) {
+            p.edit().putBoolean("contacts_asked", true).apply()
+            allowContacts()
+        }
+    }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         HHHeader(navController, onQuitClick)
         if (onReturnToCall != null)
@@ -86,22 +109,40 @@ fun HHHome(navController: NavController, viewModel: ViewModel, onQuitClick: () -
                 .clickable(onClick = onReturnToCall).padding(12.dp), color = Color.White, fontWeight = FontWeight.Medium,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         val titles = listOf(R.string.hh_tab_favorites, R.string.hh_tab_phone, R.string.hh_tab_contacts, R.string.hh_tab_chats)
+        val tab = pager.currentPage
         TabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.surface,
             indicator = { pos -> TabRowDefaults.SecondaryIndicator(Modifier.tabIndicatorOffset(pos[tab]), color = MaterialTheme.colorScheme.primary) }) {
             titles.forEachIndexed { i, t ->
-                Tab(selected = tab == i, onClick = { tab = i }, text = {
+                Tab(selected = tab == i, onClick = { scope.launch { pager.animateScrollToPage(i) } }, text = {
                     Text(stringResource(t), maxLines = 1, color = if (tab == i) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                 })
             }
         }
-        Box(Modifier.weight(1f)) {
-            when (tab) {
-                0 -> HHPeopleTab(ctx, viewModel, favoritesOnly = true)
+        HorizontalPager(pager, Modifier.weight(1f)) { page ->
+            when (page) {
+                0 -> HHPeopleTab(ctx, viewModel, favoritesOnly = true, allowContacts)
                 1 -> HHPhoneTab(ctx, navController, viewModel)
-                2 -> HHPeopleTab(ctx, viewModel, favoritesOnly = false)
+                2 -> HHPeopleTab(ctx, viewModel, favoritesOnly = false, allowContacts)
                 else -> HHChatsTab(ctx, navController)
             }
         }
+    }
+}
+
+/** Доступ к контактам телефона: есть разрешение — режим «both», нет — спрашиваем; отказано навсегда — настройки приложения. */
+@Composable
+private fun hhContactsAccess(ctx: Context): () -> Unit {
+    val perms = arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS)
+    var asked by remember { mutableStateOf(false) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        if (r.values.all { it }) Contact.setMode(ctx, "both")
+        else if (asked) try {   // повторный отказ без системного окна — запрещено «больше не спрашивать»
+            ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.packageName)))
+        } catch (_: Exception) {}
+        asked = true
+    }
+    return {
+        if (Utils.checkPermissions(ctx, perms)) Contact.setMode(ctx, "both") else launcher.launch(perms)
     }
 }
 
@@ -112,6 +153,7 @@ private fun HHHeader(navController: NavController, onQuitClick: () -> Unit) {
     val settings = stringResource(R.string.configuration)
     val accounts = stringResource(R.string.accounts)
     val quit = stringResource(R.string.quit)
+    val vibe = stringResource(R.string.hh_key_vibration)
     Row(Modifier.fillMaxWidth().background(hhHeader).statusBarsPadding().height(56.dp).padding(start = 16.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Text(stringResource(R.string.app_name), color = MaterialTheme.colorScheme.onPrimary, fontSize = 20.sp,
@@ -125,10 +167,12 @@ private fun HHHeader(navController: NavController, onQuitClick: () -> Unit) {
                 menuItems = hhMenu(listOf(
                     MenuItem(accounts, Icons.Outlined.ManageAccounts),
                     MenuItem(settings, Icons.Outlined.Settings),
+                    MenuItem(vibe, if (HHKeyVibe.enabled(ctx)) Icons.Filled.Check else Icons.Outlined.Vibration),
                     MenuItem(quit, Icons.AutoMirrored.Filled.Logout)
                 ), hidden = setOf(settings, accounts, quit)),
                 onItemClick = { item ->
                     menu = false
+                    if (item == vibe) { HHKeyVibe.toggle(ctx); return@DropdownMenu }
                     if (hhMenuClick(ctx, item) || checkLockedAndToast(ctx)) return@DropdownMenu
                     when (item) {
                         settings -> navController.navigate("settings")
@@ -206,10 +250,10 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                     })
                 }
                 Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { if (number.isNotEmpty()) navController.navigate("contact/${Uri.encode(number)}/new") }) {
-                        Icon(Icons.Outlined.PersonAdd, stringResource(R.string.hh_add_contact), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    HHRoundButton(Icons.Outlined.PersonAdd, stringResource(R.string.hh_add_contact)) {
+                        if (!checkLockedAndToast(ctx)) navController.navigate("contact/${Uri.encode(number)}/new")
                     }
-                    Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.weight(1f).padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (lines.isEmpty())
                             Surface(onClick = { if (!checkLockedAndToast(ctx)) navController.navigate("accounts") },
                                 shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.primary,
@@ -247,24 +291,33 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                             }
                         }
                     }
-                    IconButton(onClick = { keypad = !keypad }) {
-                        Icon(Icons.Default.Dialpad, stringResource(R.string.hh_keypad), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    HHRoundButton(Icons.Default.Dialpad, stringResource(R.string.hh_keypad), active = keypad) { keypad = !keypad }
                 }
             }
         }
     }
 }
 
+@Composable
+private fun HHRoundButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, active: Boolean = false, onClick: () -> Unit) =
+    Surface(onClick = onClick, shape = CircleShape, modifier = Modifier.size(52.dp),
+        color = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(icon, label, Modifier.size(28.dp),
+                tint = if (active) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+
 /** Подсказки по набранным цифрам: контакты и коллеги. */
 @Composable
 private fun HHSuggestions(number: String, onPick: (String) -> Unit) {
     if (number.length < 2) return
     val colleagues by HHColleagues.list.collectAsState()
-    val hits = remember(number, colleagues) {
-        (colleagues.filter { it.number.contains(number) }.map { it.name.ifBlank { it.number } to it.number } +
-            BaresipService.contacts.flatMap { c -> c.uris().map { c.name() to HHUiLogic.peerKey(it.uri) } }
-                .filter { it.second.contains(number) }).distinctBy { it.second }.take(3)
+    val contacts = BaresipService.contacts
+    val hits = remember(number, colleagues, contacts) {
+        (colleagues.map { it.name.ifBlank { it.number } to it.number } +
+            contacts.flatMap { c -> c.uris().map { c.name() to HHUiLogic.peerKey(it.uri) } })
+            .filter { (name, n) -> HHUiLogic.suggestMatch(number, name, n) }.distinctBy { it.second }.take(3)
     }
     hits.forEach { (name, n) ->
         Row(Modifier.fillMaxWidth().clickable { onPick(n) }.padding(horizontal = 16.dp, vertical = 6.dp),
@@ -315,7 +368,7 @@ private fun HHLogRow(ctx: Context, g: HHLogGroup, onCard: () -> Unit, onClick: (
 
 /** Контакты (с поиском и «Коллегами») или Избранное. */
 @Composable
-private fun HHPeopleTab(ctx: Context, viewModel: ViewModel, favoritesOnly: Boolean) {
+private fun HHPeopleTab(ctx: Context, viewModel: ViewModel, favoritesOnly: Boolean, allowContacts: () -> Unit) {
     val colleagues by HHColleagues.list.collectAsState()
     val stars by HHColleagues.stars.collectAsState()
     var q by rememberSaveable { mutableStateOf("") }
@@ -325,8 +378,21 @@ private fun HHPeopleTab(ctx: Context, viewModel: ViewModel, favoritesOnly: Boole
         else HHCalls.dial(ctx, viewModel, target.first, target.second)
     }
     val col = colleagues.filter { (!favoritesOnly || HHColleagues.key(it) in stars) && (q.isEmpty() || it.name.contains(q, true) || it.number.contains(q)) }
-    val con = BaresipService.contacts.filter { (!favoritesOnly || it.favorite()) && (q.isEmpty() || it.name().contains(q, true)) }
+    val con = BaresipService.contacts.filter { c -> (!favoritesOnly || c.favorite()) &&
+        (q.isEmpty() || c.name().contains(q, true) || c.uris().any { HHUiLogic.peerKey(it.uri).contains(q) }) }
     LazyColumn(Modifier.fillMaxSize()) {
+        if (BaresipService.contactsMode == "baresip") item {
+            Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.secondaryContainer).padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.hh_contacts_access), Modifier.weight(1f), fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer)
+                TextButton(onClick = allowContacts) { Text(stringResource(R.string.hh_allow)) }
+            }
+        }
+        if (favoritesOnly && col.isEmpty() && con.isEmpty()) item {
+            Text(stringResource(R.string.hh_no_favorites), Modifier.fillMaxWidth().padding(32.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if (!favoritesOnly) item {
             OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth().padding(12.dp), singleLine = true,
                 placeholder = { Text(stringResource(R.string.hh_search)) }, shape = RoundedCornerShape(24.dp))
@@ -339,7 +405,7 @@ private fun HHPeopleTab(ctx: Context, viewModel: ViewModel, favoritesOnly: Boole
         if (con.isNotEmpty()) item { HHSection(stringResource(R.string.hh_tab_contacts)) }
         items(con.flatMap { c -> c.uris().map { c to it } }, key = { (c, u) -> "p${c.id()}|${u.uri}" }) { (c, u) ->
             HHPersonRow(c.name(), u.uri, listOfNotNull(u.label.ifBlank { null }, HHUiLogic.peerKey(u.uri)).joinToString(" · "),
-                starred = c.favorite(), onStar = null) { call(HHUiLogic.dialTarget(u.uri, lines, null)) }
+                starred = c.favorite(), onStar = { Contact.toggleFavorite(ctx, c) }) { call(HHUiLogic.dialTarget(u.uri, lines, null)) }
         }
     }
 }
@@ -371,6 +437,10 @@ private fun HHPersonRow(name: String, peer: String, sub: String, starred: Boolea
 private fun HHChatsTab(ctx: Context, navController: NavController) {
     val messages = BaresipService.messages
     val chats = remember(messages) { messages.sortedByDescending { it.timeStamp }.distinctBy { it.aor + "|" + it.peerUri } }
+    val lines = hhLines()
+    var choose by remember { mutableStateOf(false) }
+    fun open(aor: String) { if (!checkLockedAndToast(ctx)) navController.navigate("chats/${Uri.encode(aor)}") }
+    Box(Modifier.fillMaxSize()) {
     LazyColumn(Modifier.fillMaxSize()) {
         if (chats.isEmpty()) item {
             Text(stringResource(R.string.hh_no_chats), Modifier.fillMaxWidth().padding(32.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -389,5 +459,16 @@ private fun HHChatsTab(ctx: Context, navController: NavController) {
                 Text(hhAgo(ctx, m.timeStamp), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+    }
+    if (lines.isNotEmpty()) Box(Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(16.dp)) {
+        ExtendedFloatingActionButton(onClick = { if (lines.size == 1) open(lines[0].aor) else choose = true },
+            icon = { Icon(Icons.AutoMirrored.Outlined.Chat, null) }, text = { Text(stringResource(R.string.hh_new_chat)) },
+            containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
+        CustomElements.DropdownMenu(expanded = choose, onDismissRequest = { choose = false },
+            items = lines.map { lineLabel(ctx, it) }) { label ->
+            choose = false
+            lines.firstOrNull { lineLabel(ctx, it) == label }?.let { open(it.aor) }
+        }
+    }
     }
 }

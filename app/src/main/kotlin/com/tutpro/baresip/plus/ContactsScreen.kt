@@ -340,36 +340,7 @@ private fun ContactsScreen(navController: NavController) {
         onLastClicked = onLastClicked.value,
     )
 
-    fun setContactsMode(mode: String) {
-        if (Config.variable("contacts_mode").lowercase() != mode) {
-            Config.replaceVariable("contacts_mode", mode)
-            BaresipService.contactsMode = mode
-            val baresipService = Intent(ctx, BaresipService::class.java)
-            when (mode) {
-                "baresip" -> {
-                    BaresipService.androidContacts.value = listOf()
-                    Contact.restoreBaresipContacts()
-                    baresipService.action = "Stop Content Observer"
-                }
-                "android" -> {
-                    BaresipService.baresipContacts.value = mutableListOf()
-                    Contact.loadAndroidContacts(ctx)
-                    baresipService.action = "Start Content Observer"
-                }
-                "both" -> {
-                    Contact.restoreBaresipContacts()
-                    Contact.loadAndroidContacts(ctx)
-                    baresipService.action = "Start Content Observer"
-                }
-            }
-            Contact.contactsUpdate()
-            Config.save()
-            if (BaresipService.isServiceRunning)
-                ctx.startService(baresipService)
-            else
-                ContextCompat.startForegroundService(ctx, baresipService)
-        }
-    }
+    fun setContactsMode(mode: String) = Contact.setMode(ctx, mode)
 
     val requestPermissionsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()

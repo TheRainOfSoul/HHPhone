@@ -1,10 +1,14 @@
 package com.tutpro.baresip.plus
 
+import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.database.Cursor
 import android.graphics.Bitmap
 import android.net.Uri
 import android.provider.ContactsContract
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.tutpro.baresip.plus.BaresipService.Companion.contactNames
 import java.io.File
@@ -61,6 +65,53 @@ sealed class Contact {
     }
 
     companion object {
+
+        /** Режим контактов baresip / android / both (перенесено из ContactsScreen — нужен и главному экрану HHPhone). */
+        fun setMode(ctx: Context, mode: String) {
+            if (!Config.isInitialized()) return   // сервис ещё не прочитал config
+            if (Config.variable("contacts_mode").lowercase() == mode) return
+            Config.replaceVariable("contacts_mode", mode)
+            BaresipService.contactsMode = mode
+            val baresipService = Intent(ctx, BaresipService::class.java)
+            when (mode) {
+                "baresip" -> {
+                    BaresipService.androidContacts.value = listOf()
+                    restoreBaresipContacts()
+                    baresipService.action = "Stop Content Observer"
+                }
+                "android" -> {
+                    BaresipService.baresipContacts.value = mutableListOf()
+                    loadAndroidContacts(ctx)
+                    baresipService.action = "Start Content Observer"
+                }
+                "both" -> {
+                    restoreBaresipContacts()
+                    loadAndroidContacts(ctx)
+                    baresipService.action = "Start Content Observer"
+                }
+            }
+            contactsUpdate()
+            Config.save()
+            if (BaresipService.isServiceRunning)
+                ctx.startService(baresipService)
+            else
+                ContextCompat.startForegroundService(ctx, baresipService)
+        }
+
+        /** Звёздочка: контакт телефона — STARRED в системной книге, контакт baresip — его поле favorite. */
+        fun toggleFavorite(ctx: Context, c: Contact) {
+            when (c) {
+                is BaresipContact -> updateBaresipContact(c.id, (c.copy() as BaresipContact).also { it.favorite = !c.favorite })
+                is AndroidContact -> try {
+                    ctx.contentResolver.update(ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, c.id),
+                        ContentValues().apply { put(ContactsContract.Contacts.STARRED, if (c.favorite) 0 else 1) }, null, null)
+                    loadAndroidContacts(ctx)
+                    contactsUpdate()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Android favorite toggle failed: ${e.message}")
+                }
+            }
+        }
 
         // Return contact name of uri or uri itself if contact with uri is not found
         // Return contact name of uri or uri itself if contact with uri is not found

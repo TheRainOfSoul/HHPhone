@@ -81,6 +81,20 @@ fun hhAgo(ctx: Context, thenMs: Long): String {
     }
 }
 
+/** Вибрация при нажатии клавиш набора; выключается в меню ⋮ (по умолчанию включена). */
+object HHKeyVibe {
+    private fun prefs(ctx: Context) = ctx.getSharedPreferences("hh_ui", Context.MODE_PRIVATE)
+    fun enabled(ctx: Context) = prefs(ctx).getBoolean("key_vibrate", true)
+    fun toggle(ctx: Context) = prefs(ctx).edit().putBoolean("key_vibrate", !enabled(ctx)).apply()
+    fun buzz(ctx: Context) {
+        if (!enabled(ctx)) return
+        val v = ctx.getSystemService(android.os.Vibrator::class.java) ?: return
+        if (!v.hasVibrator()) return
+        v.vibrate(if (android.os.Build.VERSION.SDK_INT >= 29) android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK)
+            else android.os.VibrationEffect.createOneShot(20, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+    }
+}
+
 private val latin = listOf("", "ABC", "DEF", "GHI", "JKL", "MNO", "PQRS", "TUV", "WXYZ")
 private val cyrillic = listOf("", "АБВГ", "ДЕЖЗ", "ИЙКЛ", "МНОП", "РСТУ", "ФХЦЧ", "ШЩЪЫ", "ЬЭЮЯ")
 
@@ -92,6 +106,7 @@ private val cyrillic = listOf("", "АБВГ", "ДЕЖЗ", "ИЙКЛ", "МНОП"
 @Composable
 fun HHKeypad(onKey: (Char) -> Unit, onLong: (Char) -> Boolean = { false }, modifier: Modifier = Modifier, light: Color? = null) {
     val fg = light ?: MaterialTheme.colorScheme.onSurface
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val letters = if (java.util.Locale.getDefault().language == "ru") cyrillic else latin
     val keys = ('1'..'9').mapIndexed { i, k -> k to letters[i] } + listOf('*' to "", '0' to "+", '#' to "")
     Column(modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -100,7 +115,7 @@ fun HHKeypad(onKey: (Char) -> Unit, onLong: (Char) -> Boolean = { false }, modif
                 row.forEach { (k, letters) ->
                     Column(
                         Modifier.weight(1f).height(64.dp).clip(MaterialTheme.shapes.medium)
-                            .combinedClickable(onClick = { onKey(k) }, onLongClick = { if (!onLong(k)) onKey(k) }),
+                            .combinedClickable(onClick = { HHKeyVibe.buzz(ctx); onKey(k) }, onLongClick = { HHKeyVibe.buzz(ctx); if (!onLong(k)) onKey(k) }),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
                     ) {
                         Text(k.toString(), fontSize = 30.sp, color = fg)

@@ -96,4 +96,9 @@
     <string name="hh_back_to_call">Вернуться к звонку</string>
     <string name="hh_home">Главный экран</string>
     <string name="hh_contact_card">Контакт</string>
+    <string name="hh_key_vibration">Вибрация клавиш</string>
+    <string name="hh_contacts_access">Разрешите доступ к контактам телефона, чтобы видеть их здесь и звонить им</string>
+    <string name="hh_allow">Разрешить</string>
+    <string name="hh_new_chat">Новый чат</string>
+    <string name="hh_no_favorites">Избранного пока нет. Нажмите ☆ рядом с контактом во вкладке «Контакты»</string>
 </resources>
