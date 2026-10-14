@@ -110,6 +110,7 @@ fun HHHome(navController: NavController, viewModel: ViewModel, onQuitClick: () -
     }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         HHHeader(navController, onQuitClick)
+        HHFullScreenBanner(ctx)
         if (onReturnToCall != null)
             Text(stringResource(R.string.hh_back_to_call), Modifier.fillMaxWidth().background(colorResource(R.color.colorTrafficGreen))
                 .clickable(onClick = onReturnToCall).padding(12.dp), color = Color.White, fontWeight = FontWeight.Medium,
@@ -132,6 +133,34 @@ fun HHHome(navController: NavController, viewModel: ViewModel, onQuitClick: () -
                 else -> HHChatsTab(ctx, navController)
             }
         }
+    }
+}
+
+/** Звонок на заблокированном экране открывается только с разрешением «полноэкранные уведомления» (Android 14+). */
+@Composable
+private fun HHFullScreenBanner(ctx: Context) {
+    if (android.os.Build.VERSION.SDK_INT < 34) return
+    val nm = ctx.getSystemService(android.app.NotificationManager::class.java)
+    var allowed by remember { mutableStateOf(nm.canUseFullScreenIntent()) }
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(owner) {   // вернулся из настроек — проверить снова
+        val o = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) allowed = nm.canUseFullScreenIntent()
+        }
+        owner.lifecycle.addObserver(o)
+        onDispose { owner.lifecycle.removeObserver(o) }
+    }
+    if (allowed) return
+    Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.errorContainer).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.hh_fsi_banner), Modifier.weight(1f), fontSize = 14.sp, color = MaterialTheme.colorScheme.onErrorContainer)
+        TextButton(onClick = {
+            try {
+                ctx.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:" + ctx.packageName)))
+            } catch (_: Exception) {
+                ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.packageName)))
+            }
+        }) { Text(stringResource(R.string.hh_allow)) }
     }
 }
 

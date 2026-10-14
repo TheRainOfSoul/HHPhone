@@ -133,4 +133,5 @@
     <string name="hh_delete_contact_q">Ջնջե՞լ «%1$s» կոնտակտը</string>
     <string name="hh_delete">Ջնջել</string>
     <string name="hh_delete_failed">Չհաջողվեց ջնջել կոնտակտը</string>
+    <string name="hh_fsi_banner">Զանգը չի բացվի կողպված էկրանին. թույլատրեք ամբողջ էկրանով ծանուցումները</string>
 </resources>

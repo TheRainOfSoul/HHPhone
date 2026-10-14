@@ -697,12 +697,23 @@ class BaresipService: Service() {
                 val callp = intent!!.getLongExtra("callp", 0L)
                 val video = intent.getBooleanExtra("video", false)
                 val call = Call.ofCallp(callp)
+                val fromNotification = intent.getBooleanExtra("hh_open", false)
+                if (fromNotification && call != null && call !is Call.ExternalCall) {
+                    // как answer() экрана: только звук
+                    call.setMediaDirection(Api.SDP_SENDRECV, Api.SDP_INACTIVE)
+                    call.disableVideoStream(true)
+                }
                 stopRinging()
                 stopMediaPlayer()
                 setCallVolume()
                 proximitySensing(proximitySensing)
                 call?.answer(video)
                 updateStatusNotification()
+                if (fromNotification && call != null)   // экран разговора — поверх блокировки (Call.inCall → showWhenLocked)
+                    try {
+                        startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra("action", "call show").putExtra("callp", callp))
+                    } catch (e: Exception) { Log.w(TAG, "in-call screen after answer: $e") }
             }
 
             "Call Reject" -> {
@@ -2817,10 +2828,13 @@ class BaresipService: Service() {
                 .addPerson(caller)
                 .setFullScreenIntent(pi, true)
 
-            val answerIntent = Intent(this, MainActivity::class.java)
-                .putExtra("action", "call answer")
+            // HHPhone: «Ответить» — в службу, не в экран: экран из действия уведомления на заблокированном телефоне
+            // требует PIN; служба отвечает сразу и показывает разговор поверх блокировки (как системная звонилка)
+            val answerIntent = Intent(this, BaresipService::class.java)
+                .setAction("Call Answer")
                 .putExtra("callp", callp)
-            val api = PendingIntent.getActivity(
+                .putExtra("hh_open", true)
+            val api = PendingIntent.getService(
                 this,
                 ANSWER_REQ_CODE,
                 answerIntent,
@@ -2842,7 +2856,17 @@ class BaresipService: Service() {
                 rpi,
                 api
             ))
-            nm.notify(CALL_NOTIFICATION_ID, nb.build())
+            // HHPhone: без разрешения «полноэкранные уведомления» (Samsung его не даёт приложениям не из Play) Android
+            // убирает у CallStyle кнопки — если уведомление не принадлежит foreground-службе звонка. Делаем его таким.
+            val incoming = nb.build()
+            try {
+                if (VERSION.SDK_INT >= 29) startForeground(CALL_NOTIFICATION_ID, incoming, ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL)
+                else startForeground(CALL_NOTIFICATION_ID, incoming)
+                nm.cancel(STATUS_NOTIFICATION_ID)
+            } catch (e: Exception) {
+                Log.w(TAG, "incoming as foreground failed: $e")
+                nm.notify(CALL_NOTIFICATION_ID, incoming)
+            }
         }
 
         postServiceEvent(ServiceEvent(

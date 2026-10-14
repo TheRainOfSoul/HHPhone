@@ -137,4 +137,5 @@
     <string name="hh_delete_contact_q">Удалить контакт «%1$s»?</string>
     <string name="hh_delete">Удалить</string>
     <string name="hh_delete_failed">Не удалось удалить контакт</string>
+    <string name="hh_fsi_banner">Звонок не откроется на заблокированном экране: разрешите полноэкранные уведомления</string>
 </resources>

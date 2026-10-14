@@ -133,4 +133,5 @@
     <string name="hh_delete_contact_q">Delete contact “%1$s”?</string>
     <string name="hh_delete">Delete</string>
     <string name="hh_delete_failed">Could not delete the contact</string>
+    <string name="hh_fsi_banner">Incoming calls won’t open on the lock screen: allow full screen notifications</string>
 </resources>
