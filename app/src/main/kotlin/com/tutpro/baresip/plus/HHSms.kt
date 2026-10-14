@@ -19,6 +19,7 @@ import android.telephony.SmsManager
 /** Системная база SMS — единая для HHPhone (спека 2026-10-14). */
 object HHSms {
     const val MOBILE = "sip:mobile@pstn"
+    const val DELIVERED = "am.dgsolutions.hhphone.SMS_DELIVERED"
     fun canRead(ctx: Context) = Utils.checkPermissions(ctx, arrayOf(Manifest.permission.READ_SMS))
     /** Роль SMS (RoleManager): getDefaultSmsPackage даёт null, если у приложения нет READ_CELL_BROADCASTS. */
     fun isDefault(ctx: Context) = Utils.isDefaultSmsApp(ctx)
@@ -49,14 +50,18 @@ object HHSms {
             PendingIntent.getBroadcast(ctx, base + i, Intent(ctx, HHSmsSentReceiver::class.java).setData(row),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT)
         })
-        sm.sendMultipartTextMessage(address, null, parts, sent, null)
+        val delivered = if (row == null) null else ArrayList(parts.indices.map { i ->   // отчёт о доставке → STATUS
+            PendingIntent.getBroadcast(ctx, base + 32 + i, Intent(ctx, HHSmsSentReceiver::class.java).setAction(DELIVERED).setData(row),
+                PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_ONE_SHOT)   // явный Intent; immutable потерял бы pdu отчёта
+        })
+        sm.sendMultipartTextMessage(address, null, parts, sent, delivered)
         true
     } catch (e: Exception) {
         Log.e(TAG, "SMS send failed: $e")
         false
     }
 
-    private val cols = arrayOf(Sms._ID, Sms.THREAD_ID, Sms.ADDRESS, Sms.BODY, Sms.DATE, Sms.TYPE, Sms.READ)
+    private val cols = arrayOf(Sms._ID, Sms.THREAD_ID, Sms.ADDRESS, Sms.BODY, Sms.DATE, Sms.TYPE, Sms.READ, Sms.STATUS)
 
     private fun toMessage(c: Cursor) = Message(MOBILE, "tel:" + (c.getString(2) ?: ""), c.getString(3) ?: "", c.getLong(4),
         when (c.getInt(5)) {
@@ -65,6 +70,82 @@ object HHSms {
             Sms.MESSAGE_TYPE_OUTBOX, Sms.MESSAGE_TYPE_QUEUED -> MESSAGE_UP_WAIT
             else -> MESSAGE_UP
         }, 0, "", c.getInt(6) == 0 && c.getInt(5) == Sms.MESSAGE_TYPE_INBOX, smsId = c.getLong(0))
+        .also { it.mark = HHUiLogic.deliveryMark(c.getInt(5), c.getInt(7)) }
+
+    // ---- MMS (спека 0.8.0, п. 2) ----
+    /** Участники групповых бесед: thread_id → адреса (без своего номера). */
+    private val groups = java.util.concurrent.ConcurrentHashMap<Long, List<String>>()
+    fun isGroup(peer: String) = peer.startsWith("mms:")
+    fun groupAddresses(peer: String): List<String> = peer.removePrefix("mms:").toLongOrNull()?.let { groups[it] } ?: emptyList()
+
+    /** Собеседники бесед системы: thread_id → адреса (canonical-addresses; свой номер система туда не пишет). */
+    private fun recipients(ctx: Context): Map<Long, List<String>> = try {
+        val addr = HashMap<String, String>()
+        ctx.contentResolver.query(Uri.parse("content://mms-sms/canonical-addresses"), arrayOf("_id", "address"), null, null, null)?.use { c ->
+            while (c.moveToNext()) addr[c.getLong(0).toString()] = c.getString(1) ?: ""
+        }
+        val out = HashMap<Long, List<String>>()
+        ctx.contentResolver.query(Uri.parse("content://mms-sms/conversations?simple=true"), arrayOf("_id", "recipient_ids"), null, null, null)?.use { c ->
+            while (c.moveToNext()) out[c.getLong(0)] = (c.getString(1) ?: "").trim().split(" ").mapNotNull { addr[it] }.filter { it.isNotBlank() }
+        }
+        out
+    } catch (e: Exception) {
+        Log.e(TAG, "recipients failed: $e")
+        emptyMap()
+    }
+
+    private fun mmsAddr(ctx: Context, id: Long): Pair<String?, List<String>> {
+        val rows = mutableListOf<Pair<String, Int>>()
+        ctx.contentResolver.query(Uri.parse("content://mms/$id/addr"), arrayOf("address", "type"), null, null, null)?.use { c ->
+            while (c.moveToNext()) rows += (c.getString(0) ?: "") to c.getInt(1)
+        }
+        return HHUiLogic.mmsAddresses(rows, BaresipService.mobileNumber)
+    }
+
+    /** Текст и картинки MMS: text/plain — текст, image/… — content://mms/part/<id>. */
+    private fun mmsParts(ctx: Context, id: Long): Pair<String, List<String>> {
+        val text = StringBuilder(); val images = mutableListOf<String>()
+        ctx.contentResolver.query(Uri.parse("content://mms/part"), arrayOf("_id", "ct", "text"), "mid = ?", arrayOf(id.toString()), null)?.use { c ->
+            while (c.moveToNext()) {
+                val ct = c.getString(1) ?: ""
+                when {
+                    ct == "text/plain" -> c.getString(2)?.let { if (text.isNotEmpty()) text.append('\n'); text.append(it) }
+                    ct.startsWith("image/") -> images += "content://mms/part/" + c.getLong(0)
+                }
+            }
+        }
+        return text.toString() to images
+    }
+
+    /** MMS → сообщение чата; peer — собеседник или "mms:<thread>" для групповой беседы. */
+    private fun mmsMessage(ctx: Context, id: Long, thread: Long, dateSec: Long, box: Int, read: Int, rcpt: Map<Long, List<String>>): Message {
+        val (from, to) = mmsAddr(ctx, id)
+        // собеседники — из беседы системы (свой номер исключён), иначе из адресов PDU
+        val people = rcpt[thread]?.takeIf { it.isNotEmpty() } ?: (listOfNotNull(from) + to).distinctBy { HHUiLogic.peerKey(it) }
+        if (people.size > 1) groups[thread] = people
+        val peer = if (people.size > 1) "mms:$thread" else "tel:" + (people.firstOrNull() ?: "")
+        val (text, images) = mmsParts(ctx, id)
+        val dir = when (box) { 1 -> MESSAGE_DOWN; 4 -> MESSAGE_UP_WAIT; 5 -> MESSAGE_UP_FAIL; else -> MESSAGE_UP }
+        // во входящем групповом — подпись отправителя
+        val body = if (people.size > 1 && box == 1 && from != null) "${hhName("tel:$from")}: $text" else text
+        return Message(MOBILE, peer, body.ifEmpty { if (images.isEmpty()) "[MMS]" else "" }, dateSec * 1000, dir, 0, "",
+            box == 1 && read == 0, images, smsId = -id)   // smsId < 0 — MMS (удаление — content://mms/<id>)
+    }
+
+    /** Настоящие сообщения: отправленные/полученные/загруженные (128/130/132), без черновиков; не отчёты (134/136). */
+    private const val MMS_REAL = "m_type IN (128, 130, 132) AND msg_box != 3"
+
+    private fun mmsQuery(ctx: Context, sel: String?, args: Array<String>?): List<Message> = try {
+        val rcpt = recipients(ctx)
+        ctx.contentResolver.query(Uri.parse("content://mms"), arrayOf("_id", "thread_id", "date", "msg_box", "read"),
+            if (sel == null) MMS_REAL else "($sel) AND $MMS_REAL", args, "date DESC")?.use { c ->
+            buildList { while (c.moveToNext()) add(mmsMessage(ctx, c.getLong(0), c.getLong(1), c.getLong(2), c.getInt(3), c.getInt(4), rcpt)
+                .also { it.threadId = c.getLong(1) }) }
+        } ?: emptyList()
+    } catch (e: Exception) {
+        Log.e(TAG, "MMS read failed: $e")
+        emptyList()
+    }
 
     /** Последнее сообщение каждой беседы (по THREAD_ID); new — в беседе есть непрочитанные. */
     fun threads(ctx: Context): List<Message> {
@@ -80,10 +161,34 @@ object HHSms {
                 }
             }
         } catch (e: Exception) { Log.e(TAG, "SMS threads failed: $e") }
+        // MMS: последняя в беседе, если новее SMS; групповые беседы — свой peer
+        val lastMms = LinkedHashMap<Long, Message>()
+        try {
+            val newest = LinkedHashMap<Long, LongArray>()   // thread → [_id, date, msg_box, read]
+            val unread = HashSet<Long>()
+            ctx.contentResolver.query(Uri.parse("content://mms"), arrayOf("_id", "thread_id", "date", "msg_box", "read"), MMS_REAL, null,
+                "date DESC")?.use { c ->
+                while (c.moveToNext()) {
+                    val t = c.getLong(1)
+                    if (t !in newest) newest[t] = longArrayOf(c.getLong(0), c.getLong(2), c.getLong(3), c.getLong(4))
+                    if (c.getInt(3) == 1 && c.getInt(4) == 0) unread += t
+                }
+            }
+            val rcpt = if (newest.isEmpty()) emptyMap() else recipients(ctx)
+            for ((t, r) in newest) lastMms[t] = mmsMessage(ctx, r[0], t, r[1], r[2].toInt(), r[3].toInt(), rcpt)
+                .also { it.threadId = t; if (t in unread) it.new = true }
+        } catch (e: Exception) { Log.e(TAG, "MMS threads failed: $e") }
+        for ((t, m) in lastMms) {
+            val s = seen[t]
+            if (s == null || m.timeStamp > s.timeStamp || isGroup(m.peerUri)) {
+                if (s?.new == true) m.new = true
+                seen[t] = if (isGroup(m.peerUri) || s == null) m else m.copyPeer(s.peerUri)
+            } else if (m.new) s.new = true
+        }
         // +374… и 0… — разные THREAD_ID в системе, но одна беседа в HHPhone
         val out = mutableListOf<Message>()
-        for (m in seen.values) {
-            val same = out.firstOrNull { HHUiLogic.samePhone(it.peerUri, m.peerUri) }
+        for (m in seen.values.sortedByDescending { it.timeStamp }) {
+            val same = if (isGroup(m.peerUri)) null else out.firstOrNull { HHUiLogic.samePhone(it.peerUri, m.peerUri) }
             if (same == null) out += m else if (m.new) same.new = true
         }
         return out
@@ -99,6 +204,18 @@ object HHSms {
         ctx.contentResolver.query(Sms.CONTENT_URI, arrayOf(Sms.THREAD_ID, Sms.ADDRESS), sel, arrayOf(arg), null)?.use { c ->
             while (c.moveToNext()) if (HHUiLogic.samePhone(c.getString(1) ?: "", peerUri)) ids += c.getLong(0)
         }
+        // беседы с этим номером только из MMS (не групповые)
+        try {
+            ctx.contentResolver.query(Uri.parse("content://mms-sms/canonical-addresses"), arrayOf("_id", "address"), null, null, null)?.use { c ->
+                val addrIds = buildList { while (c.moveToNext()) if (HHUiLogic.samePhone(c.getString(1) ?: "", peerUri)) add(c.getLong(0).toString()) }
+                if (addrIds.isNotEmpty())
+                    ctx.contentResolver.query(Uri.parse("content://mms-sms/conversations?simple=true"), arrayOf("_id", "recipient_ids"),
+                        null, null, null)?.use { t ->
+                        while (t.moveToNext()) if ((t.getString(1) ?: "").trim().split(" ").let { r -> r.size == 1 && r[0] in addrIds })
+                            ids += t.getLong(0)
+                    }
+            }
+        } catch (e: Exception) { Log.e(TAG, "MMS threads failed: $e") }
         return ids.toList()
     }
 
@@ -106,11 +223,13 @@ object HHSms {
     fun thread(ctx: Context, peerUri: String): List<Message> {
         if (!canRead(ctx)) return emptyList()
         return try {
-            val ids = threadIds(ctx, peerUri)
+            val ids = if (isGroup(peerUri)) listOfNotNull(peerUri.removePrefix("mms:").toLongOrNull()) else threadIds(ctx, peerUri)
             if (ids.isEmpty()) return emptyList()
-            ctx.contentResolver.query(Sms.CONTENT_URI, cols, "${Sms.THREAD_ID} IN (${ids.joinToString(",")})", null,
+            val inIds = ids.joinToString(",")
+            val sms = ctx.contentResolver.query(Sms.CONTENT_URI, cols, "${Sms.THREAD_ID} IN ($inIds)", null,
                 "${Sms.DATE} DESC")?.use { c -> buildList { while (c.moveToNext()) add(toMessage(c).copyPeer(peerUri)) } }
                 ?: emptyList()
+            (sms + mmsQuery(ctx, "thread_id IN ($inIds)", null).map { it.copyPeer(peerUri) }).sortedByDescending { it.timeStamp }
         } catch (e: Exception) {
             Log.e(TAG, "SMS thread failed: $e")
             emptyList()
@@ -120,15 +239,20 @@ object HHSms {
     fun markRead(ctx: Context, peerUri: String) {
         if (!isDefault(ctx)) return
         try {
-            val ids = threadIds(ctx, peerUri)
+            val ids = if (isGroup(peerUri)) listOfNotNull(peerUri.removePrefix("mms:").toLongOrNull()) else threadIds(ctx, peerUri)
             if (ids.isEmpty()) return
             ctx.contentResolver.update(Sms.CONTENT_URI, ContentValues().apply { put(Sms.READ, 1); put(Sms.SEEN, 1) },
                 "${Sms.THREAD_ID} IN (${ids.joinToString(",")}) AND ${Sms.READ} = 0", null)
+            ctx.contentResolver.update(Uri.parse("content://mms"), ContentValues().apply { put("read", 1); put("seen", 1) },
+                "thread_id IN (${ids.joinToString(",")}) AND read = 0", null)
         } catch (e: Exception) { Log.e(TAG, "SMS mark read failed: $e") }
     }
 
     fun delete(ctx: Context, id: Long) {
-        try { ctx.contentResolver.delete(ContentUris.withAppendedId(Sms.CONTENT_URI, id), null, null) }
+        try {   // id < 0 — MMS
+            if (id < 0) ctx.contentResolver.delete(Uri.parse("content://mms/${-id}"), null, null)
+            else ctx.contentResolver.delete(ContentUris.withAppendedId(Sms.CONTENT_URI, id), null, null)
+        }
         catch (e: Exception) { Log.e(TAG, "SMS delete failed: $e") }
     }
 
@@ -159,7 +283,7 @@ object HHSms {
     fun observe(ctx: Context, onChange: () -> Unit): () -> Unit {
         val o = object : ContentObserver(Handler(Looper.getMainLooper())) { override fun onChange(self: Boolean) = onChange() }
         return try {
-            ctx.contentResolver.registerContentObserver(Uri.parse("content://sms"), true, o)
+            ctx.contentResolver.registerContentObserver(Uri.parse("content://mms-sms/"), true, o)   // SMS и MMS
             val off: () -> Unit = { ctx.contentResolver.unregisterContentObserver(o) }
             off
         } catch (_: SecurityException) { {} }
@@ -172,6 +296,14 @@ object HHSms {
 class HHSmsSentReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         val row = intent.data ?: return
+        if (intent.action == HHSms.DELIVERED) {   // отчёт оператора: STATUS из PDU (0 — доставлено, 32 — ждёт, 64+ — не доставлено)
+            val pdu = intent.getByteArrayExtra("pdu") ?: return
+            val status = android.telephony.SmsMessage.createFromPdu(pdu, intent.getStringExtra("format"))?.status ?: return
+            val st = when { status >= 64 -> Sms.STATUS_FAILED; status >= 32 -> Sms.STATUS_PENDING; else -> Sms.STATUS_COMPLETE }
+            try { ctx.contentResolver.update(row, ContentValues().apply { put(Sms.STATUS, st) }, "${Sms.STATUS} != ${Sms.STATUS_FAILED}", null) }
+            catch (_: Exception) {}
+            return
+        }
         val type = if (resultCode == Activity.RESULT_OK) Sms.MESSAGE_TYPE_SENT else Sms.MESSAGE_TYPE_FAILED
         try {   // неудача одной части не перетирается успехом следующей
             ctx.contentResolver.update(row, ContentValues().apply { put(Sms.TYPE, type) },

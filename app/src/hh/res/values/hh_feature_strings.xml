@@ -123,4 +123,14 @@
     <string name="hh_sms_delete_role">Only the default SMS app can delete SMS</string>
     <string name="hh_block_failed">Could not change blocking</string>
     <string name="hh_contact_readonly">This contact belongs to a read-only account and cannot be edited here</string>
+    <string name="hh_keep_alive">Always connected</string>
+    <string name="hh_keep_alive_forced">Always connected is required: no push for %1$s (add the account by QR on HHPBX 1.10+ with the Firebase key)</string>
+    <string name="hh_keep_alive_on">HHPhone stays connected all the time (notification is shown)</string>
+    <string name="hh_keep_alive_off">HHPhone sleeps when idle and wakes up by push</string>
+    <string name="hh_group_reply">Replying to a group conversation is not supported yet</string>
+    <string name="hh_merge_with">Merge with…</string>
+    <string name="hh_delete_contact">Delete contact</string>
+    <string name="hh_delete_contact_q">Delete contact “%1$s”?</string>
+    <string name="hh_delete">Delete</string>
+    <string name="hh_delete_failed">Could not delete the contact</string>
 </resources>

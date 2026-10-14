@@ -46,6 +46,7 @@ import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Block
@@ -53,6 +54,7 @@ import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -117,7 +119,7 @@ object HHContactStore {
                     else HHNum(i + 1L, u.uri.removePrefix("tel:"), Contact.stringToType(u.label), u.label)
                 }, bitmap = c.avatarImage, favorite = c.favorite)
             }
-            'n' -> HHCard(key, "", listOf(HHNum(0, key.drop(1), Phone.TYPE_MOBILE)))
+            'n' -> key.drop(1).let { v -> HHCard(key, "", listOf(if (v.startsWith("sip:")) HHNum(-1, v, SIP_TYPE) else HHNum(-1, v, Phone.TYPE_MOBILE))) }
             else -> null
         }
     } catch (e: Exception) {
@@ -265,6 +267,59 @@ object HHContactStore {
         return "b$id"
     }
 
+    /** Удалить контакт: телефона — весь агрегат (синхронизация разнесёт по аккаунтам), baresip — запись и фото. */
+    fun delete(ctx: Context, card: HHCard): Boolean = try {
+        when {
+            card.key.startsWith("a") -> {
+                val n = ctx.contentResolver.delete(ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, card.contactId), null, null)
+                Contact.loadAndroidContacts(ctx)
+                Contact.contactsUpdate()
+                n > 0
+            }
+            card.key.startsWith("b") -> Contact.baresipContact(card.key.drop(1).toLong())?.let {
+                File(BaresipService.filesPath, "${it.id}.png").delete()
+                Contact.removeBaresipContact(it)
+                true
+            } ?: false
+            else -> false
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "delete failed: $e")
+        false
+    }
+
+    private fun rawIds(ctx: Context, contactId: Long): List<Long> =
+        ctx.contentResolver.query(RawContacts.CONTENT_URI, arrayOf(RawContacts._ID),
+            "${RawContacts.CONTACT_ID} = ? AND ${RawContacts.DELETED} = 0", arrayOf(contactId.toString()), null)?.use { c ->
+            buildList { while (c.moveToNext()) add(c.getLong(0)) }
+        } ?: emptyList()
+
+    /**
+     * Объединить с другим контактом телефона: исключения агрегации KEEP_TOGETHER (данные аккаунтов не меняются —
+     * поэтому и «только для чтения» можно). Возвращает ключ объединённой карточки.
+     */
+    fun merge(ctx: Context, card: HHCard, otherContactId: Long): String? = try {
+        val mine = rawIds(ctx, card.contactId)
+        val other = rawIds(ctx, otherContactId)
+        if (mine.isEmpty() || other.isEmpty()) null else {
+            val ops = ArrayList(other.map { r ->
+                ContentProviderOperation.newUpdate(ContactsContract.AggregationExceptions.CONTENT_URI)
+                    .withValue(ContactsContract.AggregationExceptions.TYPE, ContactsContract.AggregationExceptions.TYPE_KEEP_TOGETHER)
+                    .withValue(ContactsContract.AggregationExceptions.RAW_CONTACT_ID1, mine[0])
+                    .withValue(ContactsContract.AggregationExceptions.RAW_CONTACT_ID2, r).build()
+            })
+            ctx.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
+            val id = ctx.contentResolver.query(ContentUris.withAppendedId(RawContacts.CONTENT_URI, mine[0]),
+                arrayOf(RawContacts.CONTACT_ID), null, null, null)?.use { c -> if (c.moveToFirst()) c.getLong(0) else 0L } ?: 0L
+            Contact.loadAndroidContacts(ctx)
+            Contact.contactsUpdate()
+            if (id != 0L) "a$id" else null
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "merge failed: $e")
+        null
+    }
+
     fun setFavorite(ctx: Context, card: HHCard, on: Boolean) {
         if (card.key.startsWith("a")) {
             ctx.contentResolver.update(ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, card.contactId),
@@ -340,13 +395,18 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
     var blocked by remember { mutableStateOf(false) }
     var canBlock by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
+    var tmpId by remember { mutableStateOf(-2L) }   // id новых строк правки: уникальные, ≤ 0 — «новый номер»
+    var menu by remember { mutableStateOf(false) }
+    var askDelete by remember { mutableStateOf(false) }
+    var pickMerge by remember { mutableStateOf(false) }
+    val deleteFailed = stringResource(R.string.hh_delete_failed)
     val blockFailed = stringResource(R.string.hh_block_failed)
     val readOnlyText = stringResource(R.string.hh_contact_readonly)
     val lines = hhLines()
     val saveFailed = stringResource(R.string.hh_save_failed)
     val nameRequired = stringResource(R.string.hh_name_required)
     fun startEdit(c: HHCard) {
-        name = c.name; nums.clear(); nums.addAll(c.nums); if (nums.isEmpty()) nums += HHNum(0, "", Phone.TYPE_MOBILE)
+        name = c.name; nums.clear(); nums.addAll(c.nums); if (nums.isEmpty()) nums += HHNum(tmpId--, "", Phone.TYPE_MOBILE)
         newPhoto = null; removePhoto = false
     }
     LaunchedEffect(cardKey, reload) {
@@ -395,6 +455,35 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
                 IconButton(onClick = {
                     if (c.editable) { startEdit(c); editing = true } else Toast.makeText(ctx, readOnlyText, Toast.LENGTH_LONG).show()
                 }) { Icon(Icons.Outlined.Edit, stringResource(R.string.hh_edit), tint = onBar) }
+                Box {
+                    IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.hh_menu), tint = onBar) }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        if (c.key.startsWith("a"))
+                            DropdownMenuItem(text = { Text(stringResource(R.string.hh_merge_with)) }, onClick = { menu = false; pickMerge = true })
+                        if (c.editable)   // аккаунт «только для чтения» синхронизация вернёт — не предлагаем
+                            DropdownMenuItem(text = { Text(stringResource(R.string.hh_delete_contact), color = MaterialTheme.colorScheme.error) },
+                                onClick = { menu = false; askDelete = true })
+                    }
+                }
+            }
+        }
+        if (askDelete) AlertDialog(onDismissRequest = { askDelete = false },
+            text = { Text(stringResource(R.string.hh_delete_contact_q, c.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    askDelete = false
+                    scope.launch {
+                        if (withContext(Dispatchers.IO) { HHContactStore.delete(ctx, c) }) navController.navigateUp()
+                        else Toast.makeText(ctx, deleteFailed, Toast.LENGTH_LONG).show()
+                    }
+                }) { Text(stringResource(R.string.hh_delete), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { askDelete = false }) { Text(stringResource(R.string.hh_cancel)) } })
+        if (pickMerge) HHMergePicker(c.contactId, onDismiss = { pickMerge = false }) { otherId ->
+            pickMerge = false
+            scope.launch {
+                val k = withContext(Dispatchers.IO) { HHContactStore.merge(ctx, c, otherId) }
+                if (k == null) Toast.makeText(ctx, saveFailed, Toast.LENGTH_LONG).show() else { cardKey = k; reload++ }
             }
         }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 24.dp),
@@ -419,8 +508,13 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
                 OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth().padding(horizontal = 20.dp), singleLine = true,
                     label = { Text(stringResource(R.string.hh_name)) })
                 Spacer(Modifier.height(8.dp))
-                nums.forEachIndexed { i, n -> HHNumberEdit(n, onChange = { nums[i] = it }, onDelete = { nums.removeAt(i) }) }   // пропавший id = удаление
-                TextButton(onClick = { nums += HHNum(0, "", Phone.TYPE_MOBILE) }, Modifier.padding(horizontal = 12.dp)) {
+                nums.toList().forEach { n ->   // ключ — id строки: состояние строки не «переезжает» после удаления соседней
+                    androidx.compose.runtime.key(n.id) {
+                        HHNumberEdit(n, onChange = { v -> nums.indexOfFirst { it.id == n.id }.let { if (it >= 0) nums[it] = v } },
+                            onDelete = { nums.removeAll { it.id == n.id } })   // пропавший id = удаление
+                    }
+                }
+                TextButton(onClick = { nums += HHNum(tmpId--, "", Phone.TYPE_MOBILE) }, Modifier.padding(horizontal = 12.dp)) {
                     Icon(Icons.Outlined.Add, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.hh_add_number))
                 }
             } else {
@@ -506,4 +600,32 @@ private fun HHNumberEdit(n: HHNum, onChange: (HHNum) -> Unit, onDelete: () -> Un
         }
         IconButton(onClick = onDelete) { Icon(Icons.Outlined.Delete, stringResource(R.string.hh_delete_number)) }
     }
+}
+
+/** Выбор контакта телефона для объединения: поиск по имени и номеру. */
+@Composable
+private fun HHMergePicker(selfId: Long, onDismiss: () -> Unit, onPick: (Long) -> Unit) {
+    var q by remember { mutableStateOf("") }
+    val all = remember { BaresipService.contacts.filterIsInstance<Contact.AndroidContact>().filter { it.id != selfId } }
+    val list = all.filter { c -> q.isBlank() || c.name.contains(q, true) || c.uris.any { HHUiLogic.peerKey(it.uri).contains(q) } }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.hh_merge_with)) },
+        text = {
+            Column {
+                OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text(stringResource(R.string.hh_search)) })
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.height(320.dp)) {
+                    items(list.size) { i ->
+                        val c = list[i]
+                        Row(Modifier.fillMaxWidth().clickable { onPick(c.id) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            HHAvatar(c.name, null, 36.dp, c)
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(c.name, color = MaterialTheme.colorScheme.onSurface)
+                                c.uris.firstOrNull()?.let { Text(HHUiLogic.peerKey(it.uri), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {}, dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.hh_cancel)) } })
 }

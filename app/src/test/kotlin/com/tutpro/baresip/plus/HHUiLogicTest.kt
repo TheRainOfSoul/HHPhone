@@ -233,4 +233,38 @@ class HHUiLogicTest {
         assertEquals(listOf(5L, 7L), m[0].second.sorted())
         assertEquals(listOf(9L), m[1].second)
     }
+
+    @Test fun numberOpsNegativeIdIsNew() {
+        assertEquals(listOf(HHNumOp.Insert(HHNum(-1, "5", 2))), HHUiLogic.numberOps(emptyList(), listOf(HHNum(-1, "5", 2))))
+    }
+    @Test fun mmsAddressesSplitsSenderAndRecipients() {
+        val (from, to) = HHUiLogic.mmsAddresses(listOf("+37491111111" to 137, "+37493333333" to 151, "+37477000000" to 151), "077000000")
+        assertEquals("+37491111111", from)
+        assertEquals(listOf("+37493333333"), to)   // свой номер (+374 77… = 077…) убран
+    }
+    @Test fun deliveryMarks() {
+        assertEquals("✓✓", HHUiLogic.deliveryMark(2, 0))      // SENT + STATUS_COMPLETE
+        assertEquals("✓", HHUiLogic.deliveryMark(2, -1))      // SENT, статуса нет
+        assertEquals("!", HHUiLogic.deliveryMark(5, -1))      // FAILED
+        assertEquals("!", HHUiLogic.deliveryMark(2, 64))      // STATUS_FAILED
+        assertEquals("", HHUiLogic.deliveryMark(1, -1))       // входящее
+    }
+    @Test fun toE164() {
+        assertEquals("+37491123456", HHUiLogic.toE164("091 12-34-56", "374"))
+        assertEquals("+37491123456", HHUiLogic.toE164("+37491123456", null))
+        assertEquals("+37491123456", HHUiLogic.toE164("0037491123456", "374"))
+        assertEquals(null, HHUiLogic.toE164("091123456", null))
+        assertEquals(null, HHUiLogic.toE164("100", "374"))   // короткий внутренний номер
+    }
+    @Test fun messengerLinks() {
+        val m = HHUiLogic.messengerLinks("+37491123456")
+        assertEquals("https://wa.me/37491123456", m["whatsapp"])
+        assertEquals("viber://chat?number=%2B37491123456", m["viber"])
+        assertEquals("tg://resolve?phone=37491123456", m["telegram"])
+    }
+
+    @Test fun toE164LeadingZeroWithoutCountryIsNull() {
+        assertEquals(null, HHUiLogic.toE164("07911123456", null))   // UK национальный — без страны нельзя
+        assertEquals(null, HHUiLogic.toE164("0911234567", ""))
+    }
 }

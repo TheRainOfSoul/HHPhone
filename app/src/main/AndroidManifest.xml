@@ -67,6 +67,15 @@
         android:name="android.hardware.telephony"
         android:required="false" />
 
+    <!-- HHPhone: «написать в WhatsApp / Viber / Telegram» из меню звонка и контакта -->
+    <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <package android:name="com.viber.voip" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="org.telegram.messenger.web" />
+    </queries>
+
     <application
         android:name=".BaresipApp"
         android:icon="@mipmap/ic_launcher"

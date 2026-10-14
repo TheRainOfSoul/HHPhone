@@ -37,6 +37,15 @@ object HHPush {
     fun touch() { lastActive = SystemClock.elapsedRealtime() }
     fun idleMs(): Long = SystemClock.elapsedRealtime() - lastActive
 
+    /** «Постоянное подключение» (меню ⋮): не засыпать до push, даже если у всех станций push есть. */
+    var keepAlive: Boolean
+        get() = prefs.getBoolean("keep_alive", false)
+        set(v) = prefs.edit { putBoolean("keep_alive", v) }
+
+    /** Учётки, из-за которых HHPhone держит постоянную связь: регистрируются, а станция push не приняла. */
+    fun withoutPush(): List<String> = BaresipService.uas.value
+        .filter { it.account.regint > 0 && !isPush(it.account.aor) }.map { it.account.aor }
+
     /**
      * Отправить токен станциям — при каждом старте: строку на станции могли потерять (номер пересоздан,
      * БД восстановлена, ключ удалён). Станция без ключа отвечает push:false — учётка держит связь. Сеть — не из UI-потока.

@@ -3486,7 +3486,8 @@ fun handleServiceEvent(ctx: Context, viewModel: ViewModel, event: String, params
                 viewModel.triggerAccountUpdate()
             }
         }
-        "message", "message show", "message reply" -> {
+        "message" -> {}   // HHPhone: как обычные SMS-приложения — уведомление, беседу не открываем сами
+        "message show", "message reply" -> {
             Handler(Looper.getMainLooper()).postDelayed({
                 viewModel.onNewMessageReceived(aor, params[1] as String)
             }, 200)

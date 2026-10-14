@@ -13,7 +13,7 @@ class HHPushService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
-        if (message.data["t"] != "call") return
+        if (message.data["t"] != "call" && message.data["t"] != "msg") return   // звонок или сообщение станции (HHPBX 1.12.0)
         HHPush.touch()
         if (BaresipService.isServiceRunning) {
             // уже на связи — перерегистрироваться: станция ждёт свежую регистрацию (старая могла остаться от убитого процесса)
