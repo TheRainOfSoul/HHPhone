@@ -121,4 +121,6 @@
     <string name="hh_call">Call</string>
     <string name="hh_status_channel">Status</string>
     <string name="hh_sms_delete_role">Only the default SMS app can delete SMS</string>
+    <string name="hh_block_failed">Could not change blocking</string>
+    <string name="hh_contact_readonly">This contact belongs to a read-only account and cannot be edited here</string>
 </resources>

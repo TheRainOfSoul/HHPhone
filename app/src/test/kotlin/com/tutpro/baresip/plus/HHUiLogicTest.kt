@@ -224,4 +224,13 @@ class HHUiLogicTest {
             HHUiLogic.numberOps(old, new))
         assertEquals(listOf(HHNumOp.Delete(1)), HHUiLogic.numberOps(listOf(HHNum(1, "1", 2)), emptyList()))
     }
+
+    @Test fun mergeSameNumbersAcrossAccounts() {
+        // Google +374 91… и SIM 091… — один номер; представитель — из записываемого аккаунта
+        val m = HHUiLogic.mergeSame(listOf(HHNum(5, "091123456", 2), HHNum(7, "+37491123456", 2), HHNum(9, "100", 1))) { it.id == 7L }
+        assertEquals(2, m.size)
+        assertEquals(7L, m[0].first.id)
+        assertEquals(listOf(5L, 7L), m[0].second.sorted())
+        assertEquals(listOf(9L), m[1].second)
+    }
 }

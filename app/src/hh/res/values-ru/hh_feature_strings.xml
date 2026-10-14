@@ -125,4 +125,6 @@
     <string name="hh_call">Позвонить</string>
     <string name="hh_status_channel">Состояние</string>
     <string name="hh_sms_delete_role">Удалять SMS может только SMS-приложение по умолчанию</string>
+    <string name="hh_block_failed">Не удалось изменить блокировку</string>
+    <string name="hh_contact_readonly">Контакт из аккаунта только для чтения — изменить его здесь нельзя</string>
 </resources>

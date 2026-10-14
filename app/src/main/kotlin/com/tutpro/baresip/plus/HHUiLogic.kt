@@ -129,6 +129,13 @@ object HHUiLogic {
         return if (dom.isNotEmpty() && dom != aor.substringAfter("@")) "$user@$dom" else user
     }
 
+    /** Одинаковые номера из разных аккаунтов контакта (Google, SIM…) — одна строка: (представитель, все _ID). */
+    fun mergeSame(nums: List<HHNum>, prefer: (HHNum) -> Boolean): List<Pair<HHNum, List<Long>>> {
+        val groups = mutableListOf<MutableList<HHNum>>()
+        for (n in nums) groups.firstOrNull { g -> samePhone(g[0].number, n.number) || g[0].number == n.number }?.add(n) ?: groups.add(mutableListOf(n))
+        return groups.map { g -> (g.firstOrNull(prefer) ?: g[0]) to g.map { it.id } }
+    }
+
     /** Правка номеров контакта: изменённые — Update, пустые и пропавшие — Delete, новые непустые — Insert. */
     fun numberOps(old: List<HHNum>, new: List<HHNum>): List<HHNumOp> {
         val out = mutableListOf<HHNumOp>()

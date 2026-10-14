@@ -112,7 +112,7 @@ fun HHCallSheet(g: HHLogGroup, navController: NavController, viewModel: ViewMode
     val name = hhName(g.peer)
     val contact = hhContact(g.peer)
     val number = HHUiLogic.peerKey(g.peer)
-    val anonymous = HHUiLogic.dialTarget(g.peer, lines.ifEmpty { listOf(HHLine("x", true, true)) }, null) == null
+    val anonymous = number.isEmpty() || number.equals("anonymous", true) || number.equals("unknown", true)
     val green = colorResource(R.color.colorTrafficGreen)
     val copied = stringResource(R.string.hh_copied)
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -208,7 +208,7 @@ private fun HHHistoryScreen(navController: NavController, viewModel: ViewModel, 
             Text(hhName(peer), color = MaterialTheme.colorScheme.onPrimary, fontSize = 20.sp, fontWeight = FontWeight.Medium, maxLines = 1)
         }
         LazyColumn(Modifier.fillMaxSize()) {
-            items(calls, key = { "${it.id}|${it.stop}" }) { e ->
+            items(calls.withIndex().toList(), key = { (i, e) -> "${e.id}|${e.stop}|$i" }) { (_, e) ->
                 val missed = HHUiLogic.missed(e)
                 Row(Modifier.fillMaxWidth().clickable { sheet = e }.padding(horizontal = 20.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically) {

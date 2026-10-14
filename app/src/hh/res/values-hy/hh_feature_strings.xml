@@ -121,4 +121,6 @@
     <string name="hh_call">Զանգել</string>
     <string name="hh_status_channel">Վիճակ</string>
     <string name="hh_sms_delete_role">SMS-ները կարող է ջնջել միայն լռելյայն SMS հավելվածը</string>
+    <string name="hh_block_failed">Չհաջողվեց փոխել արգելափակումը</string>
+    <string name="hh_contact_readonly">Կոնտակտը միայն ընթերցման հաշվից է, այստեղ փոխել հնարավոր չէ</string>
 </resources>

@@ -100,7 +100,10 @@ private const val SIP_TYPE = -2
 
 /** Карточка: key — a<id> (контакт телефона), b<id> (baresip), n<номер> (новый). */
 data class HHCard(val key: String, val name: String, val nums: List<HHNum>, val photo: Uri? = null, val bitmap: Bitmap? = null,
-                  val favorite: Boolean = false, val rawId: Long = 0, val nameRowId: Long = 0, val contactId: Long = 0)
+                  val favorite: Boolean = false, val rawId: Long = 0, val nameRowId: Long = 0, val contactId: Long = 0,
+                  val groups: Map<Long, List<Long>> = emptyMap(),   // номер на экране → все его _ID в разных аккаунтах
+                  val readOnly: Set<Long> = emptySet(),             // _ID строк аккаунтов только для чтения (мессенджеры, Exchange)
+                  val editable: Boolean = true)
 
 /** Чтение и запись контакта: Android — по _ID строк Data одной транзакцией; baresip — через Contact. */
 object HHContactStore {
@@ -122,29 +125,50 @@ object HHContactStore {
         null
     }
 
+    /** Аккаунты, куда приложению можно писать: память телефона или синхронизация с выгрузкой (Google). */
+    private fun writableTypes(): Set<String> = android.content.ContentResolver.getSyncAdapterTypes()
+        .filter { it.authority == ContactsContract.AUTHORITY && it.supportsUploading() }.map { it.accountType }.toSet()
+    private val localTypes = setOf("vnd.sec.contact.phone", "com.android.localphone", "com.android.local")
+
     private fun loadAndroid(ctx: Context, id: Long): HHCard? {
         val cr = ctx.contentResolver
-        var name = ""; var star = false; var photo: Uri? = null
+        var name = ""; var star = false; var photo: Uri? = null; var nameRaw = 0L
         cr.query(ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, id),
-            arrayOf(ContactsContract.Contacts.DISPLAY_NAME, ContactsContract.Contacts.STARRED, ContactsContract.Contacts.PHOTO_URI),
-            null, null, null)?.use { c ->
+            arrayOf(ContactsContract.Contacts.DISPLAY_NAME, ContactsContract.Contacts.STARRED, ContactsContract.Contacts.PHOTO_URI,
+                ContactsContract.Contacts.NAME_RAW_CONTACT_ID), null, null, null)?.use { c ->
             if (!c.moveToFirst()) return null
-            name = c.getString(0) ?: ""; star = c.getInt(1) == 1; photo = c.getString(2)?.let { Uri.parse(it) }
+            name = c.getString(0) ?: ""; star = c.getInt(1) == 1; photo = c.getString(2)?.let { Uri.parse(it) }; nameRaw = c.getLong(3)
         } ?: return null
-        val nums = mutableListOf<HHNum>()
-        var rawId = 0L; var nameRow = 0L
+        val upload = writableTypes()
+        val writable = LinkedHashMap<Long, Boolean>()
+        cr.query(RawContacts.CONTENT_URI, arrayOf(RawContacts._ID, RawContacts.ACCOUNT_TYPE),
+            "${RawContacts.CONTACT_ID} = ? AND ${RawContacts.DELETED} = 0", arrayOf(id.toString()), null)?.use { c ->
+            while (c.moveToNext()) {
+                val t = c.getString(1)
+                writable[c.getLong(0)] = t.isNullOrEmpty() || t in localTypes || t in upload
+            }
+        }
+        // основной сырой контакт — тот, чьё имя показывается, если в него можно писать, иначе первый записываемый
+        val rawId = nameRaw.takeIf { writable[it] == true } ?: writable.entries.firstOrNull { it.value }?.key ?: 0L
+        val rows = mutableListOf<Pair<HHNum, Long>>()   // номер и его сырой контакт
+        var nameRow = 0L
         cr.query(Data.CONTENT_URI, arrayOf(Data._ID, Data.RAW_CONTACT_ID, Data.MIMETYPE, Data.DATA1, Data.DATA2, Data.DATA3),
             "${Data.CONTACT_ID} = ?", arrayOf(id.toString()), null)?.use { c ->
             while (c.moveToNext()) {
-                if (rawId == 0L) rawId = c.getLong(1)
+                val raw = c.getLong(1)
                 when (c.getString(2)) {
-                    StructuredName.CONTENT_ITEM_TYPE -> { nameRow = c.getLong(0); rawId = c.getLong(1) }
-                    Phone.CONTENT_ITEM_TYPE -> nums += HHNum(c.getLong(0), c.getString(3) ?: "", c.getInt(4), c.getString(5) ?: "")
-                    SipAddress.CONTENT_ITEM_TYPE -> nums += HHNum(c.getLong(0), "sip:" + (c.getString(3) ?: ""), SIP_TYPE)
+                    StructuredName.CONTENT_ITEM_TYPE -> if (raw == rawId) nameRow = c.getLong(0)
+                    Phone.CONTENT_ITEM_TYPE -> rows += HHNum(c.getLong(0), c.getString(3) ?: "", c.getInt(4), c.getString(5) ?: "") to raw
+                    SipAddress.CONTENT_ITEM_TYPE -> rows += HHNum(c.getLong(0), "sip:" + (c.getString(3) ?: ""), SIP_TYPE) to raw
                 }
             }
         }
-        return HHCard("a$id", name, nums, photo, null, star, rawId, nameRow, id)
+        val rawOf = rows.associate { it.first.id to it.second }
+        val merged = HHUiLogic.mergeSame(rows.map { it.first }) { rawOf[it.id] == rawId }
+        return HHCard("a$id", name, merged.map { it.first }, photo, null, star, rawId, nameRow, id,
+            groups = merged.associate { it.first.id to it.second },
+            readOnly = rows.filter { writable[it.second] != true }.map { it.first.id }.toSet(),
+            editable = rawId != 0L)
     }
 
     /** Сохранение; возвращает ключ сохранённой карточки или null (ошибка). photo — новое фото, removePhoto — удалить. */
@@ -160,35 +184,41 @@ object HHContactStore {
     private fun saveAndroid(ctx: Context, before: HHCard, after: HHCard, photo: Bitmap?, removePhoto: Boolean): String? {
         val cr = ctx.contentResolver
         val new = before.key.startsWith("n")
+        if (!new && !before.editable) return null   // только аккаунты «для чтения» — правка откатилась бы синхронизацией
         val ops = ArrayList<ContentProviderOperation>()
         fun data() = ContentProviderOperation.newInsert(Data.CONTENT_URI).let {
             if (new) it.withValueBackReference(Data.RAW_CONTACT_ID, 0) else it.withValue(Data.RAW_CONTACT_ID, before.rawId)
         }
         if (new) ops += ContentProviderOperation.newInsert(RawContacts.CONTENT_URI)
             .withValue(RawContacts.ACCOUNT_TYPE, null).withValue(RawContacts.ACCOUNT_NAME, null).build()
-        if (new || before.nameRowId == 0L)
+        if (new || (before.nameRowId == 0L && after.name != before.name))
             ops += data().withValue(Data.MIMETYPE, StructuredName.CONTENT_ITEM_TYPE).withValue(StructuredName.DISPLAY_NAME, after.name).build()
         else if (after.name != before.name)   // части имени очищаем — провайдер разберёт DISPLAY_NAME сам
             ops += ContentProviderOperation.newUpdate(Data.CONTENT_URI).withSelection("${Data._ID} = ?", arrayOf(before.nameRowId.toString()))
                 .withValue(StructuredName.DISPLAY_NAME, after.name).withValue(StructuredName.GIVEN_NAME, null)
                 .withValue(StructuredName.FAMILY_NAME, null).withValue(StructuredName.MIDDLE_NAME, null)
                 .withValue(StructuredName.PREFIX, null).withValue(StructuredName.SUFFIX, null).build()
+        // номер на экране = все его копии в записываемых аккаунтах
+        fun ids(id: Long) = (before.groups[id] ?: listOf(id)).filter { it !in before.readOnly }
         for (op in HHUiLogic.numberOps(if (new) emptyList() else before.nums, after.nums)) when (op) {
-            is HHNumOp.Delete -> ops += ContentProviderOperation.newDelete(Data.CONTENT_URI)
-                .withSelection("${Data._ID} = ?", arrayOf(op.id.toString())).build()
-            is HHNumOp.Update -> ops += ContentProviderOperation.newUpdate(Data.CONTENT_URI)
-                .withSelection("${Data._ID} = ?", arrayOf(op.id.toString())).withValues(numValues(op.num, false)).build()
+            is HHNumOp.Delete -> ids(op.id).forEach { ops += ContentProviderOperation.newDelete(Data.CONTENT_URI)
+                .withSelection("${Data._ID} = ?", arrayOf(it.toString())).build() }
+            is HHNumOp.Update -> ids(op.id).forEach { ops += ContentProviderOperation.newUpdate(Data.CONTENT_URI)
+                .withSelection("${Data._ID} = ?", arrayOf(it.toString())).withValues(numValues(op.num, false)).build() }
             is HHNumOp.Insert -> ops += data().withValues(numValues(op.num, true)).build()
         }
-        val res = cr.applyBatch(ContactsContract.AUTHORITY, ops)
+        val res = if (ops.isEmpty()) emptyArray() else cr.applyBatch(ContactsContract.AUTHORITY, ops)
         val rawId = if (new) ContentUris.parseId(res[0].uri!!) else before.rawId
-        if (photo != null) writePhoto(ctx, rawId, photo)
-        else if (removePhoto && !new)
-            cr.delete(Data.CONTENT_URI, "${Data.CONTACT_ID} = ? AND ${Data.MIMETYPE} = ?",
-                arrayOf(before.contactId.toString(), Photo.CONTENT_ITEM_TYPE))
-        val contactId = if (new) cr.query(ContentUris.withAppendedId(RawContacts.CONTENT_URI, rawId),
-            arrayOf(RawContacts.CONTACT_ID), null, null, null)?.use { c -> if (c.moveToFirst()) c.getLong(0) else 0L } ?: 0L
-            else before.contactId
+        try {   // фото — после записи контакта; его сбой не делает контакт «несохранённым» (иначе повторное «Сохранить» дублирует)
+            if (photo != null) writePhoto(ctx, rawId, photo)
+            else if (removePhoto && !new)
+                cr.delete(Data.CONTENT_URI, "${Data.CONTACT_ID} = ? AND ${Data.MIMETYPE} = ?",
+                    arrayOf(before.contactId.toString(), Photo.CONTENT_ITEM_TYPE))
+        } catch (e: Exception) { Log.e(TAG, "photo failed: $e") }
+        // правка могла пересобрать агрегат — id контакта берём заново
+        val contactId = cr.query(ContentUris.withAppendedId(RawContacts.CONTENT_URI, rawId),
+            arrayOf(RawContacts.CONTACT_ID), null, null, null)?.use { c -> if (c.moveToFirst()) c.getLong(0) else 0L }
+            ?.takeIf { it != 0L } ?: before.contactId
         Contact.loadAndroidContacts(ctx)
         Contact.contactsUpdate()
         return "a$contactId"
@@ -212,6 +242,9 @@ object HHContactStore {
         ctx.contentResolver.openAssetFileDescriptor(uri, "rw")?.use { fd ->
             fd.createOutputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }
         }
+        // своё фото — главное в агрегате (иначе может показываться фото из WhatsApp/Google)
+        ctx.contentResolver.update(Data.CONTENT_URI, ContentValues().apply { put(Data.IS_PRIMARY, 1); put(Data.IS_SUPER_PRIMARY, 1) },
+            "${Data.RAW_CONTACT_ID} = ? AND ${Data.MIMETYPE} = ?", arrayOf(rawId.toString(), Photo.CONTENT_ITEM_TYPE))
     }
 
     private fun saveBaresip(ctx: Context, before: HHCard, after: HHCard, photo: Bitmap?, removePhoto: Boolean): String? {
@@ -261,17 +294,22 @@ object HHContactStore {
 
 /** Системная блокировка номеров (BlockedNumberContract) — работает, пока HHPhone звонилка или SMS-приложение. */
 object HHBlock {
-    fun can(ctx: Context) = try { BlockedNumberContract.canCurrentUserBlockNumbers(ctx) } catch (_: Exception) { false }
+    /** canCurrentUserBlockNumbers не проверяет роль — без роли звонилки/SMS запись упадёт SecurityException. */
+    fun can(ctx: Context) = (Utils.isDefaultDialer(ctx) || Utils.isDefaultSmsApp(ctx)) &&
+        try { BlockedNumberContract.canCurrentUserBlockNumbers(ctx) } catch (_: Exception) { false }
 
     fun isBlocked(ctx: Context, number: String) =
         number.isNotBlank() && try { BlockedNumberContract.isBlocked(ctx, number) } catch (_: Exception) { false }
 
-    fun set(ctx: Context, numbers: List<String>, block: Boolean) {
+    /** false — хотя бы один номер не удалось (раз)блокировать. */
+    fun set(ctx: Context, numbers: List<String>, block: Boolean): Boolean {
+        var ok = true
         for (n in numbers.filter { it.isNotBlank() }) try {
             if (block) ctx.contentResolver.insert(BlockedNumberContract.BlockedNumbers.CONTENT_URI,
                 ContentValues().apply { put(BlockedNumberContract.BlockedNumbers.COLUMN_ORIGINAL_NUMBER, n) })
             else BlockedNumberContract.unblock(ctx, n)
-        } catch (e: Exception) { Log.e("HHBlock", "block $n failed: $e") }
+        } catch (e: Exception) { Log.e("HHBlock", "block $n failed: $e"); ok = false }
+        return ok
     }
 }
 
@@ -300,6 +338,10 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
     var newPhoto by remember { mutableStateOf<Bitmap?>(null) }
     var removePhoto by remember { mutableStateOf(false) }
     var blocked by remember { mutableStateOf(false) }
+    var canBlock by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
+    val blockFailed = stringResource(R.string.hh_block_failed)
+    val readOnlyText = stringResource(R.string.hh_contact_readonly)
     val lines = hhLines()
     val saveFailed = stringResource(R.string.hh_save_failed)
     val nameRequired = stringResource(R.string.hh_name_required)
@@ -311,7 +353,8 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
         val c = withContext(Dispatchers.IO) { HHContactStore.load(ctx, cardKey) }
         card = c
         if (c == null) { navController.navigateUp(); return@LaunchedEffect }
-        blocked = withContext(Dispatchers.IO) { c.nums.any { HHBlock.isBlocked(ctx, HHUiLogic.peerKey(it.number)) } }
+        blocked = withContext(Dispatchers.IO) { c.nums.any { it.type != SIP_TYPE && HHBlock.isBlocked(ctx, HHUiLogic.peerKey(it.number)) } }
+        canBlock = HHBlock.can(ctx) && c.nums.any { it.type != SIP_TYPE }
         if (editing) startEdit(c)
     }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -329,12 +372,14 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
                     Icon(Icons.Default.Close, stringResource(R.string.hh_cancel), tint = onBar)
                 }
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = {
+                IconButton(enabled = !saving, onClick = {
                     val after = c.copy(name = name.trim().ifEmpty { nums.firstOrNull { it.number.isNotBlank() }?.number?.trim() ?: "" },
                         nums = nums.toList())
                     if (after.name.isEmpty()) { Toast.makeText(ctx, nameRequired, Toast.LENGTH_SHORT).show(); return@IconButton }
+                    saving = true
                     scope.launch {
                         val k = withContext(Dispatchers.IO) { HHContactStore.save(ctx, c, after, newPhoto, removePhoto) }
+                        saving = false
                         if (k == null) Toast.makeText(ctx, saveFailed, Toast.LENGTH_LONG).show()
                         else { editing = false; cardKey = k; reload++ }
                     }
@@ -347,7 +392,9 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
                 IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { HHContactStore.setFavorite(ctx, c, !c.favorite) }; reload++ } }) {
                     Icon(if (c.favorite) Icons.Filled.Star else Icons.Outlined.StarOutline, stringResource(R.string.hh_favorite), tint = onBar)
                 }
-                IconButton(onClick = { startEdit(c); editing = true }) { Icon(Icons.Outlined.Edit, stringResource(R.string.hh_edit), tint = onBar) }
+                IconButton(onClick = {
+                    if (c.editable) { startEdit(c); editing = true } else Toast.makeText(ctx, readOnlyText, Toast.LENGTH_LONG).show()
+                }) { Icon(Icons.Outlined.Edit, stringResource(R.string.hh_edit), tint = onBar) }
             }
         }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 24.dp),
@@ -382,11 +429,14 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
                 if (blocked) Text(stringResource(R.string.hh_is_blocked), color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
                 Spacer(Modifier.height(16.dp))
                 c.nums.filter { it.number.isNotBlank() }.forEach { n -> HHNumberRow(ctx, n, lines, navController, viewModel) }
-                if (HHBlock.can(ctx) && c.nums.isNotEmpty()) {
+                if (canBlock) {
                     Spacer(Modifier.height(20.dp))
                     OutlinedButton(onClick = {
                         scope.launch {
-                            withContext(Dispatchers.IO) { HHBlock.set(ctx, c.nums.map { HHUiLogic.peerKey(it.number) }, !blocked) }
+                            val ok = withContext(Dispatchers.IO) {   // SIP-адреса не блокируем: «100» с домена станции ≠ SIM-номер 100
+                                HHBlock.set(ctx, c.nums.filter { it.type != SIP_TYPE }.map { HHUiLogic.peerKey(it.number) }, !blocked)
+                            }
+                            if (!ok) Toast.makeText(ctx, blockFailed, Toast.LENGTH_LONG).show()
                             reload++
                         }
                     }) {
