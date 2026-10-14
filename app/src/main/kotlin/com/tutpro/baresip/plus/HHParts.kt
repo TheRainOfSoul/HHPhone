@@ -112,6 +112,33 @@ fun HHAvatar(name: String, peer: String?, size: Dp, contact: Contact? = peer?.le
     }
 }
 
+/** Activity за обёртками контекста (язык HHLocale оборачивает контекст). */
+private fun Context.hhActivity(): android.app.Activity? {
+    var c: Context? = this
+    while (c is android.content.ContextWrapper) { if (c is android.app.Activity) return c; c = c.baseContext }
+    return null
+}
+
+/** Экран с бордовой шапкой: светлые значки строки состояния, при уходе — как в теме. */
+@Composable
+fun HHLightStatusBar() {
+    val act = androidx.compose.ui.platform.LocalContext.current.hhActivity()
+    val dark = hhDark()
+    fun light(on: Boolean) = act?.window?.let { androidx.core.view.WindowCompat.getInsetsController(it, it.decorView).isAppearanceLightStatusBars = on }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        light(false)
+        onDispose { light(!dark) }
+    }
+    // главный экран при уходе (onDispose) возвращает тёмные значки уже после нас — повторяем, когда экран стал активным
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(owner) {
+        val o = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) light(false) }
+        owner.lifecycle.addObserver(o)
+        onDispose { owner.lifecycle.removeObserver(o) }
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.delay(1000); light(false) }
+}
+
 fun hhAgo(ctx: Context, thenMs: Long): String {
     val now = System.currentTimeMillis()
     val (unit, v) = HHUiLogic.ago(now, thenMs, java.util.TimeZone.getDefault().getOffset(now).toLong())

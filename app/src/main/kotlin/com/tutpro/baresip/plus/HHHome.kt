@@ -10,6 +10,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Vibration
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.rememberCoroutineScope
@@ -358,8 +359,11 @@ private fun HHLogRow(ctx: Context, g: HHLogGroup, tick: Int, onCard: () -> Unit,
                 if (g.count > 1) Text(" ${g.count}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                val icon = when { missed -> Icons.AutoMirrored.Filled.CallMissed; e.dir == "in" -> Icons.AutoMirrored.Filled.CallReceived; else -> Icons.AutoMirrored.Filled.CallMade }
-                Icon(icon, null, Modifier.size(14.dp), tint = if (missed) MaterialTheme.colorScheme.error else colorResource(R.color.colorTrafficGreen))
+                val blocked = e.rejected && e.dir == "in"   // отклонён / заблокирован
+                val icon = when { missed -> Icons.AutoMirrored.Filled.CallMissed; blocked -> Icons.Outlined.Block
+                    e.dir == "in" -> Icons.AutoMirrored.Filled.CallReceived; else -> Icons.AutoMirrored.Filled.CallMade }
+                Icon(icon, null, Modifier.size(14.dp), tint = when { missed -> MaterialTheme.colorScheme.error
+                    blocked -> MaterialTheme.colorScheme.onSurfaceVariant; else -> colorResource(R.color.colorTrafficGreen) })
                 Spacer(Modifier.width(4.dp))
                 val secs = e.start?.let { (e.stop - it) / 1000 }
                 val sub = listOfNotNull(
@@ -425,7 +429,10 @@ private fun HHPeopleTab(ctx: Context, navController: NavController, viewModel: V
         items(con, key = { "p" + hhCardKey(it) }) { c ->
             val uris = c.uris()
             val first = uris.firstOrNull()
-            val sub = listOfNotNull(first?.label?.ifBlank { null }, first?.let { HHUiLogic.peerKey(it.uri) }).joinToString(" · ") +
+            val type = first?.label?.ifBlank { null }?.let {
+                android.provider.ContactsContract.CommonDataKinds.Phone.getTypeLabel(ctx.resources, Contact.stringToType(it), it).toString()
+            }
+            val sub = listOfNotNull(type, first?.let { HHUiLogic.peerKey(it.uri) }).joinToString(" · ") +
                 if (uris.size > 1) "  +${uris.size - 1}" else ""
             HHPersonRow(c.name(), first?.uri, c, sub, starred = c.favorite(), onStar = { Contact.toggleFavorite(ctx, c) }) {
                 navController.navigate(hhCardRoute(c, first?.uri ?: ""))

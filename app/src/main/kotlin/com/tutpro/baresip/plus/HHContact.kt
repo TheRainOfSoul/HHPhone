@@ -319,6 +319,7 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
             withContext(Dispatchers.IO) { HHContactStore.decodePhoto(ctx, uri) }?.let { newPhoto = it; removePhoto = false }
         }
     }
+    HHLightStatusBar()
     val c = card ?: return
     val onBar = MaterialTheme.colorScheme.onPrimary
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).imePadding()) {
@@ -443,7 +444,9 @@ private fun HHNumberEdit(n: HHNum, onChange: (HHNum) -> Unit, onDelete: () -> Un
             label = { Text(stringResource(R.string.hh_number)) },
             keyboardOptions = KeyboardOptions(keyboardType = if (n.type == SIP_TYPE) KeyboardType.Email else KeyboardType.Phone))
         Box {
-            TextButton(onClick = { if (n.type != SIP_TYPE) menu = true }) { Text(typeName(ctx, n), maxLines = 1) }
+            TextButton(onClick = { if (n.type != SIP_TYPE) menu = true }, Modifier.width(116.dp)) {
+                Text(typeName(ctx, n), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 editTypes.forEach { t ->
                     DropdownMenuItem(text = { Text(Phone.getTypeLabel(ctx.resources, t, "").toString()) },

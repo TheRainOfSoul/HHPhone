@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.CallReceived
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.outlined.AccountBox
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.History
@@ -196,6 +197,7 @@ private fun HHHistoryScreen(navController: NavController, viewModel: ViewModel, 
                 .sortedByDescending { it.stop }
         }
     }
+    HHLightStatusBar()
     var sheet by remember { mutableStateOf<HHLogEntry?>(null) }
     val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -210,9 +212,11 @@ private fun HHHistoryScreen(navController: NavController, viewModel: ViewModel, 
                 val missed = HHUiLogic.missed(e)
                 Row(Modifier.fillMaxWidth().clickable { sheet = e }.padding(horizontal = 20.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    val icon = when { missed -> Icons.AutoMirrored.Filled.CallMissed; e.dir == "in" -> Icons.AutoMirrored.Filled.CallReceived
-                        else -> Icons.AutoMirrored.Filled.CallMade }
-                    Icon(icon, null, Modifier.size(20.dp), tint = if (missed) MaterialTheme.colorScheme.error else colorResource(R.color.colorTrafficGreen))
+                    val blocked = e.rejected && e.dir == "in"
+                    val icon = when { missed -> Icons.AutoMirrored.Filled.CallMissed; blocked -> Icons.Outlined.Block
+                        e.dir == "in" -> Icons.AutoMirrored.Filled.CallReceived; else -> Icons.AutoMirrored.Filled.CallMade }
+                    Icon(icon, null, Modifier.size(20.dp), tint = when { missed -> MaterialTheme.colorScheme.error
+                        blocked -> MaterialTheme.colorScheme.onSurfaceVariant; else -> colorResource(R.color.colorTrafficGreen) })
                     Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f)) {
                         Text(fmt.format(Date(e.start ?: e.stop)), fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
