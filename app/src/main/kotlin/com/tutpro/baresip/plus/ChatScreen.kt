@@ -502,6 +502,9 @@ private fun Messages(
                             Text(text = sender, fontSize = 12.sp, color = textColor)
                             Spacer(modifier = Modifier.weight(1f))
                             Text(text = info, fontSize = 12.sp, color = textColor)
+                            if (message.mark.isNotEmpty())   // HHPhone: отправлено / доставлено / ошибка
+                                Text(text = " " + message.mark, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                                    color = if (message.mark == "!") MaterialTheme.colorScheme.error else textColor)
                         }
                         Row {
                             SelectionContainer {

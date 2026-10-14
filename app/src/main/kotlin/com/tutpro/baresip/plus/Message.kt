@@ -13,9 +13,10 @@ class Message(val aor: String, val peerUri: String, val message: String, val tim
 ): java.io.Serializable {
 
     @kotlinx.serialization.Transient @Transient var threadId: Long = 0   // HHPhone: беседа системы (MMS)
+    @kotlinx.serialization.Transient @Transient var mark: String = ""    // HHPhone: ✓ / ✓✓ / ! у исходящих SMS системы
 
     fun copyPeer(p: String) = Message(aor, p, message, timeStamp, direction, responseCode, responseReason, new, images, smsId)
-        .also { it.threadId = threadId }
+        .also { it.threadId = threadId; it.mark = mark }
 
     fun add() {
         val updatedMessages = synchronized(BaresipService.messagesLock) {

@@ -19,6 +19,7 @@ import android.telephony.SmsManager
 /** Системная база SMS — единая для HHPhone (спека 2026-10-14). */
 object HHSms {
     const val MOBILE = "sip:mobile@pstn"
+    const val DELIVERED = "am.dgsolutions.hhphone.SMS_DELIVERED"
     fun canRead(ctx: Context) = Utils.checkPermissions(ctx, arrayOf(Manifest.permission.READ_SMS))
     /** Роль SMS (RoleManager): getDefaultSmsPackage даёт null, если у приложения нет READ_CELL_BROADCASTS. */
     fun isDefault(ctx: Context) = Utils.isDefaultSmsApp(ctx)
@@ -49,14 +50,18 @@ object HHSms {
             PendingIntent.getBroadcast(ctx, base + i, Intent(ctx, HHSmsSentReceiver::class.java).setData(row),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT)
         })
-        sm.sendMultipartTextMessage(address, null, parts, sent, null)
+        val delivered = if (row == null) null else ArrayList(parts.indices.map { i ->   // отчёт о доставке → STATUS
+            PendingIntent.getBroadcast(ctx, base + 32 + i, Intent(ctx, HHSmsSentReceiver::class.java).setAction(DELIVERED).setData(row),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT)
+        })
+        sm.sendMultipartTextMessage(address, null, parts, sent, delivered)
         true
     } catch (e: Exception) {
         Log.e(TAG, "SMS send failed: $e")
         false
     }
 
-    private val cols = arrayOf(Sms._ID, Sms.THREAD_ID, Sms.ADDRESS, Sms.BODY, Sms.DATE, Sms.TYPE, Sms.READ)
+    private val cols = arrayOf(Sms._ID, Sms.THREAD_ID, Sms.ADDRESS, Sms.BODY, Sms.DATE, Sms.TYPE, Sms.READ, Sms.STATUS)
 
     private fun toMessage(c: Cursor) = Message(MOBILE, "tel:" + (c.getString(2) ?: ""), c.getString(3) ?: "", c.getLong(4),
         when (c.getInt(5)) {
@@ -65,6 +70,7 @@ object HHSms {
             Sms.MESSAGE_TYPE_OUTBOX, Sms.MESSAGE_TYPE_QUEUED -> MESSAGE_UP_WAIT
             else -> MESSAGE_UP
         }, 0, "", c.getInt(6) == 0 && c.getInt(5) == Sms.MESSAGE_TYPE_INBOX, smsId = c.getLong(0))
+        .also { it.mark = HHUiLogic.deliveryMark(c.getInt(5), c.getInt(7)) }
 
     // ---- MMS (спека 0.8.0, п. 2) ----
     /** Участники групповых бесед: thread_id → адреса (без своего номера). */
@@ -258,6 +264,13 @@ object HHSms {
 class HHSmsSentReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         val row = intent.data ?: return
+        if (intent.action == HHSms.DELIVERED) {   // отчёт оператора: STATUS из PDU (0 — доставлено, 32 — ждёт, 64+ — не доставлено)
+            val pdu = intent.getByteArrayExtra("pdu") ?: return
+            val status = android.telephony.SmsMessage.createFromPdu(pdu, intent.getStringExtra("format"))?.status ?: return
+            val st = when { status >= 64 -> Sms.STATUS_FAILED; status >= 32 -> Sms.STATUS_PENDING; else -> Sms.STATUS_COMPLETE }
+            try { ctx.contentResolver.update(row, ContentValues().apply { put(Sms.STATUS, st) }, null, null) } catch (_: Exception) {}
+            return
+        }
         val type = if (resultCode == Activity.RESULT_OK) Sms.MESSAGE_TYPE_SENT else Sms.MESSAGE_TYPE_FAILED
         try {   // неудача одной части не перетирается успехом следующей
             ctx.contentResolver.update(row, ContentValues().apply { put(Sms.TYPE, type) },
