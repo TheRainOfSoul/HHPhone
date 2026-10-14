@@ -154,6 +154,7 @@ object HHUiLogic {
             t.startsWith("+") -> d
             d.startsWith("00") -> d.drop(2)
             d.startsWith("0") && !countryCode.isNullOrEmpty() -> countryCode + d.drop(1)
+            d.startsWith("0") -> return null   // национальный номер без страны: +0… был бы ошибкой
             d.length >= 11 -> d
             else -> return null
         }

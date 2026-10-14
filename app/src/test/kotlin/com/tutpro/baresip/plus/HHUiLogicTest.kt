@@ -262,4 +262,9 @@ class HHUiLogicTest {
         assertEquals("viber://chat?number=%2B37491123456", m["viber"])
         assertEquals("tg://resolve?phone=37491123456", m["telegram"])
     }
+
+    @Test fun toE164LeadingZeroWithoutCountryIsNull() {
+        assertEquals(null, HHUiLogic.toE164("07911123456", null))   // UK национальный — без страны нельзя
+        assertEquals(null, HHUiLogic.toE164("0911234567", ""))
+    }
 }

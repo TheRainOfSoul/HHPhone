@@ -52,7 +52,7 @@ object HHSms {
         })
         val delivered = if (row == null) null else ArrayList(parts.indices.map { i ->   // отчёт о доставке → STATUS
             PendingIntent.getBroadcast(ctx, base + 32 + i, Intent(ctx, HHSmsSentReceiver::class.java).setAction(DELIVERED).setData(row),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT)
+                PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_ONE_SHOT)   // явный Intent; immutable потерял бы pdu отчёта
         })
         sm.sendMultipartTextMessage(address, null, parts, sent, delivered)
         true
@@ -78,6 +78,22 @@ object HHSms {
     fun isGroup(peer: String) = peer.startsWith("mms:")
     fun groupAddresses(peer: String): List<String> = peer.removePrefix("mms:").toLongOrNull()?.let { groups[it] } ?: emptyList()
 
+    /** Собеседники бесед системы: thread_id → адреса (canonical-addresses; свой номер система туда не пишет). */
+    private fun recipients(ctx: Context): Map<Long, List<String>> = try {
+        val addr = HashMap<String, String>()
+        ctx.contentResolver.query(Uri.parse("content://mms-sms/canonical-addresses"), arrayOf("_id", "address"), null, null, null)?.use { c ->
+            while (c.moveToNext()) addr[c.getLong(0).toString()] = c.getString(1) ?: ""
+        }
+        val out = HashMap<Long, List<String>>()
+        ctx.contentResolver.query(Uri.parse("content://mms-sms/conversations?simple=true"), arrayOf("_id", "recipient_ids"), null, null, null)?.use { c ->
+            while (c.moveToNext()) out[c.getLong(0)] = (c.getString(1) ?: "").trim().split(" ").mapNotNull { addr[it] }.filter { it.isNotBlank() }
+        }
+        out
+    } catch (e: Exception) {
+        Log.e(TAG, "recipients failed: $e")
+        emptyMap()
+    }
+
     private fun mmsAddr(ctx: Context, id: Long): Pair<String?, List<String>> {
         val rows = mutableListOf<Pair<String, Int>>()
         ctx.contentResolver.query(Uri.parse("content://mms/$id/addr"), arrayOf("address", "type"), null, null, null)?.use { c ->
@@ -102,9 +118,10 @@ object HHSms {
     }
 
     /** MMS → сообщение чата; peer — собеседник или "mms:<thread>" для групповой беседы. */
-    private fun mmsMessage(ctx: Context, id: Long, thread: Long, dateSec: Long, box: Int, read: Int): Message {
+    private fun mmsMessage(ctx: Context, id: Long, thread: Long, dateSec: Long, box: Int, read: Int, rcpt: Map<Long, List<String>>): Message {
         val (from, to) = mmsAddr(ctx, id)
-        val people = (listOfNotNull(from) + to).distinctBy { HHUiLogic.peerKey(it) }
+        // собеседники — из беседы системы (свой номер исключён), иначе из адресов PDU
+        val people = rcpt[thread]?.takeIf { it.isNotEmpty() } ?: (listOfNotNull(from) + to).distinctBy { HHUiLogic.peerKey(it) }
         if (people.size > 1) groups[thread] = people
         val peer = if (people.size > 1) "mms:$thread" else "tel:" + (people.firstOrNull() ?: "")
         val (text, images) = mmsParts(ctx, id)
@@ -115,11 +132,15 @@ object HHSms {
             box == 1 && read == 0, images, smsId = -id)   // smsId < 0 — MMS (удаление — content://mms/<id>)
     }
 
+    /** Настоящие сообщения: отправленные/полученные/загруженные (128/130/132), без черновиков; не отчёты (134/136). */
+    private const val MMS_REAL = "m_type IN (128, 130, 132) AND msg_box != 3"
+
     private fun mmsQuery(ctx: Context, sel: String?, args: Array<String>?): List<Message> = try {
+        val rcpt = recipients(ctx)
         ctx.contentResolver.query(Uri.parse("content://mms"), arrayOf("_id", "thread_id", "date", "msg_box", "read"),
-            sel, args, "date DESC")?.use { c ->
-            buildList { while (c.moveToNext()) add(mmsMessage(ctx, c.getLong(0), c.getLong(1), c.getLong(2), c.getInt(3), c.getInt(4)) to c.getLong(1)) }
-                .map { it.first.also { m -> m.threadId = it.second } }
+            if (sel == null) MMS_REAL else "($sel) AND $MMS_REAL", args, "date DESC")?.use { c ->
+            buildList { while (c.moveToNext()) add(mmsMessage(ctx, c.getLong(0), c.getLong(1), c.getLong(2), c.getInt(3), c.getInt(4), rcpt)
+                .also { it.threadId = c.getLong(1) }) }
         } ?: emptyList()
     } catch (e: Exception) {
         Log.e(TAG, "MMS read failed: $e")
@@ -142,10 +163,21 @@ object HHSms {
         } catch (e: Exception) { Log.e(TAG, "SMS threads failed: $e") }
         // MMS: последняя в беседе, если новее SMS; групповые беседы — свой peer
         val lastMms = LinkedHashMap<Long, Message>()
-        for (m in mmsQuery(ctx, null, null)) {
-            val have = lastMms[m.threadId]
-            if (have == null) lastMms[m.threadId] = m else if (m.new) have.new = true
-        }
+        try {
+            val newest = LinkedHashMap<Long, LongArray>()   // thread → [_id, date, msg_box, read]
+            val unread = HashSet<Long>()
+            ctx.contentResolver.query(Uri.parse("content://mms"), arrayOf("_id", "thread_id", "date", "msg_box", "read"), MMS_REAL, null,
+                "date DESC")?.use { c ->
+                while (c.moveToNext()) {
+                    val t = c.getLong(1)
+                    if (t !in newest) newest[t] = longArrayOf(c.getLong(0), c.getLong(2), c.getLong(3), c.getLong(4))
+                    if (c.getInt(3) == 1 && c.getInt(4) == 0) unread += t
+                }
+            }
+            val rcpt = if (newest.isEmpty()) emptyMap() else recipients(ctx)
+            for ((t, r) in newest) lastMms[t] = mmsMessage(ctx, r[0], t, r[1], r[2].toInt(), r[3].toInt(), rcpt)
+                .also { it.threadId = t; if (t in unread) it.new = true }
+        } catch (e: Exception) { Log.e(TAG, "MMS threads failed: $e") }
         for ((t, m) in lastMms) {
             val s = seen[t]
             if (s == null || m.timeStamp > s.timeStamp || isGroup(m.peerUri)) {
@@ -268,7 +300,8 @@ class HHSmsSentReceiver : BroadcastReceiver() {
             val pdu = intent.getByteArrayExtra("pdu") ?: return
             val status = android.telephony.SmsMessage.createFromPdu(pdu, intent.getStringExtra("format"))?.status ?: return
             val st = when { status >= 64 -> Sms.STATUS_FAILED; status >= 32 -> Sms.STATUS_PENDING; else -> Sms.STATUS_COMPLETE }
-            try { ctx.contentResolver.update(row, ContentValues().apply { put(Sms.STATUS, st) }, null, null) } catch (_: Exception) {}
+            try { ctx.contentResolver.update(row, ContentValues().apply { put(Sms.STATUS, st) }, "${Sms.STATUS} != ${Sms.STATUS_FAILED}", null) }
+            catch (_: Exception) {}
             return
         }
         val type = if (resultCode == Activity.RESULT_OK) Sms.MESSAGE_TYPE_SENT else Sms.MESSAGE_TYPE_FAILED

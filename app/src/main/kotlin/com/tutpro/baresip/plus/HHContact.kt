@@ -460,8 +460,9 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         if (c.key.startsWith("a"))
                             DropdownMenuItem(text = { Text(stringResource(R.string.hh_merge_with)) }, onClick = { menu = false; pickMerge = true })
-                        DropdownMenuItem(text = { Text(stringResource(R.string.hh_delete_contact), color = MaterialTheme.colorScheme.error) },
-                            onClick = { menu = false; askDelete = true })
+                        if (c.editable)   // аккаунт «только для чтения» синхронизация вернёт — не предлагаем
+                            DropdownMenuItem(text = { Text(stringResource(R.string.hh_delete_contact), color = MaterialTheme.colorScheme.error) },
+                                onClick = { menu = false; askDelete = true })
                     }
                 }
             }

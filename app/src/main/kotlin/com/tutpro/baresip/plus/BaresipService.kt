@@ -1814,7 +1814,7 @@ class BaresipService: Service() {
         ua.account.unreadMessages = true
 
         // HHPhone: как обычные SMS-приложения — уведомление и при открытом HHPhone, беседу сами не открываем
-        if (true) {
+        run {
             val piFlags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
 
             val intent = Intent(this, MainActivity::class.java)

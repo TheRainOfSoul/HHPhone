@@ -241,7 +241,7 @@ private fun TopAppBar(
             Text(
                 text = format(
                     stringResource(R.string.chat_with),
-                    Utils.friendlyUri(
+                    if (HHSms.isGroup(peerUri)) hhName(peerUri) else Utils.friendlyUri(   // HHPhone: группа — участники
                         uri = peerUri,
                         account = account,
                         anonymous = stringResource(R.string.anonymous),
@@ -293,7 +293,7 @@ private fun TopAppBar(
                         contentDescription = "Video Call",
                     )
                 }
-            IconButton(
+            if (!HHSms.isGroup(peerUri)) IconButton(   // группе не позвонить
                 onClick = {
                     val ua = UserAgent.ofAor(account.aor)
                     if (ua != null) {
