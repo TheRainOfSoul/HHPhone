@@ -445,7 +445,18 @@ private fun HHPersonRow(name: String, peer: String, sub: String, starred: Boolea
 @Composable
 private fun HHChatsTab(ctx: Context, navController: NavController) {
     val messages = BaresipService.messages
-    val chats = remember(messages) { messages.sortedByDescending { it.timeStamp }.distinctBy { it.aor + "|" + it.peerUri } }
+    var smsVer by remember { mutableStateOf(0) }
+    DisposableEffect(Unit) { val off = HHSms.observe(ctx) { smsVer++ }; onDispose { off() } }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { HHSms.migrate(ctx); smsVer++ } }
+    // SMS-беседы из системной базы + беседы HHPhone через станцию (и SIM, которых нет в системе)
+    val chats by produceState(emptyList<Message>(), messages, smsVer) {
+        value = withContext(Dispatchers.IO) {
+            val sys = HHSms.threads(ctx)
+            val own = messages.sortedByDescending { it.timeStamp }.distinctBy { it.aor + "|" + it.peerUri }
+                .filter { m -> sys.isEmpty() || m.aor != HHSms.MOBILE || sys.none { HHUiLogic.samePhone(it.peerUri, m.peerUri) } }
+            (sys + own).sortedByDescending { it.timeStamp }
+        }
+    }
     val lines = hhLines()
     var choose by remember { mutableStateOf(false) }
     fun open(aor: String) { if (!checkLockedAndToast(ctx)) navController.navigate("chats/${Uri.encode(aor)}") }

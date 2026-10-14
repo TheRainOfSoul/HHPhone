@@ -1,5 +1,6 @@
 package com.tutpro.baresip.plus
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.text.format.DateUtils.isToday
@@ -145,7 +146,7 @@ private fun ChatScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 Log.d(TAG, "Resumed to ChatScreen for AOR: $aor peer $peerUri")
-                chatMessages = loadPeerMessages(aor, peerUri)
+                chatMessages = loadPeerMessages(ctx, aor, peerUri)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -162,8 +163,9 @@ private fun ChatScreen(
         serviceIntent.putExtra("peer", peerUri)
         ctx.startService(serviceIntent)
         Message.updateMessagesFromPearRead(aor, peerUri)
+        if (aor == HHSms.MOBILE) HHSms.markRead(ctx, peerUri)
         account.unreadMessages = Message.unreadMessages(aor)
-        chatMessages = loadPeerMessages(aor, peerUri)
+        chatMessages = loadPeerMessages(ctx, aor, peerUri)
         if (!areMessagesLoaded) areMessagesLoaded = true
     }
 
@@ -179,7 +181,9 @@ private fun ChatScreen(
         reloadMessages() // Initial load
         Log.d(TAG, "Observing message updates for $peerUri")
         BaresipService.messageUpdate.observe(lifecycleOwner, messagesObserver)
+        val smsOff = if (aor == HHSms.MOBILE) HHSms.observe(ctx) { reloadMessages() } else { {} }
         onDispose {
+            smsOff()
             Log.d(TAG, "Removing message observer for $peerUri")
             BaresipService.messageUpdate.removeObserver(messagesObserver)
         }
@@ -378,6 +382,7 @@ private fun Messages(
 
     val shortMessageQuestion = stringResource(R.string.short_message_question)
     val deleteString = stringResource(R.string.delete)
+    val ctx = LocalContext.current
 
     val showDialog = remember { mutableStateOf(false) }
     val dialogMessage = remember { mutableStateOf("") }
@@ -451,7 +456,7 @@ private fun Messages(
                         secondButtonText.value = ""
                         lastButtonText.value = deleteString
                         lastAction.value = {
-                            message.delete()
+                            if (message.smsId != 0L) HHSms.delete(ctx, message.smsId) else message.delete()
                             onMessageDeleted()
                         }
                         showDialog.value = true
@@ -752,7 +757,8 @@ private fun NewMessage(
                                             }
                                             Message.updateMessageStatus(aor, time, msg.direction, msg.responseReason)
                                         }
-                                    Utils.sendSms(ctx, destination, msgText) ->
+                                    (if (HHSms.canRead(ctx)) HHSms.send(ctx, destination, msgText)
+                                        else Utils.sendSms(ctx, destination, msgText)) ->
                                         msg.direction = MESSAGE_UP
                                     else -> {
                                         Toast.makeText(ctx, "$messageFailed!", Toast.LENGTH_SHORT).show()
@@ -834,9 +840,14 @@ private fun AttachButton(
     }
 }
 
-private fun loadPeerMessages(aor: String, peerUri: String): List<Message> {
+private fun loadPeerMessages(ctx: Context, aor: String, peerUri: String): List<Message> {
     val res = mutableListOf<Message>()
     for (m in BaresipService.messages.reversed())
         if ((m.aor == aor) && (m.peerUri == peerUri)) res.add(m)
-    return res
+    if (aor != HHSms.MOBILE || !HHSms.canRead(ctx)) return res
+    // HHPhone, SIM: переписка из системной базы + свои MMS с картинками и неотправленные без пары в системе
+    val sys = HHSms.thread(ctx, peerUri)
+    val own = res.filter { m -> m.images.isNotEmpty() || (m.direction != MESSAGE_DOWN && m.direction != MESSAGE_UP &&
+        sys.none { it.message == m.message && HHUiLogic.sameTime(it.timeStamp, m.timeStamp) }) }
+    return (sys + own).sortedByDescending { it.timeStamp }
 }

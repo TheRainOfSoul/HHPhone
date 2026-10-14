@@ -188,6 +188,10 @@
         </service>
 
         <receiver
+            android:name=".HHSmsSentReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".SmsReceiver"
             android:enabled="true"
             android:exported="true"
