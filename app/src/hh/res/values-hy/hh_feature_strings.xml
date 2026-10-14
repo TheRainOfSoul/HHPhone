@@ -127,4 +127,5 @@
     <string name="hh_keep_alive_forced">Մշտական կապն անհրաժեշտ է. push չկա %1$s-ի համար (ավելացրեք հաշիվը QR-ով HHPBX 1.10+-ում Firebase բանալիով)</string>
     <string name="hh_keep_alive_on">HHPhone-ը միշտ կապի մեջ է (ծանուցմամբ)</string>
     <string name="hh_keep_alive_off">HHPhone-ը քնում է պարապ ժամանակ և արթնանում push-ով</string>
+    <string name="hh_group_reply">Խմբային զրույցին պատասխանելը դեռ հասանելի չէ</string>
 </resources>

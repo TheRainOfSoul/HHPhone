@@ -718,7 +718,10 @@ private fun NewMessage(
                 modifier = Modifier.offset(y = 2.dp),
                 onClick = {
                     val msgText = newMessage.value.text
-                    if (msgText.isNotEmpty() || attachedImages.isNotEmpty()) {
+                    if (HHSms.isGroup(peerUri)) {   // ответ в групповую MMS-беседу — вне объёма 0.8.0
+                        Toast.makeText(ctx, ctx.getString(R.string.hh_group_reply), Toast.LENGTH_LONG).show()
+                    }
+                    else if (msgText.isNotEmpty() || attachedImages.isNotEmpty()) {
                         keyboardController?.hide()
                         val time = System.currentTimeMillis()
 
@@ -861,7 +864,8 @@ private fun loadPeerMessages(ctx: Context, aor: String, peerUri: String): List<M
     // HHPhone, SIM: переписка из системной базы + свои сообщения без пары в системе (MMS с картинками,
     // неотправленные, не попавшие в базу); пара — тот же текст ±5 мин (у входящих время приёма ≠ времени отправки)
     val sys = HHSms.thread(ctx, peerUri)
-    val own = res.filter { m -> m.images.isNotEmpty() ||
-        sys.none { it.message == m.message && kotlin.math.abs(it.timeStamp - m.timeStamp) < 300_000 } }
+    // пара в системе: тот же текст или обе с картинками (MMS), ±5 мин
+    val own = res.filter { m -> sys.none { (it.message == m.message || (it.images.isNotEmpty() && m.images.isNotEmpty())) &&
+        kotlin.math.abs(it.timeStamp - m.timeStamp) < 300_000 } }
     return (sys + own).sortedByDescending { it.timeStamp }
 }

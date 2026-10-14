@@ -74,8 +74,9 @@ object HHPeople {
         return c
     }
 
-    /** Имя: контакт, коллега со станции или номер. */
+    /** Имя: контакт, коллега со станции или номер; групповая MMS-беседа — имена участников. */
     @Synchronized fun name(peer: String): String {
+        if (HHSms.isGroup(peer)) return HHSms.groupAddresses(peer).joinToString(", ") { name("tel:$it") }.ifEmpty { "MMS" }
         fresh()
         val key = HHUiLogic.peerKey(peer)
         names[key]?.let { return it }

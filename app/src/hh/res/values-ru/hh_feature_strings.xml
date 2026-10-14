@@ -131,4 +131,5 @@
     <string name="hh_keep_alive_forced">Постоянное подключение нужно: нет push для %1$s (добавьте учётку по QR на HHPBX 1.10+ с ключом Firebase)</string>
     <string name="hh_keep_alive_on">HHPhone всегда на связи (с уведомлением)</string>
     <string name="hh_keep_alive_off">HHPhone засыпает в покое и просыпается по push</string>
+    <string name="hh_group_reply">Ответ в групповую беседу пока не поддерживается</string>
 </resources>
