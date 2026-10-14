@@ -330,6 +330,7 @@ class MainActivity : ComponentActivity() {
                     blockingScreenRoute(navController)
                     chatsScreenRoute(navController)
                     chatScreenRoute(navController, viewModel)
+                    hhRoutes(navController, viewModel)
                 }
                 HHHost(navController)
             }

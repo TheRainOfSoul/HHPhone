@@ -97,4 +97,11 @@
     <string name="hh_allow">Allow</string>
     <string name="hh_new_chat">New chat</string>
     <string name="hh_no_favorites">No favorites yet. Tap ☆ next to a contact in Contacts</string>
+    <string name="hh_sms">SMS</string>
+    <string name="hh_call_history">Call history</string>
+    <string name="hh_create_contact">Create contact</string>
+    <string name="hh_copy_number">Copy number</string>
+    <string name="hh_copied">Number copied</string>
+    <string name="hh_delete_from_log">Delete from call log</string>
+    <string name="hh_back">Back</string>
 </resources>

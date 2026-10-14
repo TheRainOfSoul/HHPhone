@@ -190,7 +190,7 @@ private fun HHHeader(navController: NavController, onQuitClick: () -> Unit) {
 
 /** Линии для кнопок вызова: SIM и станции. */
 @Composable
-private fun hhLines(): List<HHLine> {
+internal fun hhLines(): List<HHLine> {
     val uas by BaresipService.uas
     val status by BaresipService.uasStatus
     return HHUiLogic.lines(uas.map { ua ->
@@ -198,8 +198,9 @@ private fun hhLines(): List<HHLine> {
     })
 }
 
-private fun lineLabel(ctx: Context, l: HHLine): String =
-    if (l.mobile) "SIM" else "HH " + HHPush.userDomain(l.aor).first
+private fun lineLabel(@Suppress("UNUSED_PARAMETER") ctx: Context, l: HHLine): String = hhLineLabel(l)
+
+internal fun hhLineLabel(l: HHLine): String = if (l.mobile) "SIM" else "HH " + HHPush.userDomain(l.aor).first
 
 @Composable
 private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: ViewModel) {
@@ -224,6 +225,8 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
     LaunchedEffect(listState.isScrollInProgress) { if (listState.isScrollInProgress && number.isEmpty()) keypad = false }
     var tick by remember { mutableStateOf(0) }
     LaunchedEffect(Unit) { while (true) { delay(60_000); tick++ } }
+    var sheet by remember { mutableStateOf<HHLogGroup?>(null) }
+    sheet?.let { HHCallSheet(it, navController, viewModel, lines) { sheet = null } }
     Column(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.weight(1f), state = listState) {
             if (log.isEmpty()) item {
@@ -231,9 +234,8 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             items(log, key = { "${it.peer}|${it.last.stop}" }) { g ->   // tick не в ключе: строки не пересоздаются раз в минуту
-                HHLogRow(ctx, g, tick, onCard = { navController.navigate(hhCardRoute(hhContact(g.peer), g.peer)) }) {
-                    HHUiLogic.dialTarget(g.peer, lines, g.aor)?.let { (aor, n) -> HHCalls.dial(ctx, viewModel, aor, n) }
-                }
+                // нажатие — меню звонка (не звонит сразу)
+                HHLogRow(ctx, g, tick, onCard = { navController.navigate(hhCardRoute(hhContact(g.peer), g.peer)) }) { sheet = g }
                 HorizontalDivider(Modifier.padding(start = 72.dp), color = MaterialTheme.colorScheme.outlineVariant)
             }
         }
@@ -364,7 +366,7 @@ private fun HHLogRow(ctx: Context, g: HHLogGroup, tick: Int, onCard: () -> Unit,
                     if (name != HHUiLogic.peerKey(g.peer)) HHUiLogic.peerKey(g.peer) else null,
                     secs?.let { "%d:%02d".format(it / 60, it % 60) },
                     if (e.aor.endsWith("@pstn")) "SIM" else null
-                ).joinToString(" · ")
+                ).joinToString(" · ")   // звонки других приложений (aor "") — без пометки
                 Text(sub, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
         }
