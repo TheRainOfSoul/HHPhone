@@ -66,7 +66,7 @@ object HHPeople {
     /** Точное совпадение или тот же номер в другой записи (+374 91… = 091…). */
     @Synchronized fun contact(peer: String): Contact? {
         fresh()
-        val key = HHUiLogic.peerKey(peer)
+        val key = hhPeerId(peer)   // sip:100@чужой и sip:100@свой — разные собеседники
         if (contacts.containsKey(key)) return contacts[key]
         val c = Contact.findContact(peer)
             ?: BaresipService.contacts.firstOrNull { c -> c.uris().any { HHUiLogic.samePhone(it.uri, peer) } }
@@ -78,10 +78,10 @@ object HHPeople {
     @Synchronized fun name(peer: String): String {
         if (HHSms.isGroup(peer)) return HHSms.groupAddresses(peer).joinToString(", ") { name("tel:$it") }.ifEmpty { "MMS" }
         fresh()
-        val key = HHUiLogic.peerKey(peer)
+        val key = hhPeerId(peer)
         names[key]?.let { return it }
         val n = Contact.contactName(peer).takeIf { it != peer } ?: contact(peer)?.name()
-            ?: HHColleagues.list.value.firstOrNull { it.number == key }?.name?.takeIf { it.isNotBlank() } ?: key
+            ?: HHColleagues.list.value.firstOrNull { it.number == key }?.name?.takeIf { it.isNotBlank() } ?: key.removePrefix("sip:")
         names[key] = n
         return n
     }
@@ -93,7 +93,16 @@ fun hhName(peer: String): String = HHPeople.name(peer)
 /** Ключ карточки контакта HHPhone: a<id> — контакт телефона, b<id> — baresip, n<номер> — новый. */
 fun hhCardKey(c: Contact): String = if (c is Contact.AndroidContact) "a${c.id}" else "b${c.id()}"
 fun hhCardRoute(c: Contact?, peer: String): String =
-    "hh_contact/" + android.net.Uri.encode(if (c != null) hhCardKey(c) else "n" + HHUiLogic.peerKey(peer))
+    "hh_contact/" + android.net.Uri.encode(if (c != null) hhCardKey(c) else "n" + hhPeerId(peer))
+
+/** Номер для своих станций, полный sip-адрес — для чужого сервера или буквенного имени. */
+fun hhPeerId(peer: String): String {
+    val key = HHUiLogic.peerKey(peer)
+    if (!peer.startsWith("sip:")) return key
+    val dom = peer.substringAfter("@", "").substringBefore(";")
+    val own = BaresipService.uas.value.map { it.account.aor.substringAfter("@") }
+    return if (key.any { it.isLetter() } || (dom.isNotEmpty() && dom !in own)) peer.substringBefore(";") else key
+}
 
 /** Фото контакта или первая буква в цветном круге. */
 @Composable

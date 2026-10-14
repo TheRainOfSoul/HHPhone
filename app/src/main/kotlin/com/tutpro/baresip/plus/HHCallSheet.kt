@@ -96,9 +96,13 @@ internal fun hhChatRoute(peer: String, aor: String, lines: List<HHLine>): String
 private fun deleteCalls(ctx: android.content.Context, entries: List<HHLogEntry>) {
     val ids = entries.map { it.id }
     if (ids.all { it > 0 }) HHCallLog.delete(ctx, ids)
-    else {
-        val stops = entries.map { it.stop }.toSet()
-        HHHistory.snapshot().filter { it.stopTime.timeInMillis in stops }.forEach { CallHistoryNew.remove(it.startTime, it.stopTime) }
+    else {   // журнал CallHistoryNew: та же минута конца и тот же номер; одна запись файла
+        synchronized(BaresipService.callHistory) {
+            BaresipService.callHistory.removeAll { h -> entries.any { e -> e.stop == h.stopTime.timeInMillis &&
+                (HHUiLogic.peerKey(e.peer) == HHUiLogic.peerKey(h.peerUri) || HHUiLogic.samePhone(e.peer, h.peerUri)) }
+                .also { if (it) CallHistoryNew.deleteRecordingFiles(h.recording) } }
+        }
+        CallHistoryNew.save()
     }
     HHHistory.bump()
 }

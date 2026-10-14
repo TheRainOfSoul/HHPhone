@@ -119,7 +119,7 @@ object HHContactStore {
                     else HHNum(i + 1L, u.uri.removePrefix("tel:"), Contact.stringToType(u.label), u.label)
                 }, bitmap = c.avatarImage, favorite = c.favorite)
             }
-            'n' -> HHCard(key, "", listOf(HHNum(0, key.drop(1), Phone.TYPE_MOBILE)))
+            'n' -> key.drop(1).let { v -> HHCard(key, "", listOf(if (v.startsWith("sip:")) HHNum(-1, v, SIP_TYPE) else HHNum(-1, v, Phone.TYPE_MOBILE))) }
             else -> null
         }
     } catch (e: Exception) {
@@ -395,6 +395,7 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
     var blocked by remember { mutableStateOf(false) }
     var canBlock by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
+    var tmpId by remember { mutableStateOf(-2L) }   // id новых строк правки: уникальные, ≤ 0 — «новый номер»
     var menu by remember { mutableStateOf(false) }
     var askDelete by remember { mutableStateOf(false) }
     var pickMerge by remember { mutableStateOf(false) }
@@ -405,7 +406,7 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
     val saveFailed = stringResource(R.string.hh_save_failed)
     val nameRequired = stringResource(R.string.hh_name_required)
     fun startEdit(c: HHCard) {
-        name = c.name; nums.clear(); nums.addAll(c.nums); if (nums.isEmpty()) nums += HHNum(0, "", Phone.TYPE_MOBILE)
+        name = c.name; nums.clear(); nums.addAll(c.nums); if (nums.isEmpty()) nums += HHNum(tmpId--, "", Phone.TYPE_MOBILE)
         newPhoto = null; removePhoto = false
     }
     LaunchedEffect(cardKey, reload) {
@@ -506,8 +507,13 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
                 OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth().padding(horizontal = 20.dp), singleLine = true,
                     label = { Text(stringResource(R.string.hh_name)) })
                 Spacer(Modifier.height(8.dp))
-                nums.forEachIndexed { i, n -> HHNumberEdit(n, onChange = { nums[i] = it }, onDelete = { nums.removeAt(i) }) }   // пропавший id = удаление
-                TextButton(onClick = { nums += HHNum(0, "", Phone.TYPE_MOBILE) }, Modifier.padding(horizontal = 12.dp)) {
+                nums.toList().forEach { n ->   // ключ — id строки: состояние строки не «переезжает» после удаления соседней
+                    androidx.compose.runtime.key(n.id) {
+                        HHNumberEdit(n, onChange = { v -> nums.indexOfFirst { it.id == n.id }.let { if (it >= 0) nums[it] = v } },
+                            onDelete = { nums.removeAll { it.id == n.id } })   // пропавший id = удаление
+                    }
+                }
+                TextButton(onClick = { nums += HHNum(tmpId--, "", Phone.TYPE_MOBILE) }, Modifier.padding(horizontal = 12.dp)) {
                     Icon(Icons.Outlined.Add, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.hh_add_number))
                 }
             } else {
