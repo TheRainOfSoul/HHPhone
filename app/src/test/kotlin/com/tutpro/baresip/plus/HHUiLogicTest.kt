@@ -234,12 +234,6 @@ class HHUiLogicTest {
         assertEquals(listOf(9L), m[1].second)
     }
 
-    @Test fun pushOnlyNeedsAllStationsAndNoKeepAlive() {
-        assertTrue(HHUiLogic.pushOnly(listOf(true, true), false))
-        assertEquals(false, HHUiLogic.pushOnly(listOf(true, false), false))
-        assertEquals(false, HHUiLogic.pushOnly(listOf(true), true))
-        assertEquals(false, HHUiLogic.pushOnly(emptyList(), false))   // нет станций — служба и так не нужна; оставляем как было
-    }
     @Test fun numberOpsNegativeIdIsNew() {
         assertEquals(listOf(HHNumOp.Insert(HHNum(-1, "5", 2))), HHUiLogic.numberOps(emptyList(), listOf(HHNum(-1, "5", 2))))
     }

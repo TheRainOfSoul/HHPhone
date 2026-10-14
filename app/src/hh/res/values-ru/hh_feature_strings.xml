@@ -127,4 +127,8 @@
     <string name="hh_sms_delete_role">Удалять SMS может только SMS-приложение по умолчанию</string>
     <string name="hh_block_failed">Не удалось изменить блокировку</string>
     <string name="hh_contact_readonly">Контакт из аккаунта только для чтения — изменить его здесь нельзя</string>
+    <string name="hh_keep_alive">Постоянное подключение</string>
+    <string name="hh_keep_alive_forced">Постоянное подключение нужно: нет push для %1$s (добавьте учётку по QR на HHPBX 1.10+ с ключом Firebase)</string>
+    <string name="hh_keep_alive_on">HHPhone всегда на связи (с уведомлением)</string>
+    <string name="hh_keep_alive_off">HHPhone засыпает в покое и просыпается по push</string>
 </resources>

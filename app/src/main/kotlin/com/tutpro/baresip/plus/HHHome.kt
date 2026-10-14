@@ -10,6 +10,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Vibration
+import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.TextButton
@@ -159,6 +160,8 @@ private fun HHHeader(navController: NavController, onQuitClick: () -> Unit) {
     val accounts = stringResource(R.string.accounts)
     val quit = stringResource(R.string.quit)
     val vibe = stringResource(R.string.hh_key_vibration)
+    val keep = stringResource(R.string.hh_keep_alive)
+    val noPush = HHPush.withoutPush()
     Row(Modifier.fillMaxWidth().background(hhHeader).statusBarsPadding().height(56.dp).padding(start = 16.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Text(stringResource(R.string.app_name), color = MaterialTheme.colorScheme.onPrimary, fontSize = 20.sp,
@@ -173,11 +176,22 @@ private fun HHHeader(navController: NavController, onQuitClick: () -> Unit) {
                     MenuItem(accounts, Icons.Outlined.ManageAccounts),
                     MenuItem(settings, Icons.Outlined.Settings),
                     MenuItem(vibe, if (HHKeyVibe.enabled(ctx)) Icons.Filled.Check else Icons.Outlined.Vibration),
+                    MenuItem(keep, if (HHPush.keepAlive || noPush.isNotEmpty()) Icons.Filled.Check else Icons.Outlined.CloudOff),
                     MenuItem(quit, Icons.AutoMirrored.Filled.Logout)
                 ), hidden = setOf(settings, accounts, quit)),
                 onItemClick = { item ->
                     menu = false
                     if (item == vibe) { HHKeyVibe.toggle(ctx); return@DropdownMenu }
+                    if (item == keep) {
+                        if (noPush.isNotEmpty())   // выключить нельзя: без push звонки на эти учётки не дойдут
+                            Toast.makeText(ctx, ctx.getString(R.string.hh_keep_alive_forced, noPush.joinToString { it.removePrefix("sip:") }),
+                                Toast.LENGTH_LONG).show()
+                        else {
+                            HHPush.keepAlive = !HHPush.keepAlive
+                            Toast.makeText(ctx, if (HHPush.keepAlive) R.string.hh_keep_alive_on else R.string.hh_keep_alive_off, Toast.LENGTH_LONG).show()
+                        }
+                        return@DropdownMenu
+                    }
                     if (hhMenuClick(ctx, item) || checkLockedAndToast(ctx)) return@DropdownMenu
                     when (item) {
                         settings -> navController.navigate("settings")

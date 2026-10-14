@@ -3361,7 +3361,7 @@ class BaresipService: Service() {
             val visible = androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
             val inCall = calls.isNotEmpty() || InCallService.instance?.calls?.isNotEmpty() == true   // SIP и SIM
             if (visible || inCall) HHPush.touch()
-            val foreign = uas.value.any { it.account.regint > 0 && !HHPush.isPush(it.account.aor) }
+            val foreign = HHPush.keepAlive || HHPush.withoutPush().isNotEmpty()   // постоянная связь: по желанию или учётка без push
             if (HHPushPolicy.keep(foreign, visible, inCall, HHPush.idleMs())) { hhHandler.postDelayed(this, 15_000); return }
             Log.i(TAG, "HHPush: idle, stopping until push")
             hhSleeping = true

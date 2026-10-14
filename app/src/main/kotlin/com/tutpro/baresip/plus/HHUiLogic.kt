@@ -129,9 +129,6 @@ object HHUiLogic {
         return if (dom.isNotEmpty() && dom != aor.substringAfter("@")) "$user@$dom" else user
     }
 
-    /** Режим push без постоянной службы: есть станции, у всех push принят, «Постоянное подключение» выключено. */
-    fun pushOnly(stations: List<Boolean>, keepAlive: Boolean) = !keepAlive && stations.isNotEmpty() && stations.all { it }
-
     /** Адреса MMS (адрес, тип PduHeaders): 137 — от кого, 151/130/129 — кому; свой номер убирается. */
     fun mmsAddresses(rows: List<Pair<String, Int>>, own: String): Pair<String?, List<String>> {
         val from = rows.firstOrNull { it.second == 137 }?.first?.takeIf { it.isNotBlank() && it != "insert-address-token" }

@@ -123,4 +123,8 @@
     <string name="hh_sms_delete_role">SMS-ները կարող է ջնջել միայն լռելյայն SMS հավելվածը</string>
     <string name="hh_block_failed">Չհաջողվեց փոխել արգելափակումը</string>
     <string name="hh_contact_readonly">Կոնտակտը միայն ընթերցման հաշվից է, այստեղ փոխել հնարավոր չէ</string>
+    <string name="hh_keep_alive">Մշտական կապ</string>
+    <string name="hh_keep_alive_forced">Մշտական կապն անհրաժեշտ է. push չկա %1$s-ի համար (ավելացրեք հաշիվը QR-ով HHPBX 1.10+-ում Firebase բանալիով)</string>
+    <string name="hh_keep_alive_on">HHPhone-ը միշտ կապի մեջ է (ծանուցմամբ)</string>
+    <string name="hh_keep_alive_off">HHPhone-ը քնում է պարապ ժամանակ և արթնանում push-ով</string>
 </resources>
