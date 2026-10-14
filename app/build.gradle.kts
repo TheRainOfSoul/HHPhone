@@ -42,8 +42,8 @@ configure<ApplicationExtension> {
         create("hh") {
             dimension = "brand"
             applicationId = "am.dgsolutions.hhphone"
-            versionCode = 11
-            versionName = "0.6.0"
+            versionCode = 12
+            versionName = "0.7.0"
             androidResources.localeFilters += listOf("en", "ru", "hy")
         }
     }
