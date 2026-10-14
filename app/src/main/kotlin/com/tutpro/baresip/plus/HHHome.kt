@@ -124,9 +124,9 @@ fun HHHome(navController: NavController, viewModel: ViewModel, onQuitClick: () -
         }
         HorizontalPager(pager, Modifier.weight(1f)) { page ->
             when (page) {
-                0 -> HHPeopleTab(ctx, viewModel, favoritesOnly = true, allowContacts)
+                0 -> HHPeopleTab(ctx, navController, viewModel, favoritesOnly = true, allowContacts)
                 1 -> HHPhoneTab(ctx, navController, viewModel)
-                2 -> HHPeopleTab(ctx, viewModel, favoritesOnly = false, allowContacts)
+                2 -> HHPeopleTab(ctx, navController, viewModel, favoritesOnly = false, allowContacts)
                 else -> HHChatsTab(ctx, navController)
             }
         }
@@ -230,9 +230,8 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                 Text(stringResource(R.string.hh_no_calls), Modifier.fillMaxWidth().padding(32.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            items(log, key = { "${it.peer}|${it.last.stop}|$tick" }) { g ->
-                HHLogRow(ctx, g, onCard = { val c = hhContact(g.peer)
-                    navController.navigate(if (c != null) "contact/${Uri.encode(c.name())}/old" else "contact/${Uri.encode(HHUiLogic.peerKey(g.peer))}/new") }) {
+            items(log, key = { "${it.peer}|${it.last.stop}" }) { g ->   // tick не в ключе: строки не пересоздаются раз в минуту
+                HHLogRow(ctx, g, tick, onCard = { navController.navigate(hhCardRoute(hhContact(g.peer), g.peer)) }) {
                     HHUiLogic.dialTarget(g.peer, lines, g.aor)?.let { (aor, n) -> HHCalls.dial(ctx, viewModel, aor, n) }
                 }
                 HorizontalDivider(Modifier.padding(start = 72.dp), color = MaterialTheme.colorScheme.outlineVariant)
@@ -341,13 +340,14 @@ private fun HHSuggestions(number: String, onPick: (String) -> Unit) {
 }
 
 @Composable
-private fun HHLogRow(ctx: Context, g: HHLogGroup, onCard: () -> Unit, onClick: () -> Unit) {
+private fun HHLogRow(ctx: Context, g: HHLogGroup, tick: Int, onCard: () -> Unit, onClick: () -> Unit) {
     val name = hhName(g.peer)
+    val contact = hhContact(g.peer)
     val e = g.last
     val missed = HHUiLogic.missed(e)
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        HHAvatar(name, g.peer, 44.dp)
+        HHAvatar(name, g.peer, 44.dp, contact)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -368,9 +368,10 @@ private fun HHLogRow(ctx: Context, g: HHLogGroup, onCard: () -> Unit, onClick: (
                 Text(sub, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
         }
-        Text(hhAgo(ctx, e.stop), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val ago = remember(tick, e.stop) { hhAgo(ctx, e.stop) }
+        Text(ago, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         IconButton(onClick = onCard) {
-            Icon(if (hhContact(g.peer) != null) Icons.Outlined.AccountBox else Icons.Outlined.PersonAdd,
+            Icon(if (contact != null) Icons.Outlined.AccountBox else Icons.Outlined.PersonAdd,
                 stringResource(R.string.hh_contact_card), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -378,7 +379,7 @@ private fun HHLogRow(ctx: Context, g: HHLogGroup, onCard: () -> Unit, onClick: (
 
 /** Контакты (с поиском и «Коллегами») или Избранное. */
 @Composable
-private fun HHPeopleTab(ctx: Context, viewModel: ViewModel, favoritesOnly: Boolean, allowContacts: () -> Unit) {
+private fun HHPeopleTab(ctx: Context, navController: NavController, viewModel: ViewModel, favoritesOnly: Boolean, allowContacts: () -> Unit) {
     val colleagues by HHColleagues.list.collectAsState()
     val stars by HHColleagues.stars.collectAsState()
     var q by rememberSaveable { mutableStateOf("") }
@@ -387,9 +388,14 @@ private fun HHPeopleTab(ctx: Context, viewModel: ViewModel, favoritesOnly: Boole
         if (target == null) Toast.makeText(ctx, R.string.hh_no_line, Toast.LENGTH_SHORT).show()
         else HHCalls.dial(ctx, viewModel, target.first, target.second)
     }
-    val col = colleagues.filter { (!favoritesOnly || HHColleagues.key(it) in stars) && (q.isEmpty() || it.name.contains(q, true) || it.number.contains(q)) }
-    val con = BaresipService.contacts.filter { c -> (!favoritesOnly || c.favorite()) &&
-        (q.isEmpty() || c.name().contains(q, true) || c.uris().any { HHUiLogic.peerKey(it.uri).contains(q) }) }
+    val contacts = BaresipService.contacts
+    val col = remember(colleagues, stars, q, favoritesOnly) {
+        colleagues.filter { (!favoritesOnly || HHColleagues.key(it) in stars) && (q.isEmpty() || it.name.contains(q, true) || it.number.contains(q)) }
+    }
+    val con = remember(contacts, q, favoritesOnly) {
+        contacts.filter { c -> (!favoritesOnly || c.favorite()) &&
+            (q.isEmpty() || c.name().contains(q, true) || c.uris().any { HHUiLogic.peerKey(it.uri).contains(q) }) }
+    }
     LazyColumn(Modifier.fillMaxSize()) {
         if (BaresipService.contactsMode == "baresip") item {
             Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.secondaryContainer).padding(horizontal = 16.dp, vertical = 8.dp),
@@ -409,13 +415,19 @@ private fun HHPeopleTab(ctx: Context, viewModel: ViewModel, favoritesOnly: Boole
         }
         if (col.isNotEmpty()) item { HHSection(stringResource(R.string.hh_colleagues)) }
         items(col, key = { "c${it.aor}|${it.number}" }) { c ->
-            HHPersonRow(c.name.ifBlank { c.number }, "sip:${c.number}@x", c.number, starred = HHColleagues.isStar(c),
+            HHPersonRow(c.name.ifBlank { c.number }, null, null, c.number, starred = HHColleagues.isStar(c),
                 onStar = { HHColleagues.toggleStar(c) }) { call(HHUiLogic.dialColleague(c.number, c.aor, lines)) }
         }
         if (con.isNotEmpty()) item { HHSection(stringResource(R.string.hh_tab_contacts)) }
-        items(con.flatMap { c -> c.uris().map { c to it } }, key = { (c, u) -> "p${c.id()}|${u.uri}" }) { (c, u) ->
-            HHPersonRow(c.name(), u.uri, listOfNotNull(u.label.ifBlank { null }, HHUiLogic.peerKey(u.uri)).joinToString(" · "),
-                starred = c.favorite(), onStar = { Contact.toggleFavorite(ctx, c) }) { call(HHUiLogic.dialTarget(u.uri, lines, null)) }
+        // контакт — одна строка: первый номер и «+N»; нажатие — карточка со всеми номерами
+        items(con, key = { "p" + hhCardKey(it) }) { c ->
+            val uris = c.uris()
+            val first = uris.firstOrNull()
+            val sub = listOfNotNull(first?.label?.ifBlank { null }, first?.let { HHUiLogic.peerKey(it.uri) }).joinToString(" · ") +
+                if (uris.size > 1) "  +${uris.size - 1}" else ""
+            HHPersonRow(c.name(), first?.uri, c, sub, starred = c.favorite(), onStar = { Contact.toggleFavorite(ctx, c) }) {
+                navController.navigate(hhCardRoute(c, first?.uri ?: ""))
+            }
         }
     }
 }
@@ -426,10 +438,11 @@ private fun HHSection(title: String) =
         fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary)
 
 @Composable
-private fun HHPersonRow(name: String, peer: String, sub: String, starred: Boolean, onStar: (() -> Unit)?, onClick: () -> Unit) {
+private fun HHPersonRow(name: String, peer: String?, contact: Contact?, sub: String, starred: Boolean, onStar: (() -> Unit)?,
+                        onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        HHAvatar(name, peer, 40.dp)
+        HHAvatar(name, peer, 40.dp, contact)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(name, fontSize = 16.sp, maxLines = 1, color = MaterialTheme.colorScheme.onSurface)

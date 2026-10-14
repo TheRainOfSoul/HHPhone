@@ -24,10 +24,10 @@ object HHCallLog {
         }
         return try {
             ctx.contentResolver.query(Calls.CONTENT_URI, arrayOf(Calls.NUMBER, Calls.TYPE, Calls.DATE, Calls.DURATION,
-                Calls.PHONE_ACCOUNT_ID, Calls.NUMBER_PRESENTATION), args, null)?.use { c ->
+                Calls.PHONE_ACCOUNT_ID, Calls.NUMBER_PRESENTATION, Calls.PHONE_ACCOUNT_COMPONENT_NAME, Calls._ID), args, null)?.use { c ->
                 buildList {
                     while (c.moveToNext()) add(HHUiLogic.callLogEntry(c.getString(0) ?: "", c.getInt(1), c.getLong(2),
-                        c.getLong(3), c.getString(4), c.getInt(5) == Calls.PRESENTATION_ALLOWED))
+                        c.getLong(3), c.getString(4), c.getInt(5) == Calls.PRESENTATION_ALLOWED, c.getString(6), c.getLong(7)))
                 }
             }
         } catch (e: Exception) {
@@ -41,7 +41,7 @@ object HHCallLog {
         if (!can(ctx, Manifest.permission.WRITE_CALL_LOG)) return
         val type = HHUiLogic.callLogType(dir, start, rejected)
         val v = ContentValues().apply {
-            put(Calls.NUMBER, HHUiLogic.peerKey(peerUri))
+            put(Calls.NUMBER, HHUiLogic.callLogNumber(peerUri, aor))
             put(Calls.TYPE, type)
             put(Calls.DATE, start ?: stop)
             put(Calls.DURATION, if (start != null) (stop - start) / 1000 else 0L)
@@ -67,6 +67,13 @@ object HHCallLog {
             write(ctx, if (h.aor.endsWith("@pstn")) "" else h.aor, h.peerUri, h.direction, start, stop, h.rejected)
         }
         p.edit().putBoolean("calllog_imported", true).apply()
+    }
+
+    /** Удаление строк системного журнала по _ID. */
+    fun delete(ctx: Context, ids: List<Long>) {
+        if (ids.isEmpty()) return
+        try { ctx.contentResolver.delete(Calls.CONTENT_URI, "${Calls._ID} IN (${ids.joinToString(",")})", null) }
+        catch (e: Exception) { Log.e(TAG, "CallLog delete failed: $e") }
     }
 
     /** Подписка на изменения журнала; возвращает отписку. */

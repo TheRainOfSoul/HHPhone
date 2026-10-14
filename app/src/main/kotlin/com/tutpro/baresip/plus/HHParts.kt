@@ -45,23 +45,59 @@ private val hhAvatarColors = listOf(
     Color(0xFF5C4B8A), Color(0xFFA15C00), Color(0xFFAD1457), Color(0xFF5D6B1E)
 )
 
-/** Контакт по номеру: точное совпадение или тот же номер в другой записи (+374 91… = 091…). */
-fun hhContact(peer: String): Contact? = Contact.findContact(peer)
-    ?: BaresipService.contacts.firstOrNull { c -> c.uris().any { HHUiLogic.samePhone(it.uri, peer) } }
+/**
+ * Кеш «собеседник → контакт / имя» по peerKey: строки журнала и чатов не перебирают все контакты на каждой
+ * перерисовке. Сбрасывается, когда меняется список контактов (contactsUpdate создаёт новый) или коллег.
+ */
+object HHPeople {
+    private var contactsRef: Any? = null
+    private var colleaguesRef: Any? = null
+    private val contacts = HashMap<String, Contact?>()
+    private val names = HashMap<String, String>()
 
-/** Имя для показа: контакт, коллега со станции или номер. */
-fun hhName(peer: String): String {
-    val n = Contact.contactName(peer)
-    if (n != peer) return n
-    hhContact(peer)?.let { return it.name() }
-    val key = HHUiLogic.peerKey(peer)
-    return HHColleagues.list.value.firstOrNull { it.number == key }?.name?.takeIf { it.isNotBlank() } ?: key
+    private fun fresh() {
+        val c = BaresipService.contacts
+        val k = HHColleagues.list.value
+        if (c !== contactsRef || k !== colleaguesRef) {
+            contacts.clear(); names.clear(); contactsRef = c; colleaguesRef = k
+        }
+    }
+
+    /** Точное совпадение или тот же номер в другой записи (+374 91… = 091…). */
+    @Synchronized fun contact(peer: String): Contact? {
+        fresh()
+        val key = HHUiLogic.peerKey(peer)
+        if (contacts.containsKey(key)) return contacts[key]
+        val c = Contact.findContact(peer)
+            ?: BaresipService.contacts.firstOrNull { c -> c.uris().any { HHUiLogic.samePhone(it.uri, peer) } }
+        contacts[key] = c
+        return c
+    }
+
+    /** Имя: контакт, коллега со станции или номер. */
+    @Synchronized fun name(peer: String): String {
+        fresh()
+        val key = HHUiLogic.peerKey(peer)
+        names[key]?.let { return it }
+        val n = Contact.contactName(peer).takeIf { it != peer } ?: contact(peer)?.name()
+            ?: HHColleagues.list.value.firstOrNull { it.number == key }?.name?.takeIf { it.isNotBlank() } ?: key
+        names[key] = n
+        return n
+    }
 }
+
+fun hhContact(peer: String): Contact? = HHPeople.contact(peer)
+fun hhName(peer: String): String = HHPeople.name(peer)
+
+/** Ключ карточки контакта HHPhone: a<id> — контакт телефона, b<id> — baresip, n<номер> — новый. */
+fun hhCardKey(c: Contact): String = if (c is Contact.AndroidContact) "a${c.id}" else "b${c.id()}"
+fun hhCardRoute(c: Contact?, peer: String): String =
+    "hh_contact/" + android.net.Uri.encode(if (c != null) hhCardKey(c) else "n" + HHUiLogic.peerKey(peer))
 
 /** Фото контакта или первая буква в цветном круге. */
 @Composable
-fun HHAvatar(name: String, peer: String?, size: Dp) {
-    when (val c = peer?.let { hhContact(it) }) {
+fun HHAvatar(name: String, peer: String?, size: Dp, contact: Contact? = peer?.let { HHPeople.contact(it) }) {
+    when (val c = contact) {
         is Contact.AndroidContact -> c.thumbnailUri?.let { t ->
             AsyncImage(model = t, contentDescription = null, contentScale = ContentScale.Crop,
                 modifier = Modifier.size(size).clip(CircleShape))
