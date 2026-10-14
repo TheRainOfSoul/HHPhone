@@ -46,6 +46,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var serviceEventObserver: Observer<Event<Long>>
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var requestPermissionsLauncher: ActivityResultLauncher<Array<String>>
+    private lateinit var roleLauncher: ActivityResultLauncher<Intent>
+    private lateinit var phonePermsLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var comDevChangedListener: AudioManager.OnCommunicationDeviceChangedListener
 
     private lateinit var baresipService: Intent
@@ -210,6 +212,20 @@ class MainActivity : ComponentActivity() {
                 Log.i(TAG, "Permission granted: $isGranted")
             }
 
+        // HHPhone: после окна роли — то же, что переключатель в Настройках (номер SIM, SIM-аккаунт)
+        phonePermsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            startService(Intent(this, BaresipService::class.java).setAction("Check Roles"))
+            HHHistory.bump()   // журнал перечитывается уже из системного CallLog
+        }
+        roleLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            val rm = getSystemService(ROLE_SERVICE) as android.app.role.RoleManager
+            val phone = arrayOf(android.Manifest.permission.READ_PHONE_STATE, android.Manifest.permission.READ_PHONE_NUMBERS,
+                android.Manifest.permission.READ_CALL_LOG, android.Manifest.permission.WRITE_CALL_LOG)
+            if (rm.isRoleHeld(android.app.role.RoleManager.ROLE_DIALER) && !Utils.checkPermissions(this, phone))
+                phonePermsLauncher.launch(phone)
+            startService(Intent(this, BaresipService::class.java).setAction("Check Roles"))
+        }
+
         requestPermissionsLauncher =
             registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
                 val denied = mutableListOf<String>()
@@ -370,6 +386,25 @@ class MainActivity : ComponentActivity() {
                     startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, "package:$packageName".toUri()))
                 } catch (_: android.content.ActivityNotFoundException) {}
             }
+        }
+        // HHPhone — обычная звонилка: один раз предлагаем роли звонилки и SMS (по одной за раз)
+        else if (Build.VERSION.SDK_INT >= 29 && !Call.inCall() && Utils.checkPermissions(this, arrayOf(RECORD_AUDIO))) {
+            val rm = getSystemService(ROLE_SERVICE) as android.app.role.RoleManager
+            val ui = getSharedPreferences("hh_ui", MODE_PRIVATE)
+            val log = arrayOf(android.Manifest.permission.READ_CALL_LOG, android.Manifest.permission.WRITE_CALL_LOG)
+            // обновление с 0.5.x: звонилке по умолчанию новое разрешение журнала само не выдаётся
+            if (rm.isRoleHeld(android.app.role.RoleManager.ROLE_DIALER) && !Utils.checkPermissions(this, log) &&
+                    !ui.getBoolean("calllog_asked", false)) {
+                ui.edit().putBoolean("calllog_asked", true).apply()
+                phonePermsLauncher.launch(log)
+            }
+            else for ((role, key) in listOf(android.app.role.RoleManager.ROLE_DIALER to "dialer_asked",
+                    android.app.role.RoleManager.ROLE_SMS to "sms_asked"))
+                if (rm.isRoleAvailable(role) && !rm.isRoleHeld(role) && !ui.getBoolean(key, false)) {
+                    ui.edit().putBoolean(key, true).apply()
+                    roleLauncher.launch(rm.createRequestRoleIntent(role))
+                    break   // следующая — при следующем onResume, после закрытия окна
+                }
         }
     }
 

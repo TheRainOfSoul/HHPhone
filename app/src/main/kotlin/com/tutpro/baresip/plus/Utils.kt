@@ -1411,21 +1411,8 @@ object Utils {
         return null
     }
 
-    fun sendSms(ctx: Context, destination: String, message: String): Boolean {
-        return try {
-            val smsManager = if (Build.VERSION.SDK_INT >= 31)
-                ctx.getSystemService(SmsManager::class.java)
-            else
-                @Suppress("DEPRECATION")
-                SmsManager.getDefault()
-            smsManager.sendTextMessage(destination, null, message, null, null)
-            Log.d(TAG, "Sent SMS message to $destination")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to send SMS: ${e.message}")
-            false
-        }
-    }
+    fun sendSms(ctx: Context, destination: String, message: String): Boolean =
+        HHSms.send(ctx, destination, message)   // HHPhone: длинный текст частями, запись в системную базу
 
     suspend fun sendMms(ctx: Context, aor: String, destination: String, text: String, images: List<String>, time: Long):
             Boolean = withContext(Dispatchers.IO) {

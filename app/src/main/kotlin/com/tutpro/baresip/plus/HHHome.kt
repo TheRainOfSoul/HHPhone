@@ -14,6 +14,10 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.produceState
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.ui.semantics.contentDescription
@@ -201,10 +205,15 @@ private fun lineLabel(ctx: Context, l: HHLine): String =
 private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: ViewModel) {
     val history by HHHistory.version.collectAsState()
     val colleagues by HHColleagues.list.collectAsState()
-    val log = remember(history, colleagues) {
-        HHUiLogic.group(HHHistory.snapshot().map {
-            HHLogEntry(it.peerUri, it.aor, it.direction, it.startTime?.timeInMillis, it.stopTime.timeInMillis, it.rejected)
-        })
+    DisposableEffect(Unit) { val off = HHCallLog.observe(ctx) { HHHistory.bump() }; onDispose { off() } }
+    LaunchedEffect(history) { withContext(Dispatchers.IO) { HHCallLog.migrate(ctx) } }   // ждёт загрузки журнала (bump)
+    // журнал — системный CallLog; без разрешения — как раньше, из CallHistoryNew
+    val log by produceState(emptyList<HHLogGroup>(), history, colleagues) {
+        value = withContext(Dispatchers.IO) {
+            HHUiLogic.group(HHCallLog.read(ctx) ?: HHHistory.snapshot().map {
+                HHLogEntry(it.peerUri, it.aor, it.direction, it.startTime?.timeInMillis, it.stopTime.timeInMillis, it.rejected)
+            })
+        }
     }
     var number by rememberSaveable { mutableStateOf("") }
     var keypad by rememberSaveable { mutableStateOf(true) }
@@ -222,7 +231,8 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             items(log, key = { "${it.peer}|${it.last.stop}|$tick" }) { g ->
-                HHLogRow(ctx, g, onCard = { navController.navigate("contact/${Uri.encode(HHUiLogic.peerKey(g.peer))}/" + if (Contact.findContact(g.peer) != null) "old" else "new") }) {
+                HHLogRow(ctx, g, onCard = { val c = hhContact(g.peer)
+                    navController.navigate(if (c != null) "contact/${Uri.encode(c.name())}/old" else "contact/${Uri.encode(HHUiLogic.peerKey(g.peer))}/new") }) {
                     HHUiLogic.dialTarget(g.peer, lines, g.aor)?.let { (aor, n) -> HHCalls.dial(ctx, viewModel, aor, n) }
                 }
                 HorizontalDivider(Modifier.padding(start = 72.dp), color = MaterialTheme.colorScheme.outlineVariant)
@@ -360,7 +370,7 @@ private fun HHLogRow(ctx: Context, g: HHLogGroup, onCard: () -> Unit, onClick: (
         }
         Text(hhAgo(ctx, e.stop), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         IconButton(onClick = onCard) {
-            Icon(if (Contact.findContact(g.peer) != null) Icons.Outlined.AccountBox else Icons.Outlined.PersonAdd,
+            Icon(if (hhContact(g.peer) != null) Icons.Outlined.AccountBox else Icons.Outlined.PersonAdd,
                 stringResource(R.string.hh_contact_card), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -436,7 +446,22 @@ private fun HHPersonRow(name: String, peer: String, sub: String, starred: Boolea
 @Composable
 private fun HHChatsTab(ctx: Context, navController: NavController) {
     val messages = BaresipService.messages
-    val chats = remember(messages) { messages.sortedByDescending { it.timeStamp }.distinctBy { it.aor + "|" + it.peerUri } }
+    var smsVer by remember { mutableStateOf(0) }
+    DisposableEffect(Unit) { val off = HHSms.observe(ctx) { smsVer++ }; onDispose { off() } }
+    LaunchedEffect(Unit) {
+        while (!HHHistory.restored) delay(300)
+        withContext(Dispatchers.IO) { HHSms.migrate(ctx) }
+        smsVer++
+    }
+    // SMS-беседы из системной базы + беседы HHPhone через станцию (и SIM, которых нет в системе)
+    val chats by produceState(emptyList<Message>(), messages, smsVer) {
+        value = withContext(Dispatchers.IO) {
+            val sys = HHSms.threads(ctx)
+            val own = messages.sortedByDescending { it.timeStamp }.distinctBy { it.aor + "|" + it.peerUri }
+                .filter { m -> sys.isEmpty() || m.aor != HHSms.MOBILE || sys.none { HHUiLogic.samePhone(it.peerUri, m.peerUri) } }
+            (sys + own).sortedByDescending { it.timeStamp }.distinctBy { it.aor + "|" + it.peerUri }   // ключ LazyColumn
+        }
+    }
     val lines = hhLines()
     var choose by remember { mutableStateOf(false) }
     fun open(aor: String) { if (!checkLockedAndToast(ctx)) navController.navigate("chats/${Uri.encode(aor)}") }

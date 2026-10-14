@@ -1,5 +1,6 @@
 package com.tutpro.baresip.plus
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.text.format.DateUtils.isToday
@@ -102,7 +103,9 @@ import com.tutpro.baresip.plus.BaresipService.Companion.circleGreen
 import com.tutpro.baresip.plus.BaresipService.Companion.colorblind
 import com.tutpro.baresip.plus.CustomElements.AlertDialog
 import com.tutpro.baresip.plus.CustomElements.verticalScrollbar
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.lang.String.format
 import java.text.DateFormat
@@ -140,12 +143,14 @@ private fun ChatScreen(
     val aor = account.aor
 
     var chatMessages by remember(aor, peerUri) { mutableStateOf<List<Message>>(emptyList()) }
+    val loadScope = rememberCoroutineScope()   // HHPhone: SIM-беседа читается из системной базы — не в главном потоке
+    val loadChat = { loadScope.launch { chatMessages = withContext(Dispatchers.IO) { loadPeerMessages(ctx, aor, peerUri) } } }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 Log.d(TAG, "Resumed to ChatScreen for AOR: $aor peer $peerUri")
-                chatMessages = loadPeerMessages(aor, peerUri)
+                loadChat()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -162,8 +167,9 @@ private fun ChatScreen(
         serviceIntent.putExtra("peer", peerUri)
         ctx.startService(serviceIntent)
         Message.updateMessagesFromPearRead(aor, peerUri)
+        if (aor == HHSms.MOBILE) loadScope.launch(Dispatchers.IO) { HHSms.markRead(ctx, peerUri) }
         account.unreadMessages = Message.unreadMessages(aor)
-        chatMessages = loadPeerMessages(aor, peerUri)
+        loadChat()
         if (!areMessagesLoaded) areMessagesLoaded = true
     }
 
@@ -179,7 +185,9 @@ private fun ChatScreen(
         reloadMessages() // Initial load
         Log.d(TAG, "Observing message updates for $peerUri")
         BaresipService.messageUpdate.observe(lifecycleOwner, messagesObserver)
+        val smsOff = if (aor == HHSms.MOBILE) HHSms.observe(ctx) { reloadMessages() } else { {} }
         onDispose {
+            smsOff()
             Log.d(TAG, "Removing message observer for $peerUri")
             BaresipService.messageUpdate.removeObserver(messagesObserver)
         }
@@ -378,6 +386,7 @@ private fun Messages(
 
     val shortMessageQuestion = stringResource(R.string.short_message_question)
     val deleteString = stringResource(R.string.delete)
+    val ctx = LocalContext.current
 
     val showDialog = remember { mutableStateOf(false) }
     val dialogMessage = remember { mutableStateOf("") }
@@ -451,7 +460,13 @@ private fun Messages(
                         secondButtonText.value = ""
                         lastButtonText.value = deleteString
                         lastAction.value = {
-                            message.delete()
+                            if (message.smsId != 0L) {
+                                HHSms.delete(ctx, message.smsId)
+                                BaresipService.messages.filter { it.aor == HHSms.MOBILE && it.message == message.message &&
+                                    HHUiLogic.samePhone(it.peerUri, message.peerUri) &&
+                                    kotlin.math.abs(it.timeStamp - message.timeStamp) < 300_000 }.forEach { it.delete() }
+                            }
+                            else message.delete()
                             onMessageDeleted()
                         }
                         showDialog.value = true
@@ -834,9 +849,15 @@ private fun AttachButton(
     }
 }
 
-private fun loadPeerMessages(aor: String, peerUri: String): List<Message> {
+private fun loadPeerMessages(ctx: Context, aor: String, peerUri: String): List<Message> {
     val res = mutableListOf<Message>()
     for (m in BaresipService.messages.reversed())
         if ((m.aor == aor) && (m.peerUri == peerUri)) res.add(m)
-    return res
+    if (aor != HHSms.MOBILE || !HHSms.canRead(ctx)) return res
+    // HHPhone, SIM: переписка из системной базы + свои сообщения без пары в системе (MMS с картинками,
+    // неотправленные, не попавшие в базу); пара — тот же текст ±5 мин (у входящих время приёма ≠ времени отправки)
+    val sys = HHSms.thread(ctx, peerUri)
+    val own = res.filter { m -> m.images.isNotEmpty() ||
+        sys.none { it.message == m.message && kotlin.math.abs(it.timeStamp - m.timeStamp) < 300_000 } }
+    return (sys + own).sortedByDescending { it.timeStamp }
 }

@@ -8,7 +8,11 @@ import android.util.Log
 @Serializable
 class Message(val aor: String, val peerUri: String, val message: String, val timeStamp: Long,
               var direction: Int, var responseCode: Int, var responseReason: String,
-              var new: Boolean, val images: List<String> = emptyList()): java.io.Serializable {
+              var new: Boolean, val images: List<String> = emptyList(),
+              val smsId: Long = 0   // HHPhone: _id в системной базе SMS (0 — сообщение HHPhone)
+): java.io.Serializable {
+
+    fun copyPeer(p: String) = Message(aor, p, message, timeStamp, direction, responseCode, responseReason, new, images, smsId)
 
     fun add() {
         val updatedMessages = synchronized(BaresipService.messagesLock) {

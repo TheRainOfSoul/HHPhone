@@ -33,6 +33,11 @@ class CallHistoryNew(val aor: String, val peerUri: String, val direction: String
         }
         save()
         HHHistory.bump()   // новый журнал HHPhone перечитывает список
+        if (!aor.endsWith("@pstn")) BaresipService.instance?.let { ctx ->   // SIM-звонки в системный журнал пишет Telecom
+            val start = startTime?.timeInMillis
+            val stop = stopTime.timeInMillis
+            Thread { HHCallLog.write(ctx, aor, peerUri, direction, start, stop, rejected) }.start()
+        }
     }
 
     companion object {
