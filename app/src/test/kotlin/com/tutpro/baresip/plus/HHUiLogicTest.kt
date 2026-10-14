@@ -143,4 +143,41 @@ class HHUiLogicTest {
         assertTrue(HHUiLogic.suggestMatch("254", "Ани Иванова", "100"))     // кириллица: А2 Н5 И4
         assertEquals(false, HHUiLogic.suggestMatch("2", "Anna", "100"))     // одна цифра — не ищем по имени
     }
+
+    @Test fun callLogSimIncoming() {
+        val e = HHUiLogic.callLogEntry("+37491123456", HHUiLogic.CL_IN, 1000, 30, "8937401", true)
+        assertEquals(HHLogEntry("tel:+37491123456", "sip:mobile@pstn", "in", 1000, 31000, false), e)
+    }
+    @Test fun callLogStationOutgoing() {
+        val e = HHUiLogic.callLogEntry("100", HHUiLogic.CL_OUT, 1000, 5, "sip:101@pbx.local", true)
+        assertEquals(HHLogEntry("sip:100@pbx.local", "sip:101@pbx.local", "out", 1000, 6000, false), e)
+    }
+    @Test fun callLogMissedRejectedBlocked() {
+        assertEquals(null, HHUiLogic.callLogEntry("1", HHUiLogic.CL_MISSED, 1000, 0, null, true).start)
+        assertEquals(false, HHUiLogic.callLogEntry("1", HHUiLogic.CL_MISSED, 1000, 0, null, true).rejected)
+        assertTrue(HHUiLogic.callLogEntry("1", HHUiLogic.CL_REJECTED, 1000, 0, null, true).rejected)
+        assertTrue(HHUiLogic.callLogEntry("1", HHUiLogic.CL_BLOCKED, 1000, 0, null, true).rejected)
+        assertEquals(null, HHUiLogic.callLogEntry("1", HHUiLogic.CL_VOICEMAIL, 1000, 0, null, true).start)
+    }
+    @Test fun callLogHiddenNumber() {
+        assertEquals("tel:anonymous", HHUiLogic.callLogEntry("", HHUiLogic.CL_IN, 1, 0, null, true).peer)
+        assertEquals("tel:anonymous", HHUiLogic.callLogEntry("555", HHUiLogic.CL_IN, 1, 0, null, false).peer)
+    }
+    @Test fun callLogTypeForStationCalls() {
+        assertEquals(HHUiLogic.CL_OUT, HHUiLogic.callLogType("out", null, false))
+        assertEquals(HHUiLogic.CL_IN, HHUiLogic.callLogType("in", 5, false))
+        assertEquals(HHUiLogic.CL_REJECTED, HHUiLogic.callLogType("in", null, true))
+        assertEquals(HHUiLogic.CL_MISSED, HHUiLogic.callLogType("in", null, false))
+    }
+    @Test fun samePhoneIgnoresCountryPrefix() {
+        assertTrue(HHUiLogic.samePhone("+37491123456", "091123456"))
+        assertTrue(HHUiLogic.samePhone("tel:+374 91 12-34-56", "+37491123456"))
+        assertEquals(false, HHUiLogic.samePhone("+37491123456", "+37491123457"))
+        assertTrue(HHUiLogic.samePhone("100", "100"))
+        assertEquals(false, HHUiLogic.samePhone("100", "2100"))
+    }
+    @Test fun sameTimeWithinFiveSeconds() {
+        assertTrue(HHUiLogic.sameTime(10_000, 14_999))
+        assertEquals(false, HHUiLogic.sameTime(10_000, 15_001))
+    }
 }

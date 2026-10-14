@@ -89,6 +89,41 @@ object HHUiLogic {
         }
     }
 
+    const val CL_IN = 1; const val CL_OUT = 2; const val CL_MISSED = 3; const val CL_VOICEMAIL = 4
+    const val CL_REJECTED = 5; const val CL_BLOCKED = 6; const val CL_EXTERNAL = 7
+
+    /** Строка системного журнала → запись журнала HHPhone; accountId «sip:…» — звонок станции, иначе SIM. */
+    fun callLogEntry(number: String, type: Int, date: Long, durationSec: Long, accountId: String?, allowed: Boolean): HHLogEntry {
+        val station = accountId != null && accountId.startsWith("sip:")
+        val aor = if (station) accountId!! else "sip:mobile@pstn"
+        val peer = when {
+            !allowed || number.isBlank() -> "tel:anonymous"
+            station -> "sip:$number@" + accountId!!.substringAfter("@")
+            else -> "tel:$number"
+        }
+        val answered = type == CL_IN || type == CL_OUT || type == CL_EXTERNAL
+        return HHLogEntry(peer, aor, if (type == CL_OUT) "out" else "in", if (answered) date else null,
+            date + durationSec * 1000, type == CL_REJECTED || type == CL_BLOCKED)
+    }
+
+    /** Тип строки системного журнала для звонка станции. */
+    fun callLogType(dir: String, start: Long?, rejected: Boolean): Int = when {
+        dir == "out" -> CL_OUT
+        start != null -> CL_IN
+        rejected -> CL_REJECTED
+        else -> CL_MISSED
+    }
+
+    /** Один номер: цифры совпадают, или у обоих ≥ 8 цифр и совпадают последние 8 (+374 91… = 091…). */
+    fun samePhone(a: String, b: String): Boolean {
+        val x = peerKey(a).filter { it.isDigit() }
+        val y = peerKey(b).filter { it.isDigit() }
+        if (x.isEmpty() || y.isEmpty()) return false
+        return x == y || (x.length >= 8 && y.length >= 8 && x.takeLast(8) == y.takeLast(8))
+    }
+
+    fun sameTime(a: Long, b: Long) = kotlin.math.abs(a - b) < 5000
+
     private val t9 = listOf("ABC" to '2', "DEF" to '3', "GHI" to '4', "JKL" to '5', "MNO" to '6', "PQRS" to '7', "TUV" to '8', "WXYZ" to '9',
         "АБВГ" to '2', "ДЕЁЖЗ" to '3', "ИЙКЛ" to '4', "МНОП" to '5', "РСТУ" to '6', "ФХЦЧ" to '7', "ШЩЪЫ" to '8', "ЬЭЮЯ" to '9')
         .flatMap { (ls, d) -> ls.map { it to d } }.toMap()
