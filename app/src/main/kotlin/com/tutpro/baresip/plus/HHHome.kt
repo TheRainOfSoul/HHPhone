@@ -416,6 +416,8 @@ private fun HHPeopleTab(ctx: Context, navController: NavController, viewModel: V
         contacts.filter { c -> (!favoritesOnly || c.favorite()) &&
             (q.isEmpty() || c.name().contains(q, true) || c.uris().any { HHUiLogic.peerKey(it.uri).contains(q) }) }
     }
+    var sheet by remember { mutableStateOf<Contact?>(null) }
+    sheet?.let { HHContactSheet(it, navController, viewModel, lines) { sheet = null } }
     LazyColumn(Modifier.fillMaxSize()) {
         if (BaresipService.contactsMode == "baresip") item {
             Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.secondaryContainer).padding(horizontal = 16.dp, vertical = 8.dp),
@@ -448,9 +450,7 @@ private fun HHPeopleTab(ctx: Context, navController: NavController, viewModel: V
             }
             val sub = listOfNotNull(type, first?.let { HHUiLogic.peerKey(it.uri) }).joinToString(" · ") +
                 if (uris.size > 1) "  +${uris.size - 1}" else ""
-            HHPersonRow(c.name(), first?.uri, c, sub, starred = c.favorite(), onStar = { Contact.toggleFavorite(ctx, c) }) {
-                navController.navigate(hhCardRoute(c, first?.uri ?: ""))
-            }
+            HHPersonRow(c.name(), first?.uri, c, sub, starred = c.favorite(), onStar = { Contact.toggleFavorite(ctx, c) }) { sheet = c }
         }
     }
 }
