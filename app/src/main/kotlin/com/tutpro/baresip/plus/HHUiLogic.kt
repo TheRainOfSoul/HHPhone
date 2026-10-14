@@ -1,10 +1,21 @@
 package com.tutpro.baresip.plus
 
 /** Запись журнала для нового интерфейса (из CallHistoryNew): start = null — не отвечен. */
-data class HHLogEntry(val peer: String, val aor: String, val dir: String, val start: Long?, val stop: Long, val rejected: Boolean)
+data class HHLogEntry(val peer: String, val aor: String, val dir: String, val start: Long?, val stop: Long, val rejected: Boolean,
+                      val id: Long = 0)   // id — _ID строки системного журнала (0 — запись CallHistoryNew)
 
 /** Подряд идущие звонки одного собеседника: last — самый свежий. */
-data class HHLogGroup(val peer: String, val aor: String, val last: HHLogEntry, val count: Int)
+data class HHLogGroup(val peer: String, val aor: String, val last: HHLogEntry, val count: Int,
+                      val entries: List<HHLogEntry> = listOf(last))
+
+/** Номер контакта: id — _ID строки Data (0 — новый), type — Phone.TYPE. */
+data class HHNum(val id: Long, val number: String, val type: Int, val label: String = "")
+
+sealed class HHNumOp {
+    data class Update(val id: Long, val num: HHNum) : HHNumOp()
+    data class Delete(val id: Long) : HHNumOp()
+    data class Insert(val num: HHNum) : HHNumOp()
+}
 
 /** Линия для кнопки вызова: SIM (mobile) или станция. */
 data class HHLine(val aor: String, val mobile: Boolean, val registered: Boolean)
@@ -20,7 +31,8 @@ object HHUiLogic {
         val out = mutableListOf<HHLogGroup>()
         for (e in entries.sortedByDescending { it.stop }) {
             val g = out.lastOrNull()
-            if (g != null && peerKey(g.peer) == peerKey(e.peer)) out[out.size - 1] = g.copy(count = g.count + 1)
+            if (g != null && (peerKey(g.peer) == peerKey(e.peer) || samePhone(g.peer, e.peer)))
+                out[out.size - 1] = g.copy(count = g.count + 1, entries = g.entries + e)
             else out += HHLogGroup(e.peer, e.aor, e, 1)
         }
         return out
@@ -93,17 +105,49 @@ object HHUiLogic {
     const val CL_REJECTED = 5; const val CL_BLOCKED = 6; const val CL_EXTERNAL = 7
 
     /** Строка системного журнала → запись журнала HHPhone; accountId «sip:…» — звонок станции, иначе SIM. */
-    fun callLogEntry(number: String, type: Int, date: Long, durationSec: Long, accountId: String?, allowed: Boolean): HHLogEntry {
+    fun callLogEntry(number: String, type: Int, date: Long, durationSec: Long, accountId: String?, allowed: Boolean,
+                     component: String? = null, id: Long = 0): HHLogEntry {
         val station = accountId != null && accountId.startsWith("sip:")
-        val aor = if (station) accountId!! else "sip:mobile@pstn"
+        // не SIM и не HHPhone — звонок другого приложения: без пометки «SIM», линия выбирается как обычно
+        val telephony = component.isNullOrBlank() || component.contains("com.android.phone") || component.contains("telephony", true)
+        val aor = when { station -> accountId!!; telephony -> "sip:mobile@pstn"; else -> "" }
         val peer = when {
             !allowed || number.isBlank() -> "tel:anonymous"
+            station && number.contains("@") -> "sip:$number"
             station -> "sip:$number@" + accountId!!.substringAfter("@")
             else -> "tel:$number"
         }
         val answered = type == CL_IN || type == CL_OUT || type == CL_EXTERNAL
         return HHLogEntry(peer, aor, if (type == CL_OUT) "out" else "in", if (answered) date else null,
-            date + durationSec * 1000, type == CL_REJECTED || type == CL_BLOCKED)
+            date + durationSec * 1000, type == CL_REJECTED || type == CL_BLOCKED, id)
+    }
+
+    /** NUMBER для системного журнала: номер, а для собеседника с чужого сервера — user@домен. */
+    fun callLogNumber(peerUri: String, aor: String): String {
+        val user = peerKey(peerUri)
+        val dom = if (peerUri.startsWith("sip:")) peerUri.substringAfter("@", "").substringBefore(";") else ""
+        return if (dom.isNotEmpty() && dom != aor.substringAfter("@")) "$user@$dom" else user
+    }
+
+    /** Одинаковые номера из разных аккаунтов контакта (Google, SIM…) — одна строка: (представитель, все _ID). */
+    fun mergeSame(nums: List<HHNum>, prefer: (HHNum) -> Boolean): List<Pair<HHNum, List<Long>>> {
+        val groups = mutableListOf<MutableList<HHNum>>()
+        for (n in nums) groups.firstOrNull { g -> samePhone(g[0].number, n.number) || g[0].number == n.number }?.add(n) ?: groups.add(mutableListOf(n))
+        return groups.map { g -> (g.firstOrNull(prefer) ?: g[0]) to g.map { it.id } }
+    }
+
+    /** Правка номеров контакта: изменённые — Update, пустые и пропавшие — Delete, новые непустые — Insert. */
+    fun numberOps(old: List<HHNum>, new: List<HHNum>): List<HHNumOp> {
+        val out = mutableListOf<HHNumOp>()
+        for (o in old) {
+            val n = new.firstOrNull { it.id == o.id }
+            when {
+                n == null || n.number.isBlank() -> out += HHNumOp.Delete(o.id)
+                n != o -> out += HHNumOp.Update(o.id, n)
+            }
+        }
+        new.filter { it.id == 0L && it.number.isNotBlank() }.forEach { out += HHNumOp.Insert(it) }
+        return out
     }
 
     /** Тип строки системного журнала для звонка станции. */

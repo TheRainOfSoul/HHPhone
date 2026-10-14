@@ -342,6 +342,9 @@ sealed class Contact {
             }
         }
 
+        /** HHPhone: подпись типа номера для контакта baresip. */
+        fun typeLabel(type: Int, label: String?) = typeToString(type, label)
+
         fun stringToType(label: String): Int {
             return when (label) {
                 "Home" -> ContactsContract.CommonDataKinds.Phone.TYPE_HOME

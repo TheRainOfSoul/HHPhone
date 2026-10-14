@@ -194,4 +194,43 @@ class HHUiLogicTest {
         assertTrue(HHUiLogic.sameLoggedCall(100_000, 100_000, null, 140_000))      // пропущенный, 40 с звонил
         assertEquals(false, HHUiLogic.sameLoggedCall(100_000, 160_000, 400_000, 460_000))
     }
+
+    @Test fun groupMergesSamePhoneAndKeepsEntries() {
+        val g = HHUiLogic.group(listOf(e("tel:+37491123456", 30), e("tel:091123456", 20), e("tel:100", 10)))
+        assertEquals(2, g.size)
+        assertEquals(2, g[0].count)
+        assertEquals(listOf(30L, 20L), g[0].entries.map { it.stop })
+    }
+    @Test fun callLogEntryOtherAppIsNotSim() {
+        val e = HHUiLogic.callLogEntry("555", HHUiLogic.CL_IN, 1, 0, "acc1", true, "com.whatsapp/.Voip", 7)
+        assertEquals("", e.aor)
+        assertEquals(7L, e.id)
+        assertEquals("sip:mobile@pstn", HHUiLogic.callLogEntry("555", HHUiLogic.CL_IN, 1, 0, "1",
+            true, "com.android.phone/com.android.services.telephony.TelephonyConnectionService").aor)
+        assertEquals("sip:mobile@pstn", HHUiLogic.callLogEntry("555", HHUiLogic.CL_IN, 1, 0, "1", true, null).aor)
+    }
+    @Test fun callLogEntryForeignDomain() {
+        assertEquals("sip:alice@other.com", HHUiLogic.callLogEntry("alice@other.com", HHUiLogic.CL_OUT, 1, 0, "sip:101@pbx", true).peer)
+    }
+    @Test fun callLogNumberKeepsForeignDomain() {
+        assertEquals("100", HHUiLogic.callLogNumber("sip:100@pbx", "sip:101@pbx"))
+        assertEquals("alice@other.com", HHUiLogic.callLogNumber("sip:alice@other.com;transport=tcp", "sip:101@pbx"))
+        assertEquals("+37491", HHUiLogic.callLogNumber("tel:+37491", "sip:101@pbx"))
+    }
+    @Test fun numberOpsDiff() {
+        val old = listOf(HHNum(1, "100", 2), HHNum(2, "200", 1), HHNum(3, "300", 3))
+        val new = listOf(HHNum(1, "100", 2), HHNum(2, "201", 1), HHNum(3, " ", 3), HHNum(0, "400", 2), HHNum(0, "", 2))
+        assertEquals(listOf(HHNumOp.Update(2, HHNum(2, "201", 1)), HHNumOp.Delete(3), HHNumOp.Insert(HHNum(0, "400", 2))),
+            HHUiLogic.numberOps(old, new))
+        assertEquals(listOf(HHNumOp.Delete(1)), HHUiLogic.numberOps(listOf(HHNum(1, "1", 2)), emptyList()))
+    }
+
+    @Test fun mergeSameNumbersAcrossAccounts() {
+        // Google +374 91… и SIM 091… — один номер; представитель — из записываемого аккаунта
+        val m = HHUiLogic.mergeSame(listOf(HHNum(5, "091123456", 2), HHNum(7, "+37491123456", 2), HHNum(9, "100", 1))) { it.id == 7L }
+        assertEquals(2, m.size)
+        assertEquals(7L, m[0].first.id)
+        assertEquals(listOf(5L, 7L), m[0].second.sorted())
+        assertEquals(listOf(9L), m[1].second)
+    }
 }
