@@ -234,6 +234,8 @@ open class Call(val callp: Long, val ua: UserAgent, val peerUri: String, val dir
         }
 
         override fun resume(): Boolean {
+            // звонок станции — на удержание сами (SIM-звонки между собой переключает Telecom)
+            for (c in BaresipService.calls) if (c !is ExternalCall && !c.onhold && !c.held) c.hold()
             telecomCall.unhold()
             onhold = false
             callOnHold.value = false

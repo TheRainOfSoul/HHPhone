@@ -1283,12 +1283,8 @@ class BaresipService: Service() {
                         if (speakerPhoneAuto) speakerPhone = true
                         val peerUri = Utils.uriUnescape(ev[1])
                         var blockedCall = false
-                        val toastMsg = if (Call.isAnyCallActive(this))
-                            String.format(
-                                getString(R.string.call_auto_rejected),
-                                Utils.friendlyUri(this, peerUri, ua.account, unique = true)
-                            )
-                        else if (ua.account.blockUnknown &&
+                        // HHPhone: второй входящий во время разговора не сбрасываем — ожидание вызова (HHInCall)
+                        val toastMsg = if (ua.account.blockUnknown &&
                                 Contact.contactName(e164Uri(peerUri, ua.account.countryCode)) ==
                                     e164Uri(peerUri, ua.account.countryCode)) {
                             blockedCall = true
@@ -1591,6 +1587,7 @@ class BaresipService: Service() {
                             val noMoreCalls = synchronized(calls) { !Call.inCall() }
                             stopRinging()
                             stopMediaPlayer()
+                            alertIncoming()
                             if (noMoreCalls) {
                                 proximitySensing(false)
                                 abandonAudioFocus(this)
@@ -2412,19 +2409,6 @@ class BaresipService: Service() {
         }
 
         if (isIncoming) {
-            if (Call.isAnyCallActive(this)) {
-                Log.d(TAG, "Auto-rejecting incoming PSTN call while another call is active")
-                telecomCall.disconnect()
-                toast(
-                    String.format(getString(R.string.call_auto_rejected),
-                        Utils.friendlyUri(this, uri, ua.account, unique = true))
-                )
-                if (ua.account.callHistory) {
-                    CallHistoryNew(ua.account.aor, uri, "in").add()
-                    ua.account.missedCalls = true
-                }
-                return
-            }
             val e164Uri = e164Uri(uri, ua.account.countryCode)
             val presentation = telecomCall.details.handlePresentation
             if (ua.account.blockHidden &&
@@ -2492,12 +2476,14 @@ class BaresipService: Service() {
                         "incoming"
                     android.telecom.Call.STATE_DIALING, android.telecom.Call.STATE_CONNECTING ->
                         "outgoing"
-                    android.telecom.Call.STATE_ACTIVE ->
+                    android.telecom.Call.STATE_ACTIVE -> {
+                        calls.find { it.callp == call.hashCode().toLong() }?.let { it.onhold = false; it.callOnHold.value = false }
                         "connected"
+                    }
                     android.telecom.Call.STATE_DISCONNECTED, android.telecom.Call.STATE_DISCONNECTING ->
                         "closed"
                     android.telecom.Call.STATE_HOLDING -> {
-                        calls.find { it.callp == call.hashCode().toLong() }?.onhold = true
+                        calls.find { it.callp == call.hashCode().toLong() }?.let { it.onhold = true; it.callOnHold.value = true }
                         "connected"
                     }
                     else -> "connected"
@@ -2507,7 +2493,8 @@ class BaresipService: Service() {
                         it.status.value = newStatus
                         // SIM: экран гаснет у уха, как у звонков станции (там — при исходящем/ответе)
                         if (newStatus == "outgoing" || newStatus == "connected") proximitySensing(proximitySensing)
-                        if (newStatus == "connected") {
+                        if (newStatus == "connected" && it.startTime == null) {
+                            alertIncoming()   // ответили на ожидающий — сигнал ожидания больше не нужен
                             it.startTime = GregorianCalendar()
                             HHRec.onConnected(this@BaresipService, it)
                             nm.cancel(CALL_NOTIFICATION_ID)
@@ -2571,6 +2558,7 @@ class BaresipService: Service() {
             }
             synchronized(calls) { calls.remove(call) }
             postServiceEvent(ServiceEvent("call closed", arrayListOf(uap, callp), System.nanoTime()))
+            alertIncoming()
         }
         if (!Call.inCall()) {
             proximitySensing(false)
@@ -2776,7 +2764,7 @@ class BaresipService: Service() {
         val callp = call.callp
 
         val callerNumber = Utils.uriUserPart(peerUri)
-        if (call !is Call.ExternalCall && shouldStartRinging(callerNumber)) startRinging()
+        alertIncoming(callerNumber)
 
         if (!Utils.isVisible()) {
             val piFlags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
@@ -2964,6 +2952,43 @@ class BaresipService: Service() {
             Log.e(TAG, "Could not query contacts for starred status: ${e.message}")
         }
         return false
+    }
+
+    /**
+     * Сигнал о звонящем вызове: никто не разговаривает — обычный звонок (SIM звонит сам Telecom), идёт разговор — короткий
+     * сигнал ожидания в трубку; SIM во время SIM — сигнал ожидания играет Telecom. Нет звонящих — тишина.
+     */
+    private fun alertIncoming(callerNumber: String? = null) {
+        val open = synchronized(calls) { calls.filter { it.status.value != "closed" } }
+        val ringing = open.firstOrNull { it.status.value == "incoming" }
+        val talking = open.filter { it.status.value != "incoming" }
+        if (ringing == null || talking.isNotEmpty()) stopRinging()
+        if (ringing == null) { stopMediaPlayer(); return }
+        when {
+            talking.isEmpty() -> {
+                stopMediaPlayer()   // сигнал ожидания — разговор закончился, теперь обычный звонок
+                if (ringing !is Call.ExternalCall && shouldStartRinging(callerNumber ?: Utils.uriUserPart(ringing.peerUri))) startRinging()
+            }
+            ringing is Call.ExternalCall && talking.all { it is Call.ExternalCall } -> {}
+            else -> playCallWaiting()
+        }
+    }
+
+    @SuppressLint("DiscouragedApi")
+    private fun playCallWaiting() {
+        if (mediaPlayer != null) return
+        val resourceId = resources.getIdentifier("callwaiting_$toneCountry", "raw", packageName)
+        if (resourceId == 0) return
+        mediaPlayer = MediaPlayer().apply {
+            setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+            val afd = resources.openRawResourceFd(resourceId)
+            setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+            afd.close()
+            isLooping = true
+            prepare()
+            start()
+        }
     }
 
     private fun stopRinging() {
