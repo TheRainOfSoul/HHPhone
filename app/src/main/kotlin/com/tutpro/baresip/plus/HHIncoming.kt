@@ -32,6 +32,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -115,32 +121,59 @@ private fun HHAnswerSlider(onAnswer: () -> Unit, onReject: () -> Unit) {
     val red = HHEndRed
     val green = colorResource(R.color.colorTrafficGreen)
     val dark = hhDark()
-    val scope = rememberCoroutineScope()
-    val x = remember { Animatable(0f) }
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    var off by remember { mutableFloatStateOf(0f) }          // смещение кружка, пиксели
+    var dragging by remember { mutableStateOf(false) }
+    var done by remember { mutableStateOf(false) }
+    var armed by remember { mutableIntStateOf(0) }           // −1/1 — за порогом (лёгкая вибрация при пересечении)
     val answer = stringResource(R.string.hh_answer)
     val decline = stringResource(R.string.hh_decline)
+    // в покое кружок слегка покачивается — подсказка «тяни»
+    val sway by androidx.compose.animation.core.rememberInfiniteTransition(label = "sway").animateFloat(-1f, 1f,
+        androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            androidx.compose.animation.core.RepeatMode.Reverse), label = "sway")
     BoxWithConstraints(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 28.dp).height(72.dp)
         .semantics { customActions = listOf(CustomAccessibilityAction(answer) { onAnswer(); true }, CustomAccessibilityAction(decline) { onReject(); true }) }) {
         val half = with(LocalDensity.current) { (maxWidth / 2 - 36.dp).toPx() }
-        Row(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(red, red.copy(alpha = 0.25f), green.copy(alpha = 0.25f), green)), RoundedCornerShape(36.dp)),
+        val swayPx = with(LocalDensity.current) { 6.dp.toPx() }
+        val p = (off / half).coerceIn(-1f, 1f)
+        // тянуть можно с любого места полосы, кружок идёт за пальцем без задержки
+        val drag = Modifier.draggable(rememberDraggableState { d ->
+                if (done) return@rememberDraggableState
+                off = (off + d).coerceIn(-half, half)
+                val a = when { off > half * 0.6f -> 1; off < -half * 0.6f -> -1; else -> 0 }
+                if (a != armed) { armed = a; if (a != 0) haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove) }
+            }, Orientation.Horizontal, startDragImmediately = true,
+            onDragStarted = { dragging = true },
+            onDragStopped = { v ->
+                dragging = false
+                if (done) return@draggable
+                val q = off / half
+                // порог — 60 % пути или быстрый взмах в ту же сторону
+                val side = when { q > 0.6f || (q > 0.2f && v > 1500f) -> 1; q < -0.6f || (q < -0.2f && v < -1500f) -> -1; else -> 0 }
+                if (side != 0) {
+                    done = true
+                    androidx.compose.animation.core.animate(off, side * half, animationSpec = androidx.compose.animation.core.tween(120)) { x, _ -> off = x }
+                    if (side > 0) onAnswer() else onReject()
+                } else
+                    androidx.compose.animation.core.animate(off, 0f, initialVelocity = v,
+                        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.65f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)) { x, _ -> off = x }
+            })
+        Row(Modifier.fillMaxSize().then(drag).background(Brush.horizontalGradient(listOf(red, red.copy(alpha = 0.25f), green.copy(alpha = 0.25f), green)), RoundedCornerShape(36.dp)),
             verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.CallEnd, stringResource(R.string.hh_decline), Modifier.padding(start = 20.dp), tint = Color.White)
+            Icon(Icons.Default.CallEnd, decline, Modifier.padding(start = 20.dp), tint = Color.White.copy(alpha = 1f - maxOf(p, 0f)))
             Spacer(Modifier.weight(1f))
-            Icon(Icons.Default.Call, stringResource(R.string.hh_answer), Modifier.padding(end = 20.dp), tint = Color.White)
+            Icon(Icons.Default.Call, answer, Modifier.padding(end = 20.dp), tint = Color.White.copy(alpha = 1f + minOf(p, 0f)))
         }
-        Box(Modifier.align(Alignment.Center).offset { IntOffset(x.value.roundToInt(), 0) }.size(72.dp)
-            .background(if (dark) Color.White else MaterialTheme.colorScheme.surface, CircleShape)
-            .draggable(rememberDraggableState { d -> scope.launch { x.snapTo((x.value + d).coerceIn(-half, half)) } },
-                Orientation.Horizontal,
-                onDragStopped = {
-                    when {
-                        x.value > half * 0.8f -> onAnswer()
-                        x.value < -half * 0.8f -> onReject()
-                    }
-                    x.animateTo(0f)
-                }),
+        val rest = if (!dragging && !done && off == 0f) sway * swayPx else 0f
+        val base = if (dark) Color.White else MaterialTheme.colorScheme.surface
+        val knob = androidx.compose.ui.graphics.lerp(base, if (p >= 0) green else red, Math.abs(p))
+        Box(Modifier.align(Alignment.Center).offset { IntOffset((off + rest).roundToInt(), 0) }.size(72.dp)
+            .background(knob, CircleShape).then(drag),
             contentAlignment = Alignment.Center) {
-            Box(Modifier.size(40.dp).background(Color(0xFF8A8A8A), CircleShape))
+            // трубка: поворачивается к «положить» влево, белеет на цвете
+            Icon(Icons.Default.Call, null, Modifier.size(32.dp).graphicsLayer { rotationZ = minOf(p, 0f) * -135f },
+                tint = androidx.compose.ui.graphics.lerp(Color(0xFF8A8A8A), Color.White, Math.abs(p)))
         }
     }
 }

@@ -2502,6 +2502,8 @@ class BaresipService: Service() {
                 calls.find { it.callp == call.hashCode().toLong() }?.let {
                     if (it.status.value != newStatus) {
                         it.status.value = newStatus
+                        // SIM: экран гаснет у уха, как у звонков станции (там — при исходящем/ответе)
+                        if (newStatus == "outgoing" || newStatus == "connected") proximitySensing(proximitySensing)
                         if (newStatus == "connected") {
                             it.startTime = GregorianCalendar()
                             HHRec.onConnected(this@BaresipService, it)
@@ -2534,12 +2536,14 @@ class BaresipService: Service() {
                 }, 2000)
             }
         }
-        else
+        else {
+            proximitySensing(proximitySensing)   // исходящий SIM: телефон у уха уже во время гудков
             postServiceEvent(ServiceEvent(
                 "call outgoing",
                 arrayListOf(ua.uap, call.callp),
                 System.nanoTime())
             )
+        }
     }
 
     fun handleExternalCallRemoved(telecomCall: android.telecom.Call) {
