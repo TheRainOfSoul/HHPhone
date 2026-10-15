@@ -168,6 +168,7 @@ class BaresipService: Service() {
 
         Log.i(TAG, "BaresipService onCreate")
         instance = this
+        HHRecAccessibility.set(this, false)   // вне звонка служба выключена (и после сбоя посреди звонка)
 
         intent = Intent("com.tutpro.baresip.plus.EVENT")
         intent.setPackage(packageName)
@@ -2392,6 +2393,8 @@ class BaresipService: Service() {
         val ua = preferredAor?.let { UserAgent.ofAor(it) }
             ?: uas.value.find { it.account.isMobile }
             ?: uas.value[0]
+        // служба записи — заранее, с гудков: к ответу система уже её подключит
+        if (HHRec.mode(this) != HHRec.OFF) HHRecAccessibility.set(this, true)
 
         val telecomState = if (VERSION.SDK_INT >= 31)
             telecomCall.details.state
@@ -2573,6 +2576,7 @@ class BaresipService: Service() {
             proximitySensing(false)
             stopMediaPlayer()
         }
+        if (calls.none { it.ua.account.isMobile }) HHRecAccessibility.set(this, false)
         updateStatusNotification()
         messageUpdate.postValue(System.currentTimeMillis())
     }

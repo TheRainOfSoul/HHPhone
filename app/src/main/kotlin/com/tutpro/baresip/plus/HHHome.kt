@@ -614,7 +614,10 @@ internal fun HHRecSettings() {
                 Text(stringResource(R.string.hh_rec_folder_reset))
             }
             // SIM: без службы специальных возможностей Android глушит микрофон во время звонка
-            if (!a11y) {
+            if (HHRecAccessibility.canToggle(ctx))
+                Text(stringResource(R.string.hh_rec_a11y_auto), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else Text(stringResource(R.string.hh_rec_a11y_adb, ctx.packageName), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (!a11y && !HHRecAccessibility.canToggle(ctx)) {
                 Text(stringResource(R.string.hh_rec_sim_a11y), fontSize = 13.sp, color = MaterialTheme.colorScheme.error)
                 TextButton(onClick = {
                     ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)

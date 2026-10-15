@@ -140,6 +140,8 @@
     <string name="hh_rec_auto">Every call (the button stops it)</string>
     <string name="hh_rec_note">Station (SIP) calls are recorded on both sides. SIM calls: Android only lets the app record the microphone, so the other person is clearly audible mainly on speaker. Recording a conversation may require the other person’s consent.</string>
     <string name="hh_rec_sim_a11y">For SIM calls, turn on the “HHPhone call recording” accessibility service: without it Android mutes the microphone during a call. If the switch is greyed out: App info → ⋮ → Allow restricted settings.</string>
+    <string name="hh_rec_a11y_auto">For SIM calls the accessibility service is turned on automatically only during the call — banking apps don’t see it the rest of the time.</string>
+    <string name="hh_rec_a11y_adb">Banking apps refuse to open while the accessibility service is on. To have HHPhone turn it on only during SIM calls, run once on a computer with the phone connected by USB: adb shell pm grant %1$s android.permission.WRITE_SECURE_SETTINGS</string>
     <string name="hh_rec_open_a11y">Open accessibility settings</string>
     <string name="hh_rec_short">REC</string>
     <string name="hh_rec_failed">Could not start recording</string>

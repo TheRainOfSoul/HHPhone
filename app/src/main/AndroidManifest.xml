@@ -36,6 +36,9 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"
         tools:ignore="FullScreenIntentPolicy" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- выдаётся один раз через adb: служба записи SIM включается только на время звонка -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.BROADCAST_STICKY" />
