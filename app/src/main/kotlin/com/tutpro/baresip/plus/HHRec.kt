@@ -106,12 +106,8 @@ object HHRec {
                     val from = (call.hhRecFrom - call.dumpStart).coerceAtLeast(0)
                     val pcm = File(ctx.cacheDir, "hh_rec.pcm")
                     val rate = HHWav.mix(File(rx).takeIf { it.exists() }, File(tx).takeIf { it.exists() }, from, pcm)
-                    if (rate > 0 && pcm.length() > 0) {
-                        val sec = (pcm.length() / 2 / rate).toInt()
-                        val out = File(dir(ctx), fileName(maxOf(call.hhRecFrom, call.dumpStart), sec, false, call.peerUri))
-                        encodeAac(pcm, rate, out)
-                        HHHistory.bump()
-                    }
+                    if (rate > 0 && pcm.length() > 0)
+                        save(ctx, pcm, rate, maxOf(call.hhRecFrom, call.dumpStart), false, call.peerUri)
                     pcm.delete()
                 }
             } catch (e: Exception) {
@@ -120,6 +116,17 @@ object HHRec {
                 File(tx).delete(); File(rx).delete()
             }
         }.start()
+    }
+
+    /** PCM разговора → обработка голоса (HHVoice) → m4a в папку записей. */
+    fun save(ctx: Context, pcm: File, rate: Int, start: Long, sim: Boolean, peer: String) {
+        val clean = File(pcm.path + ".voice")
+        try {
+            HHVoice.processFile(pcm, clean, rate)
+            val sec = (clean.length() / 2 / rate).toInt()
+            encodeAac(clean, rate, File(dir(ctx), fileName(start, sec, sim, peer)))
+            HHHistory.bump()
+        } finally { clean.delete() }
     }
 
     /** 16-битный моно PCM → AAC-LC 32 кбит/с в MP4 (≈ 240 КБ в минуту). */
@@ -228,4 +235,91 @@ object HHWav {
 
     private fun le16(b: ByteArray, o: Int) = (b[o].toInt() and 0xff) or ((b[o + 1].toInt() and 0xff) shl 8)
     private fun le32(b: ByteArray, o: Int) = le16(b, o) or (le16(b, o + 2) shl 16)
+}
+
+/**
+ * Обработка записи после звонка: гул ниже 120 Гц, фон в паузах тише, громкость речи выравнивается (тихий собеседник
+ * из динамика поднимается до своего голоса), пики ограничиваются. Два прохода по файлу (16-бит моно PCM): уровни
+ * кадров — по всей записи, в памяти только они (50 чисел в секунду), не сам звук.
+ */
+object HHVoice {
+    private const val TARGET = 3277.0      // −20 dBFS (в единицах 16-битного отсчёта) — уровень речи
+    private const val MAX_GAIN = 40.0      // +32 дБ: SIM-запись микрофоном бывает на −55 dBFS
+    private const val GATE = 0.25          // −12 дБ фону в паузах
+
+    fun processFile(inp: File, out: File, rate: Int) {
+        val frame = rate / 50                                   // 20 мс
+        // проход 1: энергия кадров после фильтра
+        val rmsList = ArrayList<Double>()
+        run {
+            val hp = HighPass(rate); var e = 0.0; var k = 0
+            samples(inp) { v -> val y = hp.next(v); e += y * y; if (++k == frame) { rmsList += Math.sqrt(e / k); e = 0.0; k = 0 } }
+            if (k > 0) rmsList += Math.sqrt(e / k)
+        }
+        val n = rmsList.size
+        if (n == 0) { out.writeBytes(ByteArray(0)); return }
+        val rms = rmsList.toDoubleArray()
+        // шум — 10-я перцентиль кадров; речь — кадры заметно громче шума
+        val noise = rms.sorted()[n / 10].coerceAtLeast(1.0)
+        val speech = BooleanArray(n) { rms[it] > noise * 3 }
+        // уровень речи — по речевым кадрам в окне ±300 мс (как у динамической нормализации)
+        val w = 15
+        val raw = DoubleArray(n) { f ->
+            var sum = 0.0; var k = 0
+            for (j in maxOf(0, f - w)..minOf(n - 1, f + w)) if (speech[j]) { sum += rms[j] * rms[j]; k++ }
+            val g = if (k == 0) 1.0 else (TARGET / Math.sqrt(sum / k)).coerceIn(1.0, MAX_GAIN)
+            if (speech[f]) g else g * GATE
+        }
+        // плавно: быстро вниз (5 кадров), медленно вверх (25 кадров) — без «дыхания» и щелчков
+        val gain = DoubleArray(n)
+        var g = raw[0]
+        for (f in 0 until n) { g += (raw[f] - g) / (if (raw[f] < g) 5.0 else 25.0); gain[f] = g }
+        // проход 2: тот же фильтр, усиление (между кадрами — линейно), ограничитель
+        val hp = HighPass(rate)
+        var i = 0
+        out.outputStream().buffered().use { o ->
+            samples(inp) { v ->
+                val f = i / frame; val t = (i % frame).toDouble() / frame
+                val gi = gain[f] * (1 - t) + gain[minOf(f + 1, n - 1)] * t
+                val y = limit(hp.next(v) * gi).toInt()
+                o.write(y and 0xff); o.write((y shr 8) and 0xff)
+                i++
+            }
+        }
+    }
+
+    private inline fun samples(f: File, each: (Double) -> Unit) {
+        f.inputStream().buffered(65536).use { s ->
+            while (true) {
+                val lo = s.read(); val hi = s.read()
+                if (lo < 0 || hi < 0) break
+                each(((hi shl 8) or lo).toShort().toDouble())
+            }
+        }
+    }
+
+    /** Мягкий ограничитель: до −3 dBFS без изменений, выше — плавно к 0 dBFS. */
+    private fun limit(v: Double): Short {
+        val k = 23170.0                                         // −3 dBFS
+        val a = Math.abs(v)
+        val y = if (a <= k) a else k + (32767 - k) * Math.tanh((a - k) / (32767 - k))
+        return (Math.signum(v) * y).toInt().coerceIn(-32767, 32767).toShort()
+    }
+
+    /** Баттерворт 2-го порядка, 120 Гц. */
+    private class HighPass(rate: Int) {
+        private val b0: Double; private val b1: Double; private val b2: Double; private val a1: Double; private val a2: Double
+        private var x1 = 0.0; private var x2 = 0.0; private var y1 = 0.0; private var y2 = 0.0
+        init {
+            val w0 = 2 * Math.PI * 120 / rate
+            val alpha = Math.sin(w0) / (2 * Math.sqrt(0.5))
+            val c = Math.cos(w0); val a0 = 1 + alpha
+            b0 = (1 + c) / 2 / a0; b1 = -(1 + c) / a0; b2 = b0; a1 = -2 * c / a0; a2 = (1 - alpha) / a0
+        }
+        fun next(v: Double): Double {
+            val o = b0 * v + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+            x2 = x1; x1 = v; y2 = y1; y1 = o
+            return o
+        }
+    }
 }
