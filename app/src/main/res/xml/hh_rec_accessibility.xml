@@ -4,5 +4,6 @@
     android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:canRetrieveWindowContent="false"
+    android:isAccessibilityTool="true"
     android:description="@string/hh_rec_a11y_description"
     android:notificationTimeout="1000" />
