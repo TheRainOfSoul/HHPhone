@@ -272,7 +272,8 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
     var sheet by remember { mutableStateOf<HHLogGroup?>(null) }
     sheet?.let { HHCallSheet(it, navController, viewModel, lines) { sheet = null } }
     Column(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.weight(1f), state = listState) {
+        Box(Modifier.weight(1f)) {
+        LazyColumn(Modifier.fillMaxSize(), state = listState) {
             if (log.isEmpty()) item {
                 Text(stringResource(R.string.hh_no_calls), Modifier.fillMaxWidth().padding(32.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -282,6 +283,11 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                 HHLogRow(ctx, g, tick, onCard = { navController.navigate(hhCardRoute(hhContact(g.peer), g.peer)) }) { sheet = g }
                 HorizontalDivider(Modifier.padding(start = 72.dp), color = MaterialTheme.colorScheme.outlineVariant)
             }
+        }
+        // подсказки — поверх журнала над панелью: поле номера и клавиатура не сдвигаются
+        if (keypad) Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
+            HHSuggestions(number) { number = it }
+        }
         }
         Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, tonalElevation = 2.dp) {
             Column(Modifier.navigationBarsPadding()) {
@@ -293,7 +299,6 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                             Icon(Icons.AutoMirrored.Outlined.Backspace, stringResource(R.string.hh_backspace), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    HHSuggestions(number) { number = it }
                     HHKeypad(onKey = { number += it }, onLong = { k ->
                         when (k) {
                             '0' -> { number += "+"; true }
