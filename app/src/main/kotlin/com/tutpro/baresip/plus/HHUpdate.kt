@@ -1,7 +1,12 @@
 package com.tutpro.baresip.plus
 
+import android.Manifest
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInstaller
+import android.os.Build
 import androidx.core.content.FileProvider
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -54,9 +59,53 @@ object HHUpdate {
         } finally { c.disconnect() }
     } catch (e: Exception) { false }
 
+    /**
+     * Ставит APK своим сеансом PackageInstaller: только так установщик может сохранить «полноэкранные уведомления»
+     * (Android 14+ при установке через системный экран сбрасывает его к политике по умолчанию — для приложений
+     * не из Play это «запрещено»). Подтверждение пользователя — через HHUpdateReceiver.
+     */
+    fun install(ctx: Context, apk: File) {
+        try {
+            val pi = ctx.packageManager.packageInstaller
+            val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+                setAppPackageName(ctx.packageName)
+                if (Build.VERSION.SDK_INT >= 34)
+                    setPermissionState(Manifest.permission.USE_FULL_SCREEN_INTENT, PackageInstaller.SessionParams.PERMISSION_STATE_GRANTED)
+            }
+            val id = pi.createSession(params)
+            pi.openSession(id).use { s ->
+                s.openWrite("HHPhone.apk", 0, apk.length()).use { out -> apk.inputStream().use { it.copyTo(out) }; s.fsync(out) }
+                val done = PendingIntent.getBroadcast(ctx, id, Intent(ctx, HHUpdateReceiver::class.java),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)   // система дописывает статус
+                s.commit(done.intentSender)
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("HHUpdate", "session install failed, system installer: $e")
+            ctx.startActivity(installIntent(ctx, apk))
+        }
+    }
+
     fun installIntent(ctx: Context, apk: File): Intent =
         Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", apk), "application/vnd.android.package-archive")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+}
+
+/** Ответ сеанса установки: подтверждение пользователя или ошибка. */
+class HHUpdateReceiver : BroadcastReceiver() {
+    override fun onReceive(ctx: Context, intent: Intent) {
+        when (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
+            PackageInstaller.STATUS_PENDING_USER_ACTION -> {
+                @Suppress("DEPRECATION") val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT) ?: return
+                ctx.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+            PackageInstaller.STATUS_SUCCESS -> {}
+            PackageInstaller.STATUS_FAILURE_ABORTED -> {}   // пользователь отказался
+            else -> {
+                android.util.Log.w("HHUpdate", "install failed: ${intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)}")
+                HHUi.message.value = ctx.getString(R.string.hh_update_failed)
+            }
+        }
+    }
 }

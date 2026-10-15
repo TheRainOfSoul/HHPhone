@@ -203,7 +203,7 @@ private fun ChatScreen(
         topBar = {
             Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
                 Spacer(Modifier.statusBarsPadding())
-                TopAppBar(navController, viewModel, account, peerUri)
+                TopAppBar(navController, viewModel, account, peerUri, chatMessages.size)
             }
         },
         bottomBar = {
@@ -232,16 +232,19 @@ private fun TopAppBar(
     navController: NavController,
     viewModel: ViewModel,
     account: Account,
-    peerUri: String
+    peerUri: String,
+    loaded: Int = 0
 ) {
     val ctx = LocalContext.current
     val aor = account.aor
+    // участники группы известны после чтения беседы — имя пересчитывается, когда сообщения загрузились
+    val groupName = if (HHSms.isGroup(peerUri)) remember(loaded) { hhName(peerUri) } else ""
     TopAppBar(
         title = {
             Text(
                 text = format(
                     stringResource(R.string.chat_with),
-                    if (HHSms.isGroup(peerUri)) hhName(peerUri) else Utils.friendlyUri(   // HHPhone: группа — участники
+                    if (HHSms.isGroup(peerUri)) groupName else Utils.friendlyUri(   // HHPhone: группа — участники
                         uri = peerUri,
                         account = account,
                         anonymous = stringResource(R.string.anonymous),

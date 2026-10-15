@@ -253,13 +253,18 @@ object HHContactStore {
         val old = if (before.key.startsWith("b")) Contact.baresipContact(before.key.drop(1).toLong()) else null
         val id = old?.id ?: System.currentTimeMillis()
         val uris = ArrayList(after.nums.filter { it.number.isNotBlank() }.map { n ->
-            if (n.type == SIP_TYPE || n.number.startsWith("sip:")) Contact.ContactUri(n.number.trim().let { if (it.startsWith("sip:")) it else "sip:$it" })
-            else Contact.ContactUri("tel:" + n.number.filter { it.isDigit() || it in "+*#" }, Contact.typeLabel(n.type, n.label))
+            val digits = n.number.filter { it.isDigit() || it in "+*#" }
+            if (n.type == SIP_TYPE || n.number.startsWith("sip:") || digits.none { it.isDigit() })
+                Contact.ContactUri(n.number.trim().let { if (it.startsWith("sip:")) it else "sip:$it" })
+            else Contact.ContactUri("tel:$digits", Contact.typeLabel(n.type, n.label))
         })
         val c = Contact.BaresipContact(after.name, uris, old?.email ?: "", old?.color ?: Utils.randomColor(), id, old?.favorite ?: false)
         val file = File(BaresipService.filesPath, "$id.png")
         when {
-            photo != null -> { file.outputStream().use { photo.compress(Bitmap.CompressFormat.PNG, 100, it) }; c.avatarImage = photo }
+            photo != null -> {   // кружок не больше 140 dp: 256 px хватает, 720 px держали бы память на каждый контакт
+                val small = if (photo.width > 256) Bitmap.createScaledBitmap(photo, 256, 256 * photo.height / photo.width, true) else photo
+                file.outputStream().use { small.compress(Bitmap.CompressFormat.PNG, 100, it) }; c.avatarImage = small
+            }
             removePhoto -> file.delete()
             else -> c.avatarImage = old?.avatarImage
         }

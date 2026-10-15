@@ -109,13 +109,18 @@ object HHSms {
             while (c.moveToNext()) {
                 val ct = c.getString(1) ?: ""
                 when {
-                    ct == "text/plain" -> c.getString(2)?.let { if (text.isNotEmpty()) text.append('\n'); text.append(it) }
+                    ct == "text/plain" -> (c.getString(2) ?: partText(ctx, c.getLong(0)))?.let { if (text.isNotEmpty()) text.append('\n'); text.append(it) }
                     ct.startsWith("image/") -> images += "content://mms/part/" + c.getLong(0)
                 }
             }
         }
         return text.toString() to images
     }
+
+    /** Текст части в файле (_data), а не в колонке text — так хранят некоторые производители. */
+    private fun partText(ctx: Context, part: Long): String? = try {
+        ctx.contentResolver.openInputStream(Uri.parse("content://mms/part/$part"))?.use { it.readBytes().toString(Charsets.UTF_8) }
+    } catch (e: Exception) { null }
 
     /** MMS → сообщение чата; peer — собеседник или "mms:<thread>" для групповой беседы. */
     private fun mmsMessage(ctx: Context, id: Long, thread: Long, dateSec: Long, box: Int, read: Int, rcpt: Map<Long, List<String>>): Message {

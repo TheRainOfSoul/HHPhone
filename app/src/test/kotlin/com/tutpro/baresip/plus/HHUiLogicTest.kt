@@ -267,4 +267,18 @@ class HHUiLogicTest {
         assertEquals(null, HHUiLogic.toE164("07911123456", null))   // UK национальный — без страны нельзя
         assertEquals(null, HHUiLogic.toE164("0911234567", ""))
     }
+
+    @Test fun sentTimeFromStationContentType() {
+        val now = 1_800_000_000_000
+        assertEquals(1_799_999_000_000, HHUiLogic.sentTime("text/plain;charset=utf-8;hh-sent=1799999000000", now))
+        assertEquals(1_799_999_000_000, HHUiLogic.sentTime("text/plain; hh-sent=1799999000000", now))
+    }
+
+    @Test fun sentTimeAbsentOrBadIsNull() {
+        val now = 1_800_000_000_000
+        assertEquals(null, HHUiLogic.sentTime("text/plain", now))
+        assertEquals(null, HHUiLogic.sentTime("text/plain;hh-sent=abc", now))
+        assertEquals(null, HHUiLogic.sentTime("text/plain;hh-sent=0", now))
+        assertEquals(null, HHUiLogic.sentTime("text/plain;hh-sent=1800000600000", now))   // в будущем (часы станции) — время приёма
+    }
 }

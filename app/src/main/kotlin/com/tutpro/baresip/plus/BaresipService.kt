@@ -1754,11 +1754,15 @@ class BaresipService: Service() {
             error
         }
 
-        handleIncomingMessage(uap, peerUri, text, System.currentTimeMillis())
+        // HHPBX передаёт время отправки (сообщение могло ждать в очереди станции, пока телефон спал)
+        val now = System.currentTimeMillis()
+        val sent = HHUiLogic.sentTime(cType, now)
+        handleIncomingMessage(uap, peerUri, text, sent ?: now, fromStation = sent != null)
     }
 
     @SuppressLint("UnspecifiedImmutableFlag")
-    fun handleIncomingMessage(uap: Long, peerUri: String, text: String, timeStamp: Long, images: List<String> = emptyList()) {
+    fun handleIncomingMessage(uap: Long, peerUri: String, text: String, timeStamp: Long, images: List<String> = emptyList(),
+                              fromStation: Boolean = false) {
 
         val ua = UserAgent.ofUap(uap)
         if (ua == null) {
@@ -1801,7 +1805,8 @@ class BaresipService: Service() {
 
         // Check for duplicates
         val lastMsg = messages.lastOrNull { m -> m.aor == aor }
-        if (lastMsg != null && lastMsg.timeStamp == timeStamp && lastMsg.peerUri == sanitizedPeerUri &&
+        // у сообщений из очереди станции время — отправки: два одинаковых в одну мс — разные сообщения
+        if (!fromStation && lastMsg != null && lastMsg.timeStamp == timeStamp && lastMsg.peerUri == sanitizedPeerUri &&
                 lastMsg.message == decodedText) {
             Log.d(TAG, "Omit duplicate message from $sanitizedPeerUri")
             return

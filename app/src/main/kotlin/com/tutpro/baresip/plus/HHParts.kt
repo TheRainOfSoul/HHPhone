@@ -52,14 +52,16 @@ private val hhAvatarColors = listOf(
 object HHPeople {
     private var contactsRef: Any? = null
     private var colleaguesRef: Any? = null
+    private var uasRef: Any? = null
     private val contacts = HashMap<String, Contact?>()
     private val names = HashMap<String, String>()
 
     private fun fresh() {
         val c = BaresipService.contacts
         val k = HHColleagues.list.value
-        if (c !== contactsRef || k !== colleaguesRef) {
-            contacts.clear(); names.clear(); contactsRef = c; colleaguesRef = k
+        val u = BaresipService.uas.value
+        if (c !== contactsRef || k !== colleaguesRef || u !== uasRef) {
+            contacts.clear(); names.clear(); contactsRef = c; colleaguesRef = k; uasRef = u
         }
     }
 

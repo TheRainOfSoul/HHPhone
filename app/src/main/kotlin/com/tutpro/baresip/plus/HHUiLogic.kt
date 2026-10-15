@@ -122,6 +122,11 @@ object HHUiLogic {
             date + durationSec * 1000, type == CL_REJECTED || type == CL_BLOCKED, id)
     }
 
+    /** Время отправки из Content-Type HHPBX (`hh-sent=<мс>`); нет, не число или позже приёма (часы станции) — null. */
+    fun sentTime(contentType: String, now: Long): Long? =
+        contentType.split(";").map { it.trim() }.firstOrNull { it.startsWith("hh-sent=") }
+            ?.substringAfter("=")?.toLongOrNull()?.takeIf { it in 1..now }
+
     /** NUMBER для системного журнала: номер, а для собеседника с чужого сервера — user@домен. */
     fun callLogNumber(peerUri: String, aor: String): String {
         val user = peerKey(peerUri)

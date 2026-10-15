@@ -84,7 +84,7 @@ object HHProvisioning {
         scope.launch {
             val ok = withContext(Dispatchers.IO) { HHUpdate.download(apk) { p -> HHUi.downloading.value = p } }
             HHUi.downloading.value = null
-            if (ok) ctx.startActivity(HHUpdate.installIntent(ctx, apk)) else HHUi.message.value = ctx.getString(R.string.hh_update_failed)
+            if (ok) withContext(Dispatchers.IO) { HHUpdate.install(ctx, apk) } else HHUi.message.value = ctx.getString(R.string.hh_update_failed)
         }
     }
 }
