@@ -79,4 +79,25 @@ class HHRecTest {
         assertEquals(listOf(old), HHRec.expired(listOf(old, fresh), now, 30))
         assertEquals(emptyList<HHRecFile>(), HHRec.expired(listOf(old, fresh), now, 0))   // 0 — не удалять никогда
     }
+
+    @Test fun readableNameWithoutSpaces() {
+        val start = java.util.GregorianCalendar(2026, 9, 15, 10, 57, 26).timeInMillis
+        assertEquals("Ստեփան_DGS_2026-10-15_10-57.m4a", HHRec.readableName("Ստեփան  DGS", start, emptySet()))
+        assertEquals("098823987_2026-10-15_10-57.m4a", HHRec.readableName("098823987", start, emptySet()))
+        // недопустимые в именах файлов знаки убираются, повтор в ту же минуту — с номером
+        assertEquals("alice@other.com_2026-10-15_10-57_2.m4a",
+            HHRec.readableName("sip:alice@other.com", start, setOf("alice@other.com_2026-10-15_10-57.m4a")))
+        assertEquals("unknown_2026-10-15_10-57.m4a", HHRec.readableName(" :/ ", start, emptySet()))
+    }
+
+    @Test fun recordingAfterLongRingingStillMatchesItsCall() {
+        // журнал SIM: время — начало гудков, конец = начало + длительность разговора; звонило минуту
+        val call = HHLogEntry("tel:077111111", "sip:mobile@pstn", "in", 1_000_000, 1_011_000, false)
+        val r = HHRecFile("a", 1_060_000, 11, true, "tel:+37477111111")
+        assertEquals(1, HHRec.of(listOf(r), call).size)
+        // следующий звонок того же собеседника — запись его, не предыдущего
+        val next = HHLogEntry("tel:077111111", "sip:mobile@pstn", "in", 1_050_000, 1_055_000, false)
+        assertEquals(0, HHRec.of(listOf(r), call, listOf(call, next)).size)
+        assertEquals(1, HHRec.of(listOf(r), next, listOf(call, next)).size)
+    }
 }

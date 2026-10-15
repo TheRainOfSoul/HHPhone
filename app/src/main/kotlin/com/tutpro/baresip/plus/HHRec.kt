@@ -11,11 +11,16 @@ import java.net.URLDecoder
 import java.net.URLEncoder
 
 /**
- * Запись разговора: <начало мс>_<длительность с>_<sip|sim>_<собеседник>.m4a. loc — путь файла во внутренней папке
- * (filesDir/hh_rec) или content:// документа в папке, выбранной пользователем.
+ * Запись разговора. Имя файла понятное: <имя контакта или номер>_<гггг-мм-дд>_<чч-мм>.m4a (без пробелов);
+ * начало, длительность, линия и собеседник — в списке записей (prefs hh_rec_index, ключ — имя файла).
+ * Записи до 0.9.8 назывались <начало мс>_<длительность с>_<sip|sim>_<собеседник>.m4a — читаются по имени.
+ * loc — путь файла во внутренней папке (filesDir/hh_rec) или content:// документа в выбранной папке.
  */
 data class HHRecFile(val loc: String, val start: Long, val seconds: Int, val sim: Boolean, val peer: String) {
     val external get() = loc.startsWith("content:")
+    /** Имя файла (для списка записей): у документа — последний сегмент id после «/». */
+    val name get() = if (!external) loc.substringAfterLast("/")   // путь файла: «+» в номере — не пробел
+        else java.net.URLDecoder.decode(loc.substringAfterLast("/"), "UTF-8").substringAfterLast("/").substringAfterLast(":")
 }
 
 /**
@@ -44,6 +49,23 @@ object HHRec {
     // ---- имена файлов ----
     fun fileName(start: Long, seconds: Int, sim: Boolean, peer: String) =
         "${start}_${seconds}_${if (sim) "sim" else "sip"}_${URLEncoder.encode(peer, "UTF-8")}.m4a"
+
+    /** Понятное имя файла без пробелов и запрещённых в именах знаков; занято — с номером (_2, _3…). */
+    fun readableName(who: String, start: Long, taken: Set<String>): String {
+        val base = who.trim().removePrefix("sip:").removePrefix("tel:")
+            .replace(Regex("\\s+"), "_").replace(Regex("[\\\\/:*?\"<>|%#;]"), "").trim('_', '.').take(60).ifEmpty { "unknown" }
+        val ts = java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm", java.util.Locale.US).format(java.util.Date(start))
+        var n = "${base}_$ts.m4a"; var i = 2
+        while (n in taken) n = "${base}_${ts}_${i++}.m4a"
+        return n
+    }
+
+    private fun index(ctx: Context) = ctx.getSharedPreferences("hh_rec_index", Context.MODE_PRIVATE)
+    private fun fromIndex(ctx: Context, name: String, loc: String): HHRecFile? {
+        val v = index(ctx).getString(name, null)?.split("|", limit = 4) ?: return null
+        if (v.size != 4) return null
+        return HHRecFile(loc, v[0].toLongOrNull() ?: return null, v[1].toIntOrNull() ?: 0, v[2] == "sim", v[3])
+    }
 
     fun parse(name: String, loc: String): HHRecFile? {
         val p = name.removeSuffix(".m4a").split("_", limit = 4)
@@ -78,13 +100,14 @@ object HHRec {
             android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { c ->
             buildList { while (c.moveToNext()) {
                 val doc = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, c.getString(0))
-                parse(c.getString(1) ?: continue, doc.toString())?.let { add(it) }
+                val name = c.getString(1) ?: continue
+                (fromIndex(ctx, name, doc.toString()) ?: parse(name, doc.toString()))?.let { add(it) }
             } }
         } ?: emptyList()
     } catch (e: Exception) { Log.w(TAG, "folder unavailable: $e"); emptyList() }   // папку удалили или отозвали доступ
 
     /** Готовый m4a (во временном файле) — в выбранную папку, при ошибке — во внутреннюю. */
-    private fun store(ctx: Context, tmp: File, name: String) {
+    private fun store(ctx: Context, tmp: File, name: String): String {
         folder(ctx)?.let { tree ->
             try {
                 val parent = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, android.provider.DocumentsContract.getTreeDocumentId(tree))
@@ -92,11 +115,13 @@ object HHRec {
                 if (doc != null) {
                     ctx.contentResolver.openOutputStream(doc)!!.use { o -> tmp.inputStream().use { it.copyTo(o) } }
                     tmp.delete()
-                    return
+                    return ctx.contentResolver.query(doc, arrayOf(android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)
+                        ?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: name
                 }
             } catch (e: Exception) { Log.w(TAG, "folder write failed, internal: $e") }
         }
         tmp.renameTo(File(dir(ctx), name))
+        return name
     }
 
     /** Для проигрывателя и «Поделиться»: content:// (своя папка — через FileProvider). */
@@ -126,13 +151,23 @@ object HHRec {
 
     /** Записи внутренней папки и выбранной (если выбрана). */
     fun list(ctx: Context): List<HHRecFile> =
-        ((dir(ctx).listFiles() ?: emptyArray()).mapNotNull { parse(it.name, it.path) } + (folder(ctx)?.let { treeChildren(ctx, it) } ?: emptyList()))
+        ((dir(ctx).listFiles() ?: emptyArray()).mapNotNull { fromIndex(ctx, it.name, it.path) ?: parse(it.name, it.path) } +
+            (folder(ctx)?.let { treeChildren(ctx, it) } ?: emptyList()))
             .sortedByDescending { it.start }
 
-    /** Записи звонка журнала: тот же собеседник, начало записи — внутри звонка (±10 с). */
-    fun of(recs: List<HHRecFile>, e: HHLogEntry): List<HHRecFile> =
-        recs.filter { r -> r.start in ((e.start ?: e.stop) - 10_000)..(e.stop + 10_000) &&
-            (HHUiLogic.peerKey(r.peer) == HHUiLogic.peerKey(e.peer) || HHUiLogic.samePhone(r.peer, e.peer)) }
+    /**
+     * Записи звонка журнала: тот же собеседник, запись началась после начала звонка (−10 с) и не позже 3 минут после его
+     * «конца» — у SIM в журнале время = начало гудков, длительность = только разговор, так что запись идёт позже на гудки.
+     * calls — другие звонки этого собеседника: запись — последнего звонка, начавшегося до неё.
+     */
+    fun of(recs: List<HHRecFile>, e: HHLogEntry, calls: List<HHLogEntry> = listOf(e)): List<HHRecFile> {
+        val es = e.start ?: e.stop
+        return recs.filter { r ->
+            (HHUiLogic.peerKey(r.peer) == HHUiLogic.peerKey(e.peer) || HHUiLogic.samePhone(r.peer, e.peer)) &&
+                r.start >= es - 10_000 && r.start <= e.stop + 180_000 &&
+                calls.none { o -> o !== e && (o.start ?: o.stop).let { it > es && it <= r.start + 10_000 } }
+        }
+    }
 
     // ---- состояние звонка ----
     /** Начало разговора: в режиме auto запись сразу (весь разговор). */
@@ -209,7 +244,11 @@ object HHRec {
             val sec = (clean.length() / 2 / rate).toInt()
             val m4a = File(ctx.cacheDir, "hh_rec.m4a")
             encodeAac(clean, rate, m4a)
-            if (m4a.exists()) store(ctx, m4a, fileName(start, sec, sim, peer))
+            if (m4a.exists()) {
+                val name = readableName(hhName(peer), start, list(ctx).map { it.name }.toSet())
+                val saved = store(ctx, m4a, name)
+                index(ctx).edit().putString(saved, "$start|$sec|${if (sim) "sim" else "sip"}|$peer").apply()
+            }
             HHHistory.bump()
             cleanup(ctx)
         } finally { clean.delete() }
@@ -261,6 +300,7 @@ object HHRec {
     }
 
     private fun remove(ctx: Context, r: HHRecFile) {
+        index(ctx).edit().remove(r.name).apply()
         try { if (r.external) android.provider.DocumentsContract.deleteDocument(ctx.contentResolver, android.net.Uri.parse(r.loc)) else File(r.loc).delete() }
         catch (e: Exception) { Log.w(TAG, "delete failed: $e") }
     }
