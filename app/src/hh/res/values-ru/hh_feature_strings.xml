@@ -155,4 +155,12 @@
     <string name="hh_rec_play_failed">Не удалось воспроизвести запись</string>
     <string name="hh_rec_a11y_label">Запись разговоров HHPhone</string>
     <string name="hh_rec_a11y_description">Позволяет HHPhone записывать SIM-звонки: без этой службы Android глушит микрофон во время звонка. Служба не читает экран и вводимый текст.</string>
+    <string name="hh_rec_keep">Хранить записи</string>
+    <string name="hh_rec_keep_forever">Всегда (не удалять)</string>
+    <string name="hh_rec_keep_days">%1$d дней</string>
+    <string name="hh_rec_folder">Папка записей</string>
+    <string name="hh_rec_folder_internal">Внутри HHPhone (видна только приложению)</string>
+    <string name="hh_rec_folder_choose">Выбрать</string>
+    <string name="hh_rec_folder_reset">Сохранять внутри HHPhone</string>
+    <string name="hh_rec_folder_failed">Не удалось использовать эту папку</string>
 </resources>

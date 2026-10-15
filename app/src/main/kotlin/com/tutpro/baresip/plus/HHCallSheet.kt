@@ -46,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
@@ -99,7 +100,7 @@ internal fun hhChatRoute(peer: String, aor: String, lines: List<HHLine>): String
 
 /** Удаление звонков группы: системный журнал по _ID, иначе записи CallHistoryNew с тем же временем. */
 private fun deleteCalls(ctx: android.content.Context, entries: List<HHLogEntry>) {
-    HHRec.list(ctx).let { all -> entries.flatMap { HHRec.of(all, it) }.distinct().forEach { it.file.delete() } }   // и записи разговоров
+    HHRec.list(ctx).let { all -> entries.flatMap { HHRec.of(all, it) }.distinct().forEach { HHRec.delete(ctx, it) } }   // и записи разговоров
     val ids = entries.map { it.id }
     if (ids.all { it > 0 }) HHCallLog.delete(ctx, ids)
     else {   // журнал CallHistoryNew: та же минута конца и тот же номер; одна запись файла
@@ -137,7 +138,8 @@ fun HHCallSheet(g: HHLogGroup, navController: NavController, viewModel: ViewMode
                         fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
             }
-            val recs = remember(g) { HHRec.list(ctx).let { all -> g.entries.flatMap { HHRec.of(all, it) }.distinct() } }
+            // запись последнего звонка; записи прежних — в «Истории звонков» у каждого звонка
+            val recs = remember(g) { HHRec.of(HHRec.list(ctx), g.last) }
             recs.forEach { HHRecRow(it) }
             if (!anonymous) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -242,6 +244,7 @@ private fun HHHistoryScreen(navController: NavController, viewModel: ViewModel, 
                 .sortedByDescending { it.stop }
         }
     }
+    val recs by produceState(emptyList<HHRecFile>(), version) { value = withContext(Dispatchers.IO) { HHRec.list(ctx) } }
     HHLightStatusBar()
     var sheet by remember { mutableStateOf<HHLogEntry?>(null) }
     val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
@@ -270,6 +273,7 @@ private fun HHHistoryScreen(navController: NavController, viewModel: ViewModel, 
                             fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                HHRec.of(recs, e).forEach { r -> key(r.loc) { HHRecRow(r) } }   // записи этого звонка
                 HorizontalDivider(Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
             }
         }
@@ -361,7 +365,7 @@ private fun HHRecRow(r: HHRecFile) {
             try {
                 if (playing) { player.pause(); playing = false }
                 else {
-                    if (pos == 0) { player.reset(); player.setDataSource(r.file.path); player.prepare()
+                    if (pos == 0) { player.reset(); player.setDataSource(ctx, HHRec.uri(ctx, r)); player.prepare()
                         player.setOnCompletionListener { playing = false; pos = 0 } }
                     player.start(); playing = true
                 }
@@ -373,12 +377,12 @@ private fun HHRecRow(r: HHRecFile) {
                 fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         IconButton(onClick = {
-            val uri = androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", r.file)
+            val uri = HHRec.uri(ctx, r)
             ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND)
                 .setType("audio/mp4").putExtra(android.content.Intent.EXTRA_STREAM, uri)
                 .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION), null))
         }) { Icon(Icons.Outlined.Share, stringResource(R.string.hh_rec_share)) }
-        IconButton(onClick = { player.reset(); playing = false; HHRec.delete(r); gone = true }) {
+        IconButton(onClick = { player.reset(); playing = false; HHRec.delete(ctx, r); gone = true }) {
             Icon(Icons.Outlined.Delete, stringResource(R.string.hh_rec_delete), tint = MaterialTheme.colorScheme.error)
         }
     }

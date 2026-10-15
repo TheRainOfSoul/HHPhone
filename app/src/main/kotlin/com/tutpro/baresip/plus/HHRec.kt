@@ -10,8 +10,13 @@ import java.io.RandomAccessFile
 import java.net.URLDecoder
 import java.net.URLEncoder
 
-/** Запись разговора: файл <начало мс>_<длительность с>_<sip|sim>_<собеседник>.m4a в filesDir/hh_rec. */
-data class HHRecFile(val file: File, val start: Long, val seconds: Int, val sim: Boolean, val peer: String)
+/**
+ * Запись разговора: <начало мс>_<длительность с>_<sip|sim>_<собеседник>.m4a. loc — путь файла во внутренней папке
+ * (filesDir/hh_rec) или content:// документа в папке, выбранной пользователем.
+ */
+data class HHRecFile(val loc: String, val start: Long, val seconds: Int, val sim: Boolean, val peer: String) {
+    val external get() = loc.startsWith("content:")
+}
 
 /**
  * Запись разговоров SIP и SIM (спека 2026-10-15). Режим: off — нет; button — кнопка «Запись» на экране разговора;
@@ -40,16 +45,89 @@ object HHRec {
     fun fileName(start: Long, seconds: Int, sim: Boolean, peer: String) =
         "${start}_${seconds}_${if (sim) "sim" else "sip"}_${URLEncoder.encode(peer, "UTF-8")}.m4a"
 
-    fun parse(f: File): HHRecFile? {
-        val p = f.name.removeSuffix(".m4a").split("_", limit = 4)
-        if (p.size != 4 || !f.name.endsWith(".m4a")) return null
+    fun parse(name: String, loc: String): HHRecFile? {
+        val p = name.removeSuffix(".m4a").split("_", limit = 4)
+        if (p.size != 4 || !name.endsWith(".m4a")) return null
         val start = p[0].toLongOrNull() ?: return null
         val sec = p[1].toIntOrNull() ?: return null
-        return HHRecFile(f, start, sec, p[2] == "sim", try { URLDecoder.decode(p[3], "UTF-8") } catch (_: Exception) { return null })
+        return HHRecFile(loc, start, sec, p[2] == "sim", try { URLDecoder.decode(p[3], "UTF-8") } catch (_: Exception) { return null })
     }
 
+    // ---- папка: внутренняя или выбранная пользователем (Storage Access Framework, постоянное разрешение) ----
+    fun folder(ctx: Context): android.net.Uri? =
+        ctx.getSharedPreferences("hh_ui", Context.MODE_PRIVATE).getString("rec_tree", null)?.let { android.net.Uri.parse(it) }
+
+    /** Выбранная папка (из ACTION_OPEN_DOCUMENT_TREE) или null — внутренняя. Прежние записи остаются где были. */
+    fun setFolder(ctx: Context, tree: android.net.Uri?) {
+        val flags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        folder(ctx)?.let { old -> if (old != tree) try { ctx.contentResolver.releasePersistableUriPermission(old, flags) } catch (_: Exception) {} }
+        if (tree != null) ctx.contentResolver.takePersistableUriPermission(tree, flags)
+        ctx.getSharedPreferences("hh_ui", Context.MODE_PRIVATE).edit().putString("rec_tree", tree?.toString()).apply()
+        HHHistory.bump()
+    }
+
+    /** Название папки для настроек: «Music/Записи» и т. п.; null — внутренняя. */
+    fun folderName(ctx: Context): String? = folder(ctx)?.let { t ->
+        android.provider.DocumentsContract.getTreeDocumentId(t).substringAfter(":", "").ifEmpty { t.lastPathSegment ?: "" }
+    }
+
+    private fun treeChildren(ctx: Context, tree: android.net.Uri): List<HHRecFile> = try {
+        val children = android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(tree,
+            android.provider.DocumentsContract.getTreeDocumentId(tree))
+        ctx.contentResolver.query(children, arrayOf(android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { c ->
+            buildList { while (c.moveToNext()) {
+                val doc = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, c.getString(0))
+                parse(c.getString(1) ?: continue, doc.toString())?.let { add(it) }
+            } }
+        } ?: emptyList()
+    } catch (e: Exception) { Log.w(TAG, "folder unavailable: $e"); emptyList() }   // папку удалили или отозвали доступ
+
+    /** Готовый m4a (во временном файле) — в выбранную папку, при ошибке — во внутреннюю. */
+    private fun store(ctx: Context, tmp: File, name: String) {
+        folder(ctx)?.let { tree ->
+            try {
+                val parent = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, android.provider.DocumentsContract.getTreeDocumentId(tree))
+                val doc = android.provider.DocumentsContract.createDocument(ctx.contentResolver, parent, "audio/mp4", name)
+                if (doc != null) {
+                    ctx.contentResolver.openOutputStream(doc)!!.use { o -> tmp.inputStream().use { it.copyTo(o) } }
+                    tmp.delete()
+                    return
+                }
+            } catch (e: Exception) { Log.w(TAG, "folder write failed, internal: $e") }
+        }
+        tmp.renameTo(File(dir(ctx), name))
+    }
+
+    /** Для проигрывателя и «Поделиться»: content:// (своя папка — через FileProvider). */
+    fun uri(ctx: Context, r: HHRecFile): android.net.Uri =
+        if (r.external) android.net.Uri.parse(r.loc)
+        else androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", File(r.loc))
+
+    // ---- автоочистка: 0 — не удалять никогда ----
+    val KEEP_DAYS = intArrayOf(0, 30, 60, 90, 180, 360)
+    fun keepDays(ctx: Context) = ctx.getSharedPreferences("hh_ui", Context.MODE_PRIVATE).getInt("rec_keep_days", 0)
+    fun setKeepDays(ctx: Context, d: Int) {
+        ctx.getSharedPreferences("hh_ui", Context.MODE_PRIVATE).edit().putInt("rec_keep_days", d).apply()
+        cleanup(ctx)
+    }
+
+    fun expired(recs: List<HHRecFile>, now: Long, days: Int): List<HHRecFile> =
+        if (days <= 0) emptyList() else recs.filter { now - it.start > days * 86_400_000L }
+
+    /** Удаляет записи старше срока (при старте службы, после каждой новой записи и смене срока). */
+    fun cleanup(ctx: Context) {
+        val old = expired(list(ctx), System.currentTimeMillis(), keepDays(ctx))
+        if (old.isEmpty()) return
+        old.forEach { remove(ctx, it) }
+        Log.i(TAG, "cleanup: ${old.size} recordings older than ${keepDays(ctx)} days deleted")
+        HHHistory.bump()
+    }
+
+    /** Записи внутренней папки и выбранной (если выбрана). */
     fun list(ctx: Context): List<HHRecFile> =
-        (dir(ctx).listFiles() ?: emptyArray()).mapNotNull { parse(it) }.sortedByDescending { it.start }
+        ((dir(ctx).listFiles() ?: emptyArray()).mapNotNull { parse(it.name, it.path) } + (folder(ctx)?.let { treeChildren(ctx, it) } ?: emptyList()))
+            .sortedByDescending { it.start }
 
     /** Записи звонка журнала: тот же собеседник, начало записи — внутри звонка (±10 с). */
     fun of(recs: List<HHRecFile>, e: HHLogEntry): List<HHRecFile> =
@@ -129,8 +207,11 @@ object HHRec {
         try {
             HHVoice.processFile(pcm, clean, rate)
             val sec = (clean.length() / 2 / rate).toInt()
-            encodeAac(clean, rate, File(dir(ctx), fileName(start, sec, sim, peer)))
+            val m4a = File(ctx.cacheDir, "hh_rec.m4a")
+            encodeAac(clean, rate, m4a)
+            if (m4a.exists()) store(ctx, m4a, fileName(start, sec, sim, peer))
             HHHistory.bump()
+            cleanup(ctx)
         } finally { clean.delete() }
     }
 
@@ -179,7 +260,12 @@ object HHRec {
         if (track >= 0) tmp.renameTo(out) else tmp.delete()
     }
 
-    fun delete(r: HHRecFile) { r.file.delete(); HHHistory.bump() }
+    private fun remove(ctx: Context, r: HHRecFile) {
+        try { if (r.external) android.provider.DocumentsContract.deleteDocument(ctx.contentResolver, android.net.Uri.parse(r.loc)) else File(r.loc).delete() }
+        catch (e: Exception) { Log.w(TAG, "delete failed: $e") }
+    }
+
+    fun delete(ctx: Context, r: HHRecFile) { remove(ctx, r); HHHistory.bump() }
 }
 
 /** WAV 16 бит (sndfile) → смесь собеседников в моно PCM. Чистая логика — тесты на JVM. */

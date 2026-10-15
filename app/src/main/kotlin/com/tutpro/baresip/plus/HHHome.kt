@@ -581,6 +581,14 @@ private fun HHChatsTab(ctx: Context, navController: NavController) {
 private fun HHRecDialog(onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     var mode by remember { mutableStateOf(HHRec.mode(ctx)) }
+    var keep by remember { mutableStateOf(HHRec.keepDays(ctx)) }
+    var keepMenu by remember { mutableStateOf(false) }
+    var folder by remember { mutableStateOf(HHRec.folderName(ctx)) }
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { tree ->
+        if (tree != null) try { HHRec.setFolder(ctx, tree); folder = HHRec.folderName(ctx) }
+            catch (e: Exception) { Toast.makeText(ctx, R.string.hh_rec_folder_failed, Toast.LENGTH_LONG).show() }
+    }
+    val keepLabel = @Composable { d: Int -> if (d == 0) stringResource(R.string.hh_rec_keep_forever) else stringResource(R.string.hh_rec_keep_days, d) }
     AlertDialog(onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.hh_rec_title)) },
         text = {
@@ -590,6 +598,29 @@ private fun HHRecDialog(onDismiss: () -> Unit) {
                         RadioButton(selected = mode == m, onClick = { mode = m })
                         Text(stringResource(label))
                     }
+                }
+                // автоочистка: выбор срока хранения
+                Box {
+                    Row(Modifier.fillMaxWidth().clickable { keepMenu = true }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.hh_rec_keep), Modifier.weight(1f))
+                        Text(keepLabel(keep), color = MaterialTheme.colorScheme.primary)
+                    }
+                    androidx.compose.material3.DropdownMenu(expanded = keepMenu, onDismissRequest = { keepMenu = false }) {
+                        HHRec.KEEP_DAYS.forEach { d ->
+                            androidx.compose.material3.DropdownMenuItem(text = { Text(keepLabel(d)) }, onClick = { keep = d; keepMenu = false })
+                        }
+                    }
+                }
+                // папка записей: внутренняя (видна только HHPhone) или выбранная пользователем
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.hh_rec_folder))
+                        Text(folder ?: stringResource(R.string.hh_rec_folder_internal), fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+                    TextButton(onClick = { try { pick.launch(null) } catch (_: Exception) {} }) { Text(stringResource(R.string.hh_rec_folder_choose)) }
+                }
+                if (folder != null) TextButton(onClick = { HHRec.setFolder(ctx, null); folder = null }) {
+                    Text(stringResource(R.string.hh_rec_folder_reset))
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(stringResource(R.string.hh_rec_note), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -604,6 +635,10 @@ private fun HHRecDialog(onDismiss: () -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { HHRec.setMode(ctx, mode); onDismiss() }) { Text(stringResource(R.string.ok)) } },
+        confirmButton = { TextButton(onClick = {
+            HHRec.setMode(ctx, mode)
+            if (keep != HHRec.keepDays(ctx)) Thread { HHRec.setKeepDays(ctx, keep) }.start()
+            onDismiss()
+        }) { Text(stringResource(R.string.ok)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } })
 }

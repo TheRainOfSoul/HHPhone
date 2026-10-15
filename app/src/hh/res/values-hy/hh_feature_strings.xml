@@ -151,4 +151,12 @@
     <string name="hh_rec_play_failed">Չհաջողվեց նվագարկել ձայնագրությունը</string>
     <string name="hh_rec_a11y_label">HHPhone զանգերի ձայնագրում</string>
     <string name="hh_rec_a11y_description">Թույլ է տալիս HHPhone-ին ձայնագրել SIM զանգերը. առանց այս ծառայության Android-ը զանգի ժամանակ անջատում է խոսափողը։ Ծառայությունը չի կարդում էկրանը և մուտքագրվող տեքստը։</string>
+    <string name="hh_rec_keep">Պահել ձայնագրությունները</string>
+    <string name="hh_rec_keep_forever">Միշտ (չջնջել)</string>
+    <string name="hh_rec_keep_days">%1$d օր</string>
+    <string name="hh_rec_folder">Ձայնագրությունների թղթապանակ</string>
+    <string name="hh_rec_folder_internal">HHPhone-ի ներսում (տեսանելի է միայն հավելվածին)</string>
+    <string name="hh_rec_folder_choose">Ընտրել</string>
+    <string name="hh_rec_folder_reset">Պահել HHPhone-ի ներսում</string>
+    <string name="hh_rec_folder_failed">Չհաջողվեց օգտագործել այս թղթապանակը</string>
 </resources>

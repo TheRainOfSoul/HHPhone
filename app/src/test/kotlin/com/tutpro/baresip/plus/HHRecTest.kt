@@ -58,17 +58,25 @@ class HHRecTest {
 
     @Test fun fileNameRoundTrip() {
         val name = HHRec.fileName(1_700_000_000_000, 125, false, "sip:alice_1@other.com;user=phone")
-        val r = HHRec.parse(File("/x", name))!!
+        val r = HHRec.parse(name, "/x/$name")!!
         assertEquals(1_700_000_000_000, r.start); assertEquals(125, r.seconds); assertEquals(false, r.sim)
         assertEquals("sip:alice_1@other.com;user=phone", r.peer)
-        assertNull(HHRec.parse(File("/x", "rec-old.wav")))
+        assertNull(HHRec.parse("rec-old.wav", "/x/rec-old.wav"))
     }
 
     @Test fun recordingsMatchCallByPeerAndTime() {
-        val r = HHRecFile(File("a"), 1_000_000, 30, true, "tel:+37477111111")
+        val r = HHRecFile("a", 1_000_000, 30, true, "tel:+37477111111")
         val call = HHLogEntry("tel:077111111", "sip:mobile@pstn", "in", 995_000, 1_040_000, false)
         assertEquals(1, HHRec.of(listOf(r), call).size)
         assertEquals(0, HHRec.of(listOf(r), call.copy(peer = "tel:091000000")).size)
         assertEquals(0, HHRec.of(listOf(r), call.copy(start = 2_000_000, stop = 2_100_000)).size)
+    }
+
+    @Test fun expiredOnlyOlderThanKeepDays() {
+        val day = 86_400_000L; val now = 1_800_000_000_000
+        val old = HHRecFile("o", now - 31 * day, 10, true, "tel:1")
+        val fresh = HHRecFile("f", now - 29 * day, 10, true, "tel:1")
+        assertEquals(listOf(old), HHRec.expired(listOf(old, fresh), now, 30))
+        assertEquals(emptyList<HHRecFile>(), HHRec.expired(listOf(old, fresh), now, 0))   // 0 — не удалять никогда
     }
 }

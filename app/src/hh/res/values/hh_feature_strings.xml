@@ -151,4 +151,12 @@
     <string name="hh_rec_play_failed">Could not play the recording</string>
     <string name="hh_rec_a11y_label">HHPhone call recording</string>
     <string name="hh_rec_a11y_description">Lets HHPhone record SIM calls: without this service Android mutes the microphone during a call. The service does not read the screen or anything you type.</string>
+    <string name="hh_rec_keep">Keep recordings</string>
+    <string name="hh_rec_keep_forever">Forever</string>
+    <string name="hh_rec_keep_days">%1$d days</string>
+    <string name="hh_rec_folder">Recordings folder</string>
+    <string name="hh_rec_folder_internal">Inside HHPhone (only the app sees it)</string>
+    <string name="hh_rec_folder_choose">Choose</string>
+    <string name="hh_rec_folder_reset">Save inside HHPhone</string>
+    <string name="hh_rec_folder_failed">Could not use this folder</string>
 </resources>

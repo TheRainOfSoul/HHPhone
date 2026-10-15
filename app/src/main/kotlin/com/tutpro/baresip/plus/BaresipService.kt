@@ -2023,6 +2023,7 @@ class BaresipService: Service() {
         Handler(Looper.getMainLooper()).post {
             isNativeReady = true
             HHRec.applySip(this)
+            Thread { HHRec.cleanup(this) }.start()
             hhPushStart()
             addMobileUserAgent()
             Account.saveAccounts()
