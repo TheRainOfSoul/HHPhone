@@ -177,4 +177,6 @@
     <string name="hh_set_network">Ցանց (SIP)</string>
     <string name="hh_set_service">Սպասարկում</string>
     <string name="hh_set_no_sim">SIM քարտ չկա — SMS-ի և MMS-ի կարգավորումները հասանելի չեն։</string>
+    <string name="hh_pin_to_home">Ավելացնել աշխատասեղանին</string>
+    <string name="hh_pin_unsupported">Գործարկիչը չի աջակցում դյուրանցումներ։</string>
 </resources>

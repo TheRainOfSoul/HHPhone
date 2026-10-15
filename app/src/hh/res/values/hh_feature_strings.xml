@@ -177,4 +177,6 @@
     <string name="hh_set_network">Network (SIP)</string>
     <string name="hh_set_service">Maintenance</string>
     <string name="hh_set_no_sim">No SIM card — SMS and MMS settings are not available.</string>
+    <string name="hh_pin_to_home">Add to home screen</string>
+    <string name="hh_pin_unsupported">The launcher does not support shortcuts.</string>
 </resources>

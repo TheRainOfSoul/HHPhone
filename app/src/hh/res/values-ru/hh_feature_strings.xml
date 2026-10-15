@@ -181,4 +181,6 @@
     <string name="hh_set_network">Сеть (SIP)</string>
     <string name="hh_set_service">Обслуживание</string>
     <string name="hh_set_no_sim">Нет SIM-карты — настройки SMS и MMS недоступны.</string>
+    <string name="hh_pin_to_home">Вынести на рабочий стол</string>
+    <string name="hh_pin_unsupported">Лаунчер не поддерживает ярлыки.</string>
 </resources>

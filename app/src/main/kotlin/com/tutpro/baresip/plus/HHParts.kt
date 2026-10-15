@@ -40,7 +40,7 @@ object HHHistory {
 }
 
 /** Палитра кружков — приглушённые тона, совместимые с бордо HHDesign. */
-private val hhAvatarColors = listOf(
+internal val hhAvatarColors = listOf(
     Color(0xFF7A0C2A), Color(0xFF424242), Color(0xFF0F6C6C), Color(0xFF2E7D32),
     Color(0xFF5C4B8A), Color(0xFFA15C00), Color(0xFFAD1457), Color(0xFF5D6B1E)
 )

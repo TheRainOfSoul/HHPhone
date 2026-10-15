@@ -436,6 +436,7 @@ sealed class Contact {
             }
             BaresipService.contacts = newContacts
             generateContactNames()
+            HHShortcuts.refresh()   // избранные → ярлыки при зажатии иконки
         }
 
         fun addBaresipContact(contact: BaresipContact) {

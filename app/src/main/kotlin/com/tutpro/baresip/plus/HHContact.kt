@@ -49,6 +49,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.AddToHomeScreen
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Delete
@@ -527,7 +528,7 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
                     modifier = Modifier.padding(horizontal = 20.dp))
                 if (blocked) Text(stringResource(R.string.hh_is_blocked), color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
                 Spacer(Modifier.height(16.dp))
-                c.nums.filter { it.number.isNotBlank() }.forEach { n -> HHNumberRow(ctx, n, lines, navController, viewModel) }
+                c.nums.filter { it.number.isNotBlank() }.forEach { n -> HHNumberRow(ctx, n, c.name, lines, navController, viewModel) }
                 if (canBlock) {
                     Spacer(Modifier.height(20.dp))
                     OutlinedButton(onClick = {
@@ -551,7 +552,7 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
 
 /** Номер в просмотре: тип, номер, звонок (выбор линии, если их несколько) и SMS. */
 @Composable
-private fun HHNumberRow(ctx: Context, n: HHNum, lines: List<HHLine>, navController: NavController, viewModel: ViewModel) {
+private fun HHNumberRow(ctx: Context, n: HHNum, name: String, lines: List<HHLine>, navController: NavController, viewModel: ViewModel) {
     val peer = if (n.type == SIP_TYPE) n.number else "tel:" + n.number
     val targets = hhLineTargets(peer, lines)
     var choose by remember { mutableStateOf(false) }
@@ -559,6 +560,9 @@ private fun HHNumberRow(ctx: Context, n: HHNum, lines: List<HHLine>, navControll
         Column(Modifier.weight(1f)) {
             Text(n.number, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
             Text(typeName(ctx, n), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        IconButton(onClick = { HHShortcuts.pin(ctx, name, peer) }) {
+            Icon(Icons.Outlined.AddToHomeScreen, stringResource(R.string.hh_pin_to_home), tint = MaterialTheme.colorScheme.primary)
         }
         hhChatRoute(peer, "", lines)?.let { r ->
             IconButton(onClick = { navController.navigate(r) }) {
