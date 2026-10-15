@@ -159,4 +159,10 @@
     <string name="hh_rec_folder_choose">Choose</string>
     <string name="hh_rec_folder_reset">Save inside HHPhone</string>
     <string name="hh_rec_folder_failed">Could not use this folder</string>
+    <string name="hh_set_general">General</string>
+    <string name="hh_set_calls">Calls</string>
+    <string name="hh_set_messages">Messages</string>
+    <string name="hh_set_network">Network (SIP)</string>
+    <string name="hh_set_service">Maintenance</string>
+    <string name="hh_set_no_sim">No SIM card — SMS and MMS settings are not available.</string>
 </resources>

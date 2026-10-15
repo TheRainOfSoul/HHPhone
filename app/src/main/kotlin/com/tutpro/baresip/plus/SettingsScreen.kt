@@ -1,5 +1,6 @@
 package com.tutpro.baresip.plus
 
+import kotlinx.coroutines.launch
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -1385,53 +1386,79 @@ private fun SettingsContent(
         }
     }
 
-    val scrollState = rememberScrollState()
+    // HHPhone: вкладки вместо одного длинного списка; сотруднику без PIN администратора — только «Общие» и «Звонки»
+    val restricted by HHStaff.restricted.collectAsState()
+    val admin by HHStaff.adminSession.collectAsState()
+    val tabs = listOf(R.string.hh_set_general, R.string.hh_set_calls, R.string.hh_set_messages, R.string.hh_set_network,
+        R.string.hh_set_service).let { if (restricted && !admin) it.take(2) else it }
+    val pager = androidx.compose.foundation.pager.rememberPagerState { tabs.size }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val defaultDialer by viewModel.defaultDialer.collectAsState()
+    val defaultMessaging by viewModel.defaultMessaging.collectAsState()
+    val isSimReady = BaresipService.instance?.isSimReady() == true
+    val debug by viewModel.debug.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(contentPadding)
-            .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
-            .verticalScrollbar(scrollState)
-            .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        StartAutomatically()
-        AddressFamily()
-        ListenAddress()
-        TransportProtocols()
-        DnsServers()
-        TlsCertificateFile(activity)
-        VerifyServer()
-        CaFile(activity)
-        UserAgent()
-        UniqueContactUri()
-        AudioSettings(navController)
-        VideoSize()
-        VideoFps()
-        if (VERSION.SDK_INT >= 29) {
-            DefaultDialer()
-            val defaultDialer by viewModel.defaultDialer.collectAsState()
-            val defaultMessaging by viewModel.defaultMessaging.collectAsState()
-            val isSimReady = BaresipService.instance?.isSimReady() == true
-            if (isSimReady) {
-                DefaultMessaging()
-                if (defaultMessaging) {
-                    MaxMmsImagesSize()
+    Column(Modifier.fillMaxSize().padding(contentPadding)) {
+        androidx.compose.material3.PrimaryScrollableTabRow(selectedTabIndex = pager.currentPage.coerceAtMost(tabs.size - 1), edgePadding = 8.dp) {
+            tabs.forEachIndexed { i, t ->
+                androidx.compose.material3.Tab(selected = pager.currentPage == i,
+                    onClick = { scope.launch { pager.animateScrollToPage(i) } },
+                    text = { Text(stringResource(t), maxLines = 1) })
+            }
+        }
+        androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { page ->
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 8.dp)
+                    .verticalScrollbar(scrollState)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                when (page) {
+                    0 -> {   // Общие
+                        ThemeMode()
+                        ColorBlind()
+                        HHGeneralSwitches()
+                        if (VERSION.SDK_INT >= 29) DefaultDialer()
+                        StartAutomatically()
+                        if (VERSION.SDK_INT < 29 || (!defaultDialer && (!isSimReady || !defaultMessaging))) BatteryOptimizations()
+                    }
+                    1 -> {   // Звонки
+                        HHRecSettings()
+                        ProximitySensing()
+                        AudioSettings(navController)
+                    }
+                    2 -> {   // Сообщения
+                        if (VERSION.SDK_INT >= 29 && isSimReady) {
+                            DefaultMessaging()
+                            if (defaultMessaging) MaxMmsImagesSize()
+                        } else
+                            Text(stringResource(R.string.hh_set_no_sim), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    3 -> {   // Сеть (SIP)
+                        AddressFamily()
+                        ListenAddress()
+                        TransportProtocols()
+                        DnsServers()
+                        TlsCertificateFile(activity)
+                        VerifyServer()
+                        CaFile(activity)
+                        UserAgent()
+                        UniqueContactUri()
+                        VideoSize()   // видео — редкость для HHPhone, к специалистам
+                        VideoFps()
+                    }
+                    else -> {   // Обслуживание
+                        HHMaintenance(navController, onRestartApp)
+                        Debug()
+                        if (debug) SipTrace()
+                        Reset(onRestartApp)
+                    }
                 }
             }
-            if (!defaultDialer && (!isSimReady || !defaultMessaging)) BatteryOptimizations()
         }
-        else
-            BatteryOptimizations()
-        ThemeMode()
-        ColorBlind()
-        ProximitySensing()
-        Debug()
-        val debug by viewModel.debug.collectAsState()
-        if (debug) SipTrace()
-        Reset(onRestartApp)
-        HHMaintenance(navController, onRestartApp)
     }
 }
 

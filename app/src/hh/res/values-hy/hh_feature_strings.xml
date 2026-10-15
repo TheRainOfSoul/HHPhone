@@ -159,4 +159,10 @@
     <string name="hh_rec_folder_choose">Ընտրել</string>
     <string name="hh_rec_folder_reset">Պահել HHPhone-ի ներսում</string>
     <string name="hh_rec_folder_failed">Չհաջողվեց օգտագործել այս թղթապանակը</string>
+    <string name="hh_set_general">Ընդհանուր</string>
+    <string name="hh_set_calls">Զանգեր</string>
+    <string name="hh_set_messages">Հաղորդագրություններ</string>
+    <string name="hh_set_network">Ցանց (SIP)</string>
+    <string name="hh_set_service">Սպասարկում</string>
+    <string name="hh_set_no_sim">SIM քարտ չկա — SMS-ի և MMS-ի կարգավորումները հասանելի չեն։</string>
 </resources>

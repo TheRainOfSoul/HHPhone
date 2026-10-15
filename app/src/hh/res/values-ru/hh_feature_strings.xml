@@ -163,4 +163,10 @@
     <string name="hh_rec_folder_choose">Выбрать</string>
     <string name="hh_rec_folder_reset">Сохранять внутри HHPhone</string>
     <string name="hh_rec_folder_failed">Не удалось использовать эту папку</string>
+    <string name="hh_set_general">Общие</string>
+    <string name="hh_set_calls">Звонки</string>
+    <string name="hh_set_messages">Сообщения</string>
+    <string name="hh_set_network">Сеть (SIP)</string>
+    <string name="hh_set_service">Обслуживание</string>
+    <string name="hh_set_no_sim">Нет SIM-карты — настройки SMS и MMS недоступны.</string>
 </resources>

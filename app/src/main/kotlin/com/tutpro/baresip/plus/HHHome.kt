@@ -191,12 +191,6 @@ private fun HHHeader(navController: NavController, onQuitClick: () -> Unit) {
     val settings = stringResource(R.string.configuration)
     val accounts = stringResource(R.string.accounts)
     val quit = stringResource(R.string.quit)
-    val vibe = stringResource(R.string.hh_key_vibration)
-    val keep = stringResource(R.string.hh_keep_alive)
-    val recItem = stringResource(R.string.hh_rec_title)
-    var recDialog by remember { mutableStateOf(false) }
-    if (recDialog) HHRecDialog { recDialog = false }
-    val noPush = HHPush.withoutPush()
     Row(Modifier.fillMaxWidth().background(hhHeader).statusBarsPadding().height(56.dp).padding(start = 16.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Text(stringResource(R.string.app_name), color = MaterialTheme.colorScheme.onPrimary, fontSize = 20.sp,
@@ -210,25 +204,10 @@ private fun HHHeader(navController: NavController, onQuitClick: () -> Unit) {
                 menuItems = hhMenu(listOf(
                     MenuItem(accounts, Icons.Outlined.ManageAccounts),
                     MenuItem(settings, Icons.Outlined.Settings),
-                    MenuItem(vibe, if (HHKeyVibe.enabled(ctx)) Icons.Filled.Check else Icons.Outlined.Vibration),
-                    MenuItem(keep, if (HHPush.keepAlive || noPush.isNotEmpty()) Icons.Filled.Check else Icons.Outlined.CloudOff),
-                    MenuItem(recItem, Icons.Filled.FiberManualRecord),
                     MenuItem(quit, Icons.AutoMirrored.Filled.Logout)
-                ), hidden = setOf(settings, accounts, quit)),
+                ), hidden = setOf(accounts, quit)),
                 onItemClick = { item ->
                     menu = false
-                    if (item == vibe) { HHKeyVibe.toggle(ctx); return@DropdownMenu }
-                    if (item == recItem) { recDialog = true; return@DropdownMenu }
-                    if (item == keep) {
-                        if (noPush.isNotEmpty())   // выключить нельзя: без push звонки на эти учётки не дойдут
-                            Toast.makeText(ctx, ctx.getString(R.string.hh_keep_alive_forced, noPush.joinToString { it.removePrefix("sip:") }),
-                                Toast.LENGTH_LONG).show()
-                        else {
-                            HHPush.keepAlive = !HHPush.keepAlive
-                            Toast.makeText(ctx, if (HHPush.keepAlive) R.string.hh_keep_alive_on else R.string.hh_keep_alive_off, Toast.LENGTH_LONG).show()
-                        }
-                        return@DropdownMenu
-                    }
                     if (hhMenuClick(ctx, item) || checkLockedAndToast(ctx)) return@DropdownMenu
                     when (item) {
                         settings -> navController.navigate("settings")
@@ -578,69 +557,96 @@ private fun HHChatsTab(ctx: Context, navController: NavController) {
     }
 }
 
-/** Запись разговоров: выключена / по кнопке на экране разговора / каждый разговор. */
+/** Настройки HHPhone во вкладках «Настроек»: применяются сразу, без кнопки «Сохранить». */
+
+/** Запись разговоров: режим, срок хранения, папка, служба для SIM. */
 @Composable
-private fun HHRecDialog(onDismiss: () -> Unit) {
+internal fun HHRecSettings() {
     val ctx = LocalContext.current
     var mode by remember { mutableStateOf(HHRec.mode(ctx)) }
     var keep by remember { mutableStateOf(HHRec.keepDays(ctx)) }
     var keepMenu by remember { mutableStateOf(false) }
     var folder by remember { mutableStateOf(HHRec.folderName(ctx)) }
+    // служба специальных возможностей включается в системных настройках — проверка при возврате
+    var a11y by remember { mutableStateOf(HHRecAccessibility.enabled(ctx)) }
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val o = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) a11y = HHRecAccessibility.enabled(ctx) }
+        owner.lifecycle.addObserver(o)
+        onDispose { owner.lifecycle.removeObserver(o) }
+    }
     val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { tree ->
         if (tree != null) try { HHRec.setFolder(ctx, tree); folder = HHRec.folderName(ctx) }
             catch (e: Exception) { Toast.makeText(ctx, R.string.hh_rec_folder_failed, Toast.LENGTH_LONG).show() }
     }
     val keepLabel = @Composable { d: Int -> if (d == 0) stringResource(R.string.hh_rec_keep_forever) else stringResource(R.string.hh_rec_keep_days, d) }
-    AlertDialog(onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.hh_rec_title)) },
-        text = {
-            Column {
-                listOf(HHRec.OFF to R.string.hh_rec_off, HHRec.BUTTON to R.string.hh_rec_button, HHRec.AUTO to R.string.hh_rec_auto).forEach { (m, label) ->
-                    Row(Modifier.fillMaxWidth().clickable { mode = m }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = mode == m, onClick = { mode = m })
-                        Text(stringResource(label))
-                    }
+    Column(Modifier.padding(end = 10.dp)) {
+        Text(stringResource(R.string.hh_rec_title), fontSize = 18.sp)
+        listOf(HHRec.OFF to R.string.hh_rec_off, HHRec.BUTTON to R.string.hh_rec_button, HHRec.AUTO to R.string.hh_rec_auto).forEach { (m, label) ->
+            Row(Modifier.fillMaxWidth().clickable { mode = m; HHRec.setMode(ctx, m) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(selected = mode == m, onClick = { mode = m; HHRec.setMode(ctx, m) })
+                Text(stringResource(label))
+            }
+        }
+        if (mode != HHRec.OFF) {
+            Box {
+                Row(Modifier.fillMaxWidth().clickable { keepMenu = true }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.hh_rec_keep), Modifier.weight(1f))
+                    Text(keepLabel(keep), color = MaterialTheme.colorScheme.primary)
                 }
-                // автоочистка: выбор срока хранения
-                Box {
-                    Row(Modifier.fillMaxWidth().clickable { keepMenu = true }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.hh_rec_keep), Modifier.weight(1f))
-                        Text(keepLabel(keep), color = MaterialTheme.colorScheme.primary)
+                androidx.compose.material3.DropdownMenu(expanded = keepMenu, onDismissRequest = { keepMenu = false }) {
+                    HHRec.KEEP_DAYS.forEach { d ->
+                        androidx.compose.material3.DropdownMenuItem(text = { Text(keepLabel(d)) }, onClick = {
+                            keep = d; keepMenu = false; Thread { HHRec.setKeepDays(ctx, d) }.start()
+                        })
                     }
-                    androidx.compose.material3.DropdownMenu(expanded = keepMenu, onDismissRequest = { keepMenu = false }) {
-                        HHRec.KEEP_DAYS.forEach { d ->
-                            androidx.compose.material3.DropdownMenuItem(text = { Text(keepLabel(d)) }, onClick = { keep = d; keepMenu = false })
-                        }
-                    }
-                }
-                // папка записей: внутренняя (видна только HHPhone) или выбранная пользователем
-                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.hh_rec_folder))
-                        Text(folder ?: stringResource(R.string.hh_rec_folder_internal), fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
-                    }
-                    TextButton(onClick = { try { pick.launch(null) } catch (_: Exception) {} }) { Text(stringResource(R.string.hh_rec_folder_choose)) }
-                }
-                if (folder != null) TextButton(onClick = { HHRec.setFolder(ctx, null); folder = null }) {
-                    Text(stringResource(R.string.hh_rec_folder_reset))
-                }
-                Spacer(Modifier.height(8.dp))
-                Text(stringResource(R.string.hh_rec_note), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                // SIM: без службы специальных возможностей Android глушит микрофон во время звонка
-                if (mode != HHRec.OFF && !HHRecAccessibility.enabled(ctx)) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(stringResource(R.string.hh_rec_sim_a11y), fontSize = 13.sp, color = MaterialTheme.colorScheme.error)
-                    TextButton(onClick = {
-                        ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-                    }) { Text(stringResource(R.string.hh_rec_open_a11y)) }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = {
-            HHRec.setMode(ctx, mode)
-            if (keep != HHRec.keepDays(ctx)) Thread { HHRec.setKeepDays(ctx, keep) }.start()
-            onDismiss()
-        }) { Text(stringResource(R.string.ok)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } })
+            // папка записей: внутренняя (видна только HHPhone) или выбранная пользователем
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.hh_rec_folder))
+                    Text(folder ?: stringResource(R.string.hh_rec_folder_internal), fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
+                }
+                TextButton(onClick = { try { pick.launch(null) } catch (_: Exception) {} }) { Text(stringResource(R.string.hh_rec_folder_choose)) }
+            }
+            if (folder != null) TextButton(onClick = { HHRec.setFolder(ctx, null); folder = null }) {
+                Text(stringResource(R.string.hh_rec_folder_reset))
+            }
+            // SIM: без службы специальных возможностей Android глушит микрофон во время звонка
+            if (!a11y) {
+                Text(stringResource(R.string.hh_rec_sim_a11y), fontSize = 13.sp, color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = {
+                    ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }) { Text(stringResource(R.string.hh_rec_open_a11y)) }
+            }
+        }
+        Text(stringResource(R.string.hh_rec_note), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** Переключатель в стиле «Настроек»: подпись (по нажатию — пояснение, если есть) и Switch. */
+@Composable
+internal fun HHSettingSwitch(title: String, checked: Boolean, help: String? = null, onChange: (Boolean) -> Unit) {
+    val ctx = LocalContext.current
+    Row(Modifier.fillMaxWidth().padding(end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, Modifier.weight(1f).clickable(enabled = help != null) { Toast.makeText(ctx, help, Toast.LENGTH_LONG).show() }, fontSize = 18.sp)
+        androidx.compose.material3.Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+/** Вибрация клавиш набора и постоянное подключение (без push у какой-то учётки — включено и не выключается). */
+@Composable
+internal fun HHGeneralSwitches() {
+    val ctx = LocalContext.current
+    var vibe by remember { mutableStateOf(HHKeyVibe.enabled(ctx)) }
+    HHSettingSwitch(stringResource(R.string.hh_key_vibration), vibe) { HHKeyVibe.toggle(ctx); vibe = HHKeyVibe.enabled(ctx) }
+    val noPush = HHPush.withoutPush()
+    var keep by remember { mutableStateOf(HHPush.keepAlive) }
+    HHSettingSwitch(stringResource(R.string.hh_keep_alive), keep || noPush.isNotEmpty()) {
+        if (noPush.isNotEmpty())   // выключить нельзя: без push звонки на эти учётки не дойдут
+            Toast.makeText(ctx, ctx.getString(R.string.hh_keep_alive_forced, noPush.joinToString { it.removePrefix("sip:") }), Toast.LENGTH_LONG).show()
+        else { HHPush.keepAlive = it; keep = it }
+    }
 }
