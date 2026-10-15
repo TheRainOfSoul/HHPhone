@@ -156,6 +156,11 @@ sealed class Contact {
                     }
                     return name
                 }
+                // HHPhone: тот же номер в другой записи (+374 77 111111 = 077 111111) — как HHPeople.contact
+                if (userPart.count { it.isDigit() } >= 8)
+                    synchronized(BaresipService.contacts) {
+                        BaresipService.contacts.firstOrNull { c -> c.uris().any { HHUiLogic.samePhone(it.uri, uri) } }
+                    }?.let { return it.name() }
             }
             return uri
         }
