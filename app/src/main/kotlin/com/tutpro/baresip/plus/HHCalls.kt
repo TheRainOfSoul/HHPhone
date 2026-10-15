@@ -16,11 +16,12 @@ object HHCalls {
      * Позвонить через учётку aor (SIM — sip:mobile@pstn). guard — не звонить второй раз, пока предыдущий вызов не начался
      * (двойное нажатие). Ошибки baresip показывает своим окном (showAlert). false — не звонили.
      */
-    fun dial(ctx: Context, viewModel: ViewModel, aor: String, number: String, onHoldCallp: Long = 0L, guard: Boolean = true): Boolean {
+    fun dial(ctx: Context, viewModel: ViewModel, aor: String, number: String, onHoldCallp: Long = 0L, guard: Boolean = true,
+             video: Boolean = false): Boolean {
         if (number.isBlank() || (guard && !viewModel.dialerState.callButtonsEnabled.value)) return false
         viewModel.updateSelectedAor(aor)
         viewModel.dialerState.showCallConferenceButton.value = false
-        makeCall(ctx, viewModel, number.trim(), viewModel.dialerState, false, onHoldCallp)
+        makeCall(ctx, viewModel, number.trim(), viewModel.dialerState, video, onHoldCallp)
         return true
     }
 

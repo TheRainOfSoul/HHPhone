@@ -181,4 +181,5 @@
     <string name="hh_pin_unsupported">Գործարկիչը չի աջակցում դյուրանցումներ։</string>
     <string name="hh_camera_flip">Փոխել տեսախցիկը</string>
     <string name="hh_video_off">Անջատել տեսանյութը</string>
+    <string name="hh_video_call">Տեսազանգ</string>
 </resources>

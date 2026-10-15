@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AddToHomeScreen
 import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
@@ -555,7 +556,9 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
 private fun HHNumberRow(ctx: Context, n: HHNum, name: String, lines: List<HHLine>, navController: NavController, viewModel: ViewModel) {
     val peer = if (n.type == SIP_TYPE) n.number else "tel:" + n.number
     val targets = hhLineTargets(peer, lines)
+    val videoTargets = hhLineTargets(peer, lines.filter { !it.mobile })   // видео — только через станцию (SIP), не SIM
     var choose by remember { mutableStateOf(false) }
+    var chooseVideo by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(n.number, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
@@ -567,6 +570,20 @@ private fun HHNumberRow(ctx: Context, n: HHNum, name: String, lines: List<HHLine
         hhChatRoute(peer, "", lines)?.let { r ->
             IconButton(onClick = { navController.navigate(r) }) {
                 Icon(Icons.AutoMirrored.Outlined.Chat, stringResource(R.string.hh_sms), tint = MaterialTheme.colorScheme.primary)
+            }
+        }
+        if (videoTargets.isNotEmpty()) {
+            Box {
+                IconButton(onClick = {
+                    if (videoTargets.size == 1) videoTargets[0].let { (_, aor, t) -> HHCalls.dial(ctx, viewModel, aor, t, video = true) } else chooseVideo = true
+                }) {
+                    Icon(Icons.Outlined.Videocam, stringResource(R.string.hh_video_call), tint = MaterialTheme.colorScheme.primary)
+                }
+                DropdownMenu(expanded = chooseVideo, onDismissRequest = { chooseVideo = false }) {
+                    videoTargets.forEach { (label, aor, t) ->
+                        DropdownMenuItem(text = { Text(label) }, onClick = { chooseVideo = false; HHCalls.dial(ctx, viewModel, aor, t, video = true) })
+                    }
+                }
             }
         }
         Box {

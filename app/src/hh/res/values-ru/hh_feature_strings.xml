@@ -185,4 +185,5 @@
     <string name="hh_pin_unsupported">Лаунчер не поддерживает ярлыки.</string>
     <string name="hh_camera_flip">Сменить камеру</string>
     <string name="hh_video_off">Выключить видео</string>
+    <string name="hh_video_call">Видеозвонок</string>
 </resources>

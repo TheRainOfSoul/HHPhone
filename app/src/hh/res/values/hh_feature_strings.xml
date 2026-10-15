@@ -181,4 +181,5 @@
     <string name="hh_pin_unsupported">The launcher does not support shortcuts.</string>
     <string name="hh_camera_flip">Flip camera</string>
     <string name="hh_video_off">Stop video</string>
+    <string name="hh_video_call">Video call</string>
 </resources>
