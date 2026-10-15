@@ -569,9 +569,13 @@ internal fun HHRecSettings() {
     var folder by remember { mutableStateOf(HHRec.folderName(ctx)) }
     // служба специальных возможностей включается в системных настройках — проверка при возврате
     var a11y by remember { mutableStateOf(HHRecAccessibility.enabled(ctx)) }
+    var devOn by remember { mutableStateOf(HHAdbGrant.devOptionsOn(ctx)) }
+    var canToggle by remember { mutableStateOf(HHRecAccessibility.canToggle(ctx)) }
     val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(owner) {
-        val o = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) a11y = HHRecAccessibility.enabled(ctx) }
+        val o = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+            a11y = HHRecAccessibility.enabled(ctx); devOn = HHAdbGrant.devOptionsOn(ctx); canToggle = HHRecAccessibility.canToggle(ctx)
+        } }
         owner.lifecycle.addObserver(o)
         onDispose { owner.lifecycle.removeObserver(o) }
     }
@@ -614,10 +618,27 @@ internal fun HHRecSettings() {
                 Text(stringResource(R.string.hh_rec_folder_reset))
             }
             // SIM: без службы специальных возможностей Android глушит микрофон во время звонка
-            if (HHRecAccessibility.canToggle(ctx))
+            if (canToggle)
                 Text(stringResource(R.string.hh_rec_a11y_auto), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            else Text(stringResource(R.string.hh_rec_a11y_adb, ctx.packageName), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (!a11y && !HHRecAccessibility.canToggle(ctx)) {
+            else {
+                Text(stringResource(R.string.hh_rec_a11y_adb, ctx.packageName), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // без компьютера: «Отладка по Wi-Fi» → код в уведомлении HHPhone (HHAdbGrant)
+                if (HHAdbGrant.supported()) {
+                    val step by HHAdbGrant.state
+                    if (!devOn) {
+                        Text(stringResource(R.string.hh_adb_need_dev), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        TextButton(onClick = {
+                            try { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_DEVICE_INFO_SETTINGS)
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+                        }) { Text(stringResource(R.string.hh_adb_open_about)) }
+                    } else {
+                        Text(stringResource(R.string.hh_adb_steps), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        TextButton(onClick = { HHAdbGrant.begin(ctx) }) { Text(stringResource(R.string.hh_adb_start)) }
+                    }
+                    step?.let { Text(it, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary) }
+                }
+            }
+            if (!a11y && !canToggle) {
                 Text(stringResource(R.string.hh_rec_sim_a11y), fontSize = 13.sp, color = MaterialTheme.colorScheme.error)
                 TextButton(onClick = {
                     ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)

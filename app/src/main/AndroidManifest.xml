@@ -257,6 +257,10 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".HHAdbGrant$Reply"
+            android:exported="false" />
+
         <service
             android:name=".HHRecAccessibility"
             android:exported="true"

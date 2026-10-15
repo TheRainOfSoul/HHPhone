@@ -42,8 +42,8 @@ configure<ApplicationExtension> {
         create("hh") {
             dimension = "brand"
             applicationId = "am.dgsolutions.hhphone"
-            versionCode = 29
-            versionName = "0.9.11"
+            versionCode = 30
+            versionName = "0.9.12"
             androidResources.localeFilters += listOf("en", "ru", "hy")
         }
     }
@@ -101,6 +101,9 @@ composeCompiler {
 dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
+    implementation(libs.libadb.android)      // HHAdbGrant: разрешение себе через «Отладку по Wi-Fi»
+    implementation(libs.bcprov)              // сертификат для сопряжения (та же версия, что у libadb)
+    implementation(libs.conscrypt.android)   // TLS 1.3 + exportKeyingMaterial для сопряжения adb
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.cardview)
     implementation(libs.androidx.swiperefreshlayout)

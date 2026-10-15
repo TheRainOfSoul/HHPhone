@@ -3385,7 +3385,7 @@ class BaresipService: Service() {
             if (!isServiceRunning) return
             val visible = androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
             // SIP и SIM; обработка записи разговора — тоже не засыпать
-            val inCall = calls.isNotEmpty() || InCallService.instance?.calls?.isNotEmpty() == true || HHRec.busy.get() > 0
+            val inCall = calls.isNotEmpty() || InCallService.instance?.calls?.isNotEmpty() == true || HHRec.busy.get() > 0 || HHAdbGrant.busy()
             if (visible || inCall) HHPush.touch()
             val foreign = HHPush.keepAlive || HHPush.withoutPush().isNotEmpty()   // постоянная связь: по желанию или учётка без push
             if (HHPushPolicy.keep(foreign, visible, inCall, HHPush.idleMs())) { hhHandler.postDelayed(this, 15_000); return }
