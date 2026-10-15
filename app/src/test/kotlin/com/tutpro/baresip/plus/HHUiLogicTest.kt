@@ -281,4 +281,18 @@ class HHUiLogicTest {
         assertEquals(null, HHUiLogic.sentTime("text/plain;hh-sent=0", now))
         assertEquals(null, HHUiLogic.sentTime("text/plain;hh-sent=1800000600000", now))   // в будущем (часы станции) — время приёма
     }
+
+    @Test fun lastNumberPrefersLatestOutgoingOnThatLine() {
+        val sim = "sip:mobile@pstn"; val hh = "sip:101@pbx.local"
+        val log = listOf(
+            HHLogEntry("tel:091111111", sim, "in", 50, 60, false),
+            HHLogEntry("sip:100@pbx.local", hh, "out", 40, 45, false),
+            HHLogEntry("tel:093222222", sim, "out", 30, 35, false),
+            HHLogEntry("tel:099333333", sim, "out", 10, 15, false))
+        assertEquals("tel:093222222", HHUiLogic.lastNumber(log, setOf(sim)))
+        assertEquals("sip:100@pbx.local", HHUiLogic.lastNumber(log, setOf(hh)))
+        // исходящих по линии нет — последний любой; по линии ничего — null
+        assertEquals("tel:091111111", HHUiLogic.lastNumber(log.take(1), setOf(sim)))
+        assertEquals(null, HHUiLogic.lastNumber(log, setOf("sip:102@other")))
+    }
 }

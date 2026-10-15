@@ -335,8 +335,10 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                             Box(Modifier.weight(1f)) {
                                 Surface(onClick = {
                                     if (!keypad) keypad = true
+                                    else if (number.isBlank())   // пусто — номер последнего звонка этой линии, второе нажатие звонит
+                                        HHUiLogic.lastNumber(log.flatMap { it.entries }, group.map { it.aor }.toSet())?.let { number = hhPeerId(it) }
                                     else if (group.size > 1) choose = true
-                                    else if (number.isNotBlank() && HHCalls.dial(ctx, viewModel, group[0].aor, number)) number = ""
+                                    else if (HHCalls.dial(ctx, viewModel, group[0].aor, number)) number = ""
                                 }, shape = RoundedCornerShape(28.dp), color = green, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                                     Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Call, null, tint = Color.White)

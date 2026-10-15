@@ -112,7 +112,7 @@ fun HHIncoming(call: Call) {
             Spacer(Modifier.weight(1f))
             HHAnswerSlider(onAnswer = { HHCalls.answer(ctx, call) }, onReject = { HHCalls.reject(call) })
             // выше низа экрана: туда голосовой ассистент (Gemini «быстрые фразы», Bixby) выводит свои подсказки
-            Spacer(Modifier.height(140.dp))
+            Spacer(Modifier.height(200.dp))
         }
     }
 }

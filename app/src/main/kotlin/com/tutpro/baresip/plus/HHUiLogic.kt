@@ -122,6 +122,12 @@ object HHUiLogic {
             date + durationSec * 1000, type == CL_REJECTED || type == CL_BLOCKED, id)
     }
 
+    /** Повторный набор: последний исходящий по этим линиям, иначе последний любой; скрытые номера пропускаются. */
+    fun lastNumber(entries: List<HHLogEntry>, aors: Set<String>): String? {
+        val mine = entries.filter { it.aor in aors && it.peer != "tel:anonymous" }.sortedByDescending { it.stop }
+        return (mine.firstOrNull { it.dir == "out" } ?: mine.firstOrNull())?.peer
+    }
+
     /** Время отправки из Content-Type HHPBX (`hh-sent=<мс>`); нет, не число или позже приёма (часы станции) — null. */
     fun sentTime(contentType: String, now: Long): Long? =
         contentType.split(";").map { it.trim() }.firstOrNull { it.startsWith("hh-sent=") }
