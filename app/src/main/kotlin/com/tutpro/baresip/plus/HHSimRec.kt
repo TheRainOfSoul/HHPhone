@@ -16,12 +16,12 @@ import java.io.File
  */
 object HHSimRec {
     private const val TAG = "HHSimRec"
-    private const val RATE = 16_000
     @Volatile private var rec: AudioRecord? = null   // поток записи смотрит, не остановлена ли
     private var worker: Thread? = null
     private var pcm: File? = null
     private var peer = ""
     private var started = 0L
+    private var rate = 48_000
 
     private fun sources(ctx: Context) =
         if (ctx.checkSelfPermission("android.permission.CAPTURE_AUDIO_OUTPUT") == android.content.pm.PackageManager.PERMISSION_GRANTED)
@@ -33,20 +33,23 @@ object HHSimRec {
     @Synchronized fun start(ctx: Context, call: Call) {
         if (rec != null) return
         val f = File(HHRec.dir(ctx), "sim.tmp.pcm")
-        val buf = maxOf(AudioRecord.getMinBufferSize(RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT), RATE / 5 * 2)
-        for (src in sources(ctx)) {
-            val r = try { AudioRecord(src, RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, buf) } catch (e: Exception) { null }
-            if (r == null || r.state != AudioRecord.STATE_INITIALIZED) { r?.release(); Log.w(TAG, "source $src refused"); continue }
+        // 48 кГц — свой голос чище (собеседник из динамика всё равно телефонного качества); не даёт — 16 кГц
+        for (src in sources(ctx)) for (hz in intArrayOf(48_000, 16_000)) {
+            val min = AudioRecord.getMinBufferSize(hz, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            if (min <= 0) continue
+            val buf = maxOf(min, hz / 5 * 2)
+            val r = try { AudioRecord(src, hz, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, buf) } catch (e: Exception) { null }
+            if (r == null || r.state != AudioRecord.STATE_INITIALIZED) { r?.release(); Log.w(TAG, "source $src $hz Hz refused"); continue }
             try { r.startRecording() } catch (e: Exception) { r.release(); Log.w(TAG, "source $src start: $e"); continue }
             if (r.recordingState != AudioRecord.RECORDSTATE_RECORDING) { r.release(); continue }
-            rec = r; pcm = f; peer = call.peerUri; started = System.currentTimeMillis()
+            rec = r; pcm = f; peer = call.peerUri; started = System.currentTimeMillis(); rate = hz
             worker = Thread {
                 val b = ByteArray(buf)
                 f.outputStream().buffered().use { o ->
                     while (rec === r) { val n = r.read(b, 0, b.size); if (n > 0) o.write(b, 0, n) else if (n < 0) break }   // stop() снимает блокировку read
                 }
             }.apply { start() }
-            Log.i(TAG, "recording SIM call, source $src")
+            Log.i(TAG, "recording SIM call, source $src, $hz Hz")
             if (src != MediaRecorder.AudioSource.VOICE_CALL) warnIfSilenced(ctx, r)
             return
         }
@@ -70,14 +73,15 @@ object HHSimRec {
         try { r.stop() } catch (_: Exception) {}
         val w = worker; worker = null
         val f = pcm ?: return
-        val start = started; val who = peer
+        val start = started; val who = peer; val hz = rate
+        HHRec.busy.incrementAndGet()
         Thread {
             w?.join(3000)
             r.release()
             try {
-                if (f.length() > RATE * 2) HHRec.save(ctx, f, RATE, start, true, who)   // меньше секунды — не запись
+                if (f.length() > hz * 2) HHRec.save(ctx, f, hz, start, true, who)   // меньше секунды — не запись
             } catch (e: Exception) { Log.e(TAG, "SIM recording save failed: $e") }
-            finally { f.delete() }
+            finally { f.delete(); HHRec.busy.decrementAndGet() }
         }.start()
     }
 }

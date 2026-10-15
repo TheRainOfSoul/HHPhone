@@ -57,6 +57,38 @@ class HHVoiceTest {
         assertTrue(run(x).size == x.size)
     }
 
+    private fun ns(x: ShortArray): ShortArray {
+        val i = File.createTempFile("hhvoice", ".raw").apply { deleteOnExit() }
+        val o = File.createTempFile("hhvoice", ".ns").apply { deleteOnExit() }
+        i.writeBytes(ByteBuffer.allocate(x.size * 2).order(ByteOrder.LITTLE_ENDIAN).apply { x.forEach { putShort(it) } }.array())
+        HHNoise.suppress(i, o, rate)
+        val b = ByteBuffer.wrap(o.readBytes()).order(ByteOrder.LITTLE_ENDIAN)
+        return ShortArray(b.remaining() / 2) { b.short }
+    }
+
+    @Test fun fftRoundTrip() {
+        val re = DoubleArray(512) { Math.sin(it * 0.3) * 100 + it % 7 }; val im = DoubleArray(512)
+        val orig = re.clone()
+        HHNoise.fft(re, im, false); HHNoise.fft(re, im, true)
+        assertTrue(re.indices.all { Math.abs(re[it] - orig[it]) < 1e-6 })
+    }
+
+    @Test fun noiseReducedSpeechKeptInPlace() {
+        // 2 с шума (σ=300), затем 2 с тона (амплитуда 6000) + тот же шум
+        val r = java.util.Random(7)
+        val x = ShortArray(rate * 4) { i -> (r.nextGaussian() * 300 + (if (i >= rate * 2) 6000 * Math.sin(2 * Math.PI * 500 * i / rate) else 0.0)).toInt().toShort() }
+        val y = ns(x)
+        assertTrue("same length", y.size == x.size)
+        val noiseIn = rms(x, rate / 2, rate * 3 / 2); val noiseOut = rms(y, rate / 2, rate * 3 / 2)
+        assertTrue("noise −10 dB: $noiseIn → $noiseOut", noiseOut < noiseIn / 3.16)
+        val toneIn = rms(x, rate * 5 / 2, rate * 7 / 2); val toneOut = rms(y, rate * 5 / 2, rate * 7 / 2)
+        assertTrue("tone within 3 dB: $toneIn → $toneOut", toneOut > toneIn / 1.41 && toneOut < toneIn * 1.41)
+        // не сдвинуто во времени: корреляция с исходным тоном на участке речи высокая
+        var c = 0.0; var a = 0.0; var b = 0.0
+        for (i in rate * 5 / 2 until rate * 7 / 2) { c += x[i] * y[i].toDouble(); a += x[i] * x[i].toDouble(); b += y[i] * y[i].toDouble() }
+        assertTrue("aligned: ${c / Math.sqrt(a * b)}", c / Math.sqrt(a * b) > 0.9)
+    }
+
     /** Прогон настоящей записи: HH_VOICE_IN=файл.raw (s16le моно 16 кГц) → рядом .out.raw. */
     @Test fun realRecording() {
         val path = System.getenv("HH_VOICE_IN") ?: return
