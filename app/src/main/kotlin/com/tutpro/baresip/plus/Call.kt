@@ -26,6 +26,10 @@ open class Call(val callp: Long, val ua: UserAgent, val peerUri: String, val dir
     var referTo = ""
     var videoRequest = 0
     var dumpfiles = arrayOf("", "")
+    // HHPhone: запись разговора (HHRec) — идёт ли, с какого момента, когда sndfile открыл файлы
+    val hhRec: MutableState<Boolean> = mutableStateOf(false)
+    var hhRecFrom = 0L
+    var dumpStart = 0L
 
     // UI state properties
     val callUri: MutableState<String> = mutableStateOf("")

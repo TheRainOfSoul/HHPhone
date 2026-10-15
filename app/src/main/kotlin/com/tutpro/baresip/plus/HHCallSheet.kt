@@ -26,6 +26,9 @@ import androidx.compose.material.icons.automirrored.filled.CallMissed
 import androidx.compose.material.icons.automirrored.filled.CallReceived
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.AccountBox
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -43,6 +46,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -94,6 +99,7 @@ internal fun hhChatRoute(peer: String, aor: String, lines: List<HHLine>): String
 
 /** Удаление звонков группы: системный журнал по _ID, иначе записи CallHistoryNew с тем же временем. */
 private fun deleteCalls(ctx: android.content.Context, entries: List<HHLogEntry>) {
+    HHRec.list(ctx).let { all -> entries.flatMap { HHRec.of(all, it) }.distinct().forEach { it.file.delete() } }   // и записи разговоров
     val ids = entries.map { it.id }
     if (ids.all { it > 0 }) HHCallLog.delete(ctx, ids)
     else {   // журнал CallHistoryNew: та же минута конца и тот же номер; одна запись файла
@@ -131,6 +137,8 @@ fun HHCallSheet(g: HHLogGroup, navController: NavController, viewModel: ViewMode
                         fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
             }
+            val recs = remember(g) { HHRec.list(ctx).let { all -> g.entries.flatMap { HHRec.of(all, it) }.distinct() } }
+            recs.forEach { HHRecRow(it) }
             if (!anonymous) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     hhLineTargets(g.peer, lines).forEach { (label, aor, target) ->
@@ -334,3 +342,44 @@ fun HHContactSheet(c: Contact, navController: NavController, viewModel: ViewMode
     }
 }
 
+
+/** Запись разговора: прослушать (▶/❚❚, позиция), поделиться, удалить. */
+@Composable
+private fun HHRecRow(r: HHRecFile) {
+    val ctx = LocalContext.current
+    var gone by remember { mutableStateOf(false) }
+    if (gone) return
+    var playing by remember { mutableStateOf(false) }
+    var pos by remember { mutableStateOf(0) }
+    val player = remember { android.media.MediaPlayer() }
+    DisposableEffect(Unit) { onDispose { player.release() } }
+    LaunchedEffect(playing) { while (playing) { pos = player.currentPosition / 1000; kotlinx.coroutines.delay(500) } }
+    val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(r.start))
+    fun mmss(s: Int) = "%d:%02d".format(s / 60, s % 60)
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = {
+            try {
+                if (playing) { player.pause(); playing = false }
+                else {
+                    if (pos == 0) { player.reset(); player.setDataSource(r.file.path); player.prepare()
+                        player.setOnCompletionListener { playing = false; pos = 0 } }
+                    player.start(); playing = true
+                }
+            } catch (e: Exception) { Toast.makeText(ctx, R.string.hh_rec_play_failed, Toast.LENGTH_SHORT).show() }
+        }) { Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, stringResource(R.string.hh_rec_play)) }
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.hh_rec_item, time), color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+            Text(if (playing || pos > 0) "${mmss(pos)} / ${mmss(r.seconds)}" else mmss(r.seconds),
+                fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        IconButton(onClick = {
+            val uri = androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", r.file)
+            ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND)
+                .setType("audio/mp4").putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION), null))
+        }) { Icon(Icons.Outlined.Share, stringResource(R.string.hh_rec_share)) }
+        IconButton(onClick = { player.reset(); playing = false; HHRec.delete(r); gone = true }) {
+            Icon(Icons.Outlined.Delete, stringResource(R.string.hh_rec_delete), tint = MaterialTheme.colorScheme.error)
+        }
+    }
+}

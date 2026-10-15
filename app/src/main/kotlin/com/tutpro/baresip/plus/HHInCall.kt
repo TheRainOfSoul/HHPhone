@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AddIcCall
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Dialpad
+import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.SwapCalls
@@ -92,6 +93,21 @@ fun HHInCall(call: Call, others: List<Call>, viewModel: ViewModel, onHome: () ->
                 HHCallTitle(call, state)
                 IconButton(onClick = onHome, modifier = Modifier.statusBarsPadding().padding(8.dp)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.hh_home), tint = fg)
+                }
+                // запись разговора (режим «по кнопке» или «все» — тогда кнопкой можно остановить)
+                val recording by call.hhRec
+                if (HHRec.mode(ctx) != HHRec.OFF && (status == "connected" || status == "answered")) {
+                    val recLabel = stringResource(R.string.hh_rec_short)
+                    Surface(onClick = { HHRec.toggle(ctx, call) }, shape = RoundedCornerShape(20.dp),
+                        color = if (recording) HHEndRed else fg.copy(alpha = 0.10f),
+                        modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp)
+                            .semantics { stateDescription = ctx.getString(if (recording) R.string.hh_on else R.string.hh_off) }) {
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.FiberManualRecord, null, Modifier.size(14.dp), tint = if (recording) Color.White else HHEndRed)
+                            Spacer(Modifier.width(6.dp))
+                            Text(recLabel, color = if (recording) Color.White else fg, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
                 }
             }
             others.forEach { o ->

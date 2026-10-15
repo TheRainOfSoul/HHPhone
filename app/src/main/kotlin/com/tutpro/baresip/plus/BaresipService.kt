@@ -1099,6 +1099,7 @@ class BaresipService: Service() {
         if (ev[0] == "sndfile dump") {
             Log.d(TAG, "Got sndfile dump ${ev[1]}")
             if (Call.inCall()) {
+                HHRec.onDump(Call.calls()[0])
                 if (ev[1].endsWith("enc.wav"))
                     Call.calls()[0].dumpfiles[0] = ev[1]
                 else
@@ -1420,6 +1421,7 @@ class BaresipService: Service() {
                                 call.status.value = "connected"
                                 call.onhold = false
                                 call.startTime = GregorianCalendar()
+                                HHRec.onConnected(this, call)
                                 if (call.conferenceCall) Api.cmd_exec("conference")
                             }
                             updateStatusNotification()
@@ -1630,6 +1632,7 @@ class BaresipService: Service() {
                                         !reason.startsWith("480") &&
                                         !reason.startsWith("Connection reset by")
                             val missed = call.dir == "in" && call.startTime == null && !call.rejected
+                            HHRec.finishSip(this, call)
                             if (ua.account.callHistory) {
                                 val completedElsewhere = missed && ev[2].startsWith("SIP") &&
                                         ev[2].contains(";cause=200")
@@ -1641,42 +1644,7 @@ class BaresipService: Service() {
                                     else
                                         call.startTime
                                     history.rejected = call.rejected
-                                    if (call.dumpfiles[0] != "") history.recording = call.dumpfiles
-                                    history.add()
-                                    if (call.startTime != null && call.dumpfiles[0] != "") {
-                                        delay(500.milliseconds)
-                                        val rxFile = File(call.dumpfiles[0])
-                                        val txFile = File(call.dumpfiles[1])
-                                        val mergedFileName = rxFile.name
-                                            .replace("dump", "rec")
-                                            .replace("=>", "-")
-                                            .replace("sip:", "")
-                                            .replace("-enc", "")
-                                            .replace("*", "#")
-                                            .replace(";user=phone", "")
-                                        val mergedFile = File(filesPath, mergedFileName)
-                                        if (Utils.mergeWavFiles(rxFile, txFile, mergedFile)) {
-                                            Log.d(TAG, "Automatic merge succeeded.")
-                                            history.recording = arrayOf(mergedFile.absolutePath, "")
-                                            CallHistoryNew.save()
-                                            try {
-                                                rxFile.delete()
-                                                txFile.delete()
-                                            } catch (e: Exception) {
-                                                Log.w(
-                                                    TAG,
-                                                    "Could not delete temporary raw files after merge: ${e.message}"
-                                                )
-                                            }
-                                        }
-                                        else {
-                                            Log.e(
-                                                TAG,
-                                                "Automatic merge failed. Storing raw file paths as fallback."
-                                            )
-                                            history.recording = call.dumpfiles
-                                        }
-                                    }
+                                    history.add()   // запись разговора — HHRec.finishSip
                                 }
                                 ua.account.missedCalls = ua.account.missedCalls || missed
                             }
@@ -2054,6 +2022,7 @@ class BaresipService: Service() {
 
         Handler(Looper.getMainLooper()).post {
             isNativeReady = true
+            HHRec.applySip(this)
             hhPushStart()
             addMobileUserAgent()
             Account.saveAccounts()
@@ -2534,6 +2503,7 @@ class BaresipService: Service() {
                         it.status.value = newStatus
                         if (newStatus == "connected") {
                             it.startTime = GregorianCalendar()
+                            HHRec.onConnected(this@BaresipService, it)
                             nm.cancel(CALL_NOTIFICATION_ID)
                             updateStatusNotification()
                         }
@@ -2577,6 +2547,7 @@ class BaresipService: Service() {
         val call = calls.find { it.callp == callp }
         if (call != null) {
             val uap = call.ua.uap
+            HHSimRec.stop(this, call)
             stopRinging()
             stopMediaPlayer()
             if (call.ua.account.callHistory) {

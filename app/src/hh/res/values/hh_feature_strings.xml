@@ -134,4 +134,21 @@
     <string name="hh_delete">Delete</string>
     <string name="hh_delete_failed">Could not delete the contact</string>
     <string name="hh_fsi_banner">Incoming calls won’t open on the lock screen: allow full screen notifications</string>
+    <string name="hh_rec_title">Call recording</string>
+    <string name="hh_rec_off">Off</string>
+    <string name="hh_rec_button">With the button during a call</string>
+    <string name="hh_rec_auto">Every call (the button stops it)</string>
+    <string name="hh_rec_note">Station (SIP) calls are recorded on both sides. SIM calls: Android only lets the app record the microphone, so the other person is clearly audible mainly on speaker. Recording a conversation may require the other person’s consent.</string>
+    <string name="hh_rec_sim_a11y">For SIM calls, turn on the “HHPhone call recording” accessibility service: without it Android mutes the microphone during a call. If the switch is greyed out: App info → ⋮ → Allow restricted settings.</string>
+    <string name="hh_rec_open_a11y">Open accessibility settings</string>
+    <string name="hh_rec_short">REC</string>
+    <string name="hh_rec_failed">Could not start recording</string>
+    <string name="hh_rec_need_a11y">Android muted the microphone: turn on the “HHPhone call recording” accessibility service (menu ⋮ → Call recording)</string>
+    <string name="hh_rec_item">Call recording %1$s</string>
+    <string name="hh_rec_play">Play</string>
+    <string name="hh_rec_share">Share</string>
+    <string name="hh_rec_delete">Delete recording</string>
+    <string name="hh_rec_play_failed">Could not play the recording</string>
+    <string name="hh_rec_a11y_label">HHPhone call recording</string>
+    <string name="hh_rec_a11y_description">Lets HHPhone record SIM calls: without this service Android mutes the microphone during a call. The service does not read the screen or anything you type.</string>
 </resources>

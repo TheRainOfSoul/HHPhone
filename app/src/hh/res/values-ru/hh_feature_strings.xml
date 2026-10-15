@@ -138,4 +138,21 @@
     <string name="hh_delete">Удалить</string>
     <string name="hh_delete_failed">Не удалось удалить контакт</string>
     <string name="hh_fsi_banner">Звонок не откроется на заблокированном экране: разрешите полноэкранные уведомления</string>
+    <string name="hh_rec_title">Запись разговоров</string>
+    <string name="hh_rec_off">Выключена</string>
+    <string name="hh_rec_button">По кнопке во время разговора</string>
+    <string name="hh_rec_auto">Каждый разговор (кнопкой — остановить)</string>
+    <string name="hh_rec_note">Звонки через станцию (SIP) записываются с обеих сторон. SIM-звонки: Android даёт записывать только микрофон, поэтому собеседника хорошо слышно в основном на громкой связи. Для записи разговора может требоваться согласие собеседника.</string>
+    <string name="hh_rec_sim_a11y">Для SIM-звонков включите службу специальных возможностей «Запись разговоров HHPhone»: без неё Android глушит микрофон во время звонка. Если переключатель серый: «О приложении» → ⋮ → «Разрешить ограниченные настройки».</string>
+    <string name="hh_rec_open_a11y">Открыть специальные возможности</string>
+    <string name="hh_rec_short">Запись</string>
+    <string name="hh_rec_failed">Не удалось начать запись</string>
+    <string name="hh_rec_need_a11y">Android заглушил микрофон: включите службу «Запись разговоров HHPhone» (меню ⋮ → Запись разговоров)</string>
+    <string name="hh_rec_item">Запись разговора %1$s</string>
+    <string name="hh_rec_play">Прослушать</string>
+    <string name="hh_rec_share">Поделиться</string>
+    <string name="hh_rec_delete">Удалить запись</string>
+    <string name="hh_rec_play_failed">Не удалось воспроизвести запись</string>
+    <string name="hh_rec_a11y_label">Запись разговоров HHPhone</string>
+    <string name="hh_rec_a11y_description">Позволяет HHPhone записывать SIM-звонки: без этой службы Android глушит микрофон во время звонка. Служба не читает экран и вводимый текст.</string>
 </resources>

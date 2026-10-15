@@ -26,6 +26,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
+import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -190,6 +193,9 @@ private fun HHHeader(navController: NavController, onQuitClick: () -> Unit) {
     val quit = stringResource(R.string.quit)
     val vibe = stringResource(R.string.hh_key_vibration)
     val keep = stringResource(R.string.hh_keep_alive)
+    val recItem = stringResource(R.string.hh_rec_title)
+    var recDialog by remember { mutableStateOf(false) }
+    if (recDialog) HHRecDialog { recDialog = false }
     val noPush = HHPush.withoutPush()
     Row(Modifier.fillMaxWidth().background(hhHeader).statusBarsPadding().height(56.dp).padding(start = 16.dp),
         verticalAlignment = Alignment.CenterVertically) {
@@ -206,11 +212,13 @@ private fun HHHeader(navController: NavController, onQuitClick: () -> Unit) {
                     MenuItem(settings, Icons.Outlined.Settings),
                     MenuItem(vibe, if (HHKeyVibe.enabled(ctx)) Icons.Filled.Check else Icons.Outlined.Vibration),
                     MenuItem(keep, if (HHPush.keepAlive || noPush.isNotEmpty()) Icons.Filled.Check else Icons.Outlined.CloudOff),
+                    MenuItem(recItem, Icons.Filled.FiberManualRecord),
                     MenuItem(quit, Icons.AutoMirrored.Filled.Logout)
                 ), hidden = setOf(settings, accounts, quit)),
                 onItemClick = { item ->
                     menu = false
                     if (item == vibe) { HHKeyVibe.toggle(ctx); return@DropdownMenu }
+                    if (item == recItem) { recDialog = true; return@DropdownMenu }
                     if (item == keep) {
                         if (noPush.isNotEmpty())   // выключить нельзя: без push звонки на эти учётки не дойдут
                             Toast.makeText(ctx, ctx.getString(R.string.hh_keep_alive_forced, noPush.joinToString { it.removePrefix("sip:") }),
@@ -566,4 +574,36 @@ private fun HHChatsTab(ctx: Context, navController: NavController) {
         }
     }
     }
+}
+
+/** Запись разговоров: выключена / по кнопке на экране разговора / каждый разговор. */
+@Composable
+private fun HHRecDialog(onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    var mode by remember { mutableStateOf(HHRec.mode(ctx)) }
+    AlertDialog(onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.hh_rec_title)) },
+        text = {
+            Column {
+                listOf(HHRec.OFF to R.string.hh_rec_off, HHRec.BUTTON to R.string.hh_rec_button, HHRec.AUTO to R.string.hh_rec_auto).forEach { (m, label) ->
+                    Row(Modifier.fillMaxWidth().clickable { mode = m }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = mode == m, onClick = { mode = m })
+                        Text(stringResource(label))
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(stringResource(R.string.hh_rec_note), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // SIM: без службы специальных возможностей Android глушит микрофон во время звонка
+                if (mode != HHRec.OFF && !HHRecAccessibility.enabled(ctx)) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(R.string.hh_rec_sim_a11y), fontSize = 13.sp, color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = {
+                        ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }) { Text(stringResource(R.string.hh_rec_open_a11y)) }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { HHRec.setMode(ctx, mode); onDismiss() }) { Text(stringResource(R.string.ok)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } })
 }

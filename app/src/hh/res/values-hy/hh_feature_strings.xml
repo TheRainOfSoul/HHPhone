@@ -134,4 +134,21 @@
     <string name="hh_delete">Ջնջել</string>
     <string name="hh_delete_failed">Չհաջողվեց ջնջել կոնտակտը</string>
     <string name="hh_fsi_banner">Զանգը չի բացվի կողպված էկրանին. թույլատրեք ամբողջ էկրանով ծանուցումները</string>
+    <string name="hh_rec_title">Զանգերի ձայնագրում</string>
+    <string name="hh_rec_off">Անջատված</string>
+    <string name="hh_rec_button">Կոճակով՝ զանգի ժամանակ</string>
+    <string name="hh_rec_auto">Յուրաքանչյուր զանգ (կոճակով՝ կանգնեցնել)</string>
+    <string name="hh_rec_note">Կայանով (SIP) զանգերը ձայնագրվում են երկու կողմից։ SIM զանգեր. Android-ը թույլ է տալիս ձայնագրել միայն խոսափողը, ուստի զրուցակիցը լավ լսելի է հիմնականում բարձրախոսով։ Զրույցի ձայնագրման համար կարող է պահանջվել զրուցակցի համաձայնությունը։</string>
+    <string name="hh_rec_sim_a11y">SIM զանգերի համար միացրեք «HHPhone զանգերի ձայնագրում» հատուկ հնարավորությունների ծառայությունը. առանց դրա Android-ը զանգի ժամանակ անջատում է խոսափողը։ Եթե փոխարկիչը մոխրագույն է՝ «Հավելվածի մասին» → ⋮ → «Թույլատրել սահմանափակ կարգավորումները»։</string>
+    <string name="hh_rec_open_a11y">Բացել հատուկ հնարավորությունները</string>
+    <string name="hh_rec_short">Ձայնագրում</string>
+    <string name="hh_rec_failed">Չհաջողվեց սկսել ձայնագրումը</string>
+    <string name="hh_rec_need_a11y">Android-ը անջատել է խոսափողը. միացրեք «HHPhone զանգերի ձայնագրում» ծառայությունը (մենյու ⋮ → Զանգերի ձայնագրում)</string>
+    <string name="hh_rec_item">Զանգի ձայնագրություն %1$s</string>
+    <string name="hh_rec_play">Լսել</string>
+    <string name="hh_rec_share">Կիսվել</string>
+    <string name="hh_rec_delete">Ջնջել ձայնագրությունը</string>
+    <string name="hh_rec_play_failed">Չհաջողվեց նվագարկել ձայնագրությունը</string>
+    <string name="hh_rec_a11y_label">HHPhone զանգերի ձայնագրում</string>
+    <string name="hh_rec_a11y_description">Թույլ է տալիս HHPhone-ին ձայնագրել SIM զանգերը. առանց այս ծառայության Android-ը զանգի ժամանակ անջատում է խոսափողը։ Ծառայությունը չի կարդում էկրանը և մուտքագրվող տեքստը։</string>
 </resources>
