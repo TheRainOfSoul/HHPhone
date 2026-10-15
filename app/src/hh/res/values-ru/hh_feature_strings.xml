@@ -183,4 +183,6 @@
     <string name="hh_set_no_sim">Нет SIM-карты — настройки SMS и MMS недоступны.</string>
     <string name="hh_pin_to_home">Вынести на рабочий стол</string>
     <string name="hh_pin_unsupported">Лаунчер не поддерживает ярлыки.</string>
+    <string name="hh_camera_flip">Сменить камеру</string>
+    <string name="hh_video_off">Выключить видео</string>
 </resources>

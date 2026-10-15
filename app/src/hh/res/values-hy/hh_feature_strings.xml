@@ -179,4 +179,6 @@
     <string name="hh_set_no_sim">SIM քարտ չկա — SMS-ի և MMS-ի կարգավորումները հասանելի չեն։</string>
     <string name="hh_pin_to_home">Ավելացնել աշխատասեղանին</string>
     <string name="hh_pin_unsupported">Գործարկիչը չի աջակցում դյուրանցումներ։</string>
+    <string name="hh_camera_flip">Փոխել տեսախցիկը</string>
+    <string name="hh_video_off">Անջատել տեսանյութը</string>
 </resources>

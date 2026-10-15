@@ -33,6 +33,9 @@ import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.SwapCalls
+import androidx.compose.material.icons.filled.VideoCameraBack
+import androidx.compose.material.icons.filled.VideoCameraFront
+import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -69,7 +72,11 @@ val HHEndRed = Color(0xFFC50F1F)
 fun HHInCall(call: Call, others: List<Call>, viewModel: ViewModel, onHome: () -> Unit) {
     val ctx = LocalContext.current
     val dark = hhDark()
-    val fg = if (dark) Color.White else MaterialTheme.colorScheme.onSurface
+    val vIcon by call.videoIcon
+    val video = call.videoCall || vIcon != Video.NONE   // звонок с видео — показываем собеседника на весь экран
+    var front by remember { mutableStateOf(BaresipService.isCameraFront) }
+    LaunchedEffect(video) { if (video) call.setVideoSource(front) }
+    val fg = if (dark || video) Color.White else MaterialTheme.colorScheme.onSurface
     val status by call.status
     val onHold by call.callOnHold
     val speaker by viewModel.isSpeakerOn.collectAsState()
@@ -87,10 +94,10 @@ fun HHInCall(call: Call, others: List<Call>, viewModel: ViewModel, onHome: () ->
         status == "connected" || status == "answered" -> call.startTime?.let { s -> ((now - s.timeInMillis) / 1000).let { "%d:%02d".format(it / 60, it % 60) } } ?: "0:00"
         else -> stringResource(R.string.hh_calling)
     }
-    HHCallBackdrop(call) {
+    HHCallBackdrop(call, video) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxWidth()) {
-                HHCallTitle(call, state)
+                HHCallTitle(call, state, video)
                 IconButton(onClick = onHome, modifier = Modifier.statusBarsPadding().padding(8.dp)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.hh_home), tint = fg)
                 }
@@ -170,6 +177,17 @@ fun HHInCall(call: Call, others: List<Call>, viewModel: ViewModel, onHome: () ->
                         }
                     }
                     HHCallButton(Icons.Default.Dialpad, R.string.hh_keypad, false, fg, enabled = connected) { keypad = true }
+                }
+                if (video) {
+                    Spacer(Modifier.height(20.dp))
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        HHCallButton(if (front) Icons.Default.VideoCameraFront else Icons.Default.VideoCameraBack,
+                            R.string.hh_camera_flip, false, fg, enabled = Utils.isCameraAvailable(ctx)) {
+                            if (call.setVideoSource(!front) == 0) { front = !front; BaresipService.isCameraFront = front }
+                        }
+                        HHCallButton(Icons.Default.VideocamOff, R.string.hh_video_off, false, fg) { call.setVideoDirection(Api.SDP_INACTIVE) }
+                        Box(Modifier.weight(1f))
+                    }
                 }
             }
             Spacer(Modifier.height(28.dp))

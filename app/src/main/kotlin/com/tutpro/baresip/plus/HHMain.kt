@@ -21,7 +21,8 @@ fun HHMain(navController: NavController, viewModel: ViewModel, onQuitClick: () -
     var homeDuringCall by remember { mutableStateOf(false) }
     val raw = HHUiLogic.screenFor(open.map { it.status.value }, open.any { it.videoCall })
     if (raw == "home" || raw == "incoming") homeDuringCall = false
-    val screen = if (raw == "call" && homeDuringCall) "home" else raw
+    val inCall = raw == "call" || raw == "video"   // видео теперь тоже в HH-экране звонка
+    val screen = if (inCall && homeDuringCall) "home" else raw
     val ctx = LocalContext.current
     val dark = hhDark()
     // строка состояния: на бордовой шапке и тёмных экранах звонка — светлые значки
@@ -33,9 +34,9 @@ fun HHMain(navController: NavController, viewModel: ViewModel, onQuitClick: () -
         onDispose { (ctx as? Activity)?.window?.let { w -> WindowCompat.getInsetsController(w, w.decorView).isAppearanceLightStatusBars = !dark } }
     }
     when (screen) {
-        "home" -> HHHome(navController, viewModel, onQuitClick, onReturnToCall = if (raw == "call") ({ homeDuringCall = false }) else null)
+        "home" -> HHHome(navController, viewModel, onQuitClick, onReturnToCall = if (inCall) ({ homeDuringCall = false }) else null)
         "incoming" -> HHIncoming(open.first { it.status.value == "incoming" })
-        "call" -> {
+        "call", "video" -> {
             val active = open.firstOrNull { it.status.value != "incoming" && !it.callOnHold.value }
                 ?: open.first { it.status.value != "incoming" }
             HHInCall(active, open.filter { it != active }, viewModel, onHome = { homeDuringCall = true })

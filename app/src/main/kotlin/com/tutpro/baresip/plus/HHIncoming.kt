@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -65,11 +66,15 @@ fun hhDark(): Boolean = MaterialTheme.colorScheme.background.let { (it.red + it.
 
 /** Шапка звонка: фото/буква, имя, номер, линия. Светлая — круг; тёмная — фото на весь экран (спека: экраны следуют теме). */
 @Composable
-fun HHCallBackdrop(call: Call, content: @Composable () -> Unit) {
+fun HHCallBackdrop(call: Call, video: Boolean = false, content: @Composable () -> Unit) {
     val dark = hhDark()
     val photo = (Contact.findContact(call.peerUri) as? Contact.AndroidContact)?.thumbnailUri
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        if (dark) {
+        if (video) {
+            // живое видео на весь экран (VideoView сам запускает отображение по surface); затемнение сверху/снизу под подписи и кнопки
+            AndroidView(factory = { VideoView(it).surfaceView }, modifier = Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x99000000), Color(0x11000000), Color(0xBB000000)))))
+        } else if (dark) {
             if (photo != null)
                 AsyncImage(model = photo, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             else
@@ -81,9 +86,9 @@ fun HHCallBackdrop(call: Call, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun HHCallTitle(call: Call, status: String) {
+fun HHCallTitle(call: Call, status: String, video: Boolean = false) {
     val dark = hhDark()
-    val fg = if (dark) Color.White else MaterialTheme.colorScheme.onSurface
+    val fg = if (dark || video) Color.White else MaterialTheme.colorScheme.onSurface   // над видео подписи белые
     val colleagues by HHColleagues.list.collectAsState()
     val name = remember(colleagues, call.peerUri) { hhName(call.peerUri) }
     val number = HHUiLogic.peerKey(call.peerUri)
@@ -91,12 +96,12 @@ fun HHCallTitle(call: Call, status: String) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 24.dp, start = 24.dp, end = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
         Text(status, color = fg.copy(alpha = 0.8f), fontSize = 15.sp)
-        if (!dark) {
+        if (!dark && !video) {   // над видео аватар не нужен — виден собеседник
             Spacer(Modifier.height(20.dp))
             HHAvatar(name, call.peerUri, 140.dp)
         }
-        Spacer(Modifier.height(16.dp))
-        Text(name, color = fg, fontSize = 32.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, maxLines = 2)
+        Spacer(Modifier.height(if (video) 8.dp else 16.dp))
+        Text(name, color = fg, fontSize = if (video) 24.sp else 32.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, maxLines = 2)
         if (name != number) Text(number, color = fg.copy(alpha = 0.8f), fontSize = 18.sp)
         Text(stringResource(R.string.hh_via, line), color = fg.copy(alpha = 0.6f), fontSize = 14.sp)
     }
