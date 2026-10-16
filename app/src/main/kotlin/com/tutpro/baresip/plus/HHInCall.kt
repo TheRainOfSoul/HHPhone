@@ -91,7 +91,7 @@ fun HHInCall(call: Call, others: List<Call>, viewModel: ViewModel, onHome: () ->
 
     val state = when {
         onHold -> stringResource(R.string.hh_on_hold)
-        status == "connected" || status == "answered" -> call.startTime?.let { s -> ((now - s.timeInMillis) / 1000).let { "%d:%02d".format(it / 60, it % 60) } } ?: "0:00"
+        status == "connected" || status == "answered" -> call.startTime?.let { s -> hhDuration((now - s.timeInMillis) / 1000) } ?: "0:00"
         else -> stringResource(R.string.hh_calling)
     }
     HHCallBackdrop(call, video) {

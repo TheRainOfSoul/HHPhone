@@ -59,6 +59,32 @@ class HHUiLogicTest {
         assertEquals(3 to 0L, HHUiLogic.ago(now, 20 * day + 3_600_000L, -2 * 3_600_000L))  // UTC−2: это ещё вчера 23:00
     }
 
+    @Test fun recentHoursSurviveMidnight() {
+        val day = 86_400_000L
+        val now = 20 * day + 3_600_000L            // 01:00 дня 20
+        val then = 19 * day + 23 * 3_600_000L      // 23:00 дня 19 — всего 2 часа назад
+        assertEquals(2 to 2L, HHUiLogic.ago(now, then, 0))   // «2 ч назад», а не «вчера»
+    }
+
+    @Test fun durationAddsHoursAndPadsSeconds() {
+        assertEquals("0:05", HHUiLogic.duration(5))
+        assertEquals("0:43", HHUiLogic.duration(43))
+        assertEquals("12:30", HHUiLogic.duration(12 * 60 + 30))
+        assertEquals("59:59", HHUiLogic.duration(3599))
+        assertEquals("1:00:00", HHUiLogic.duration(3600))
+        assertEquals("1:03:12", HHUiLogic.duration(3792))     // раньше было «63:12»
+        assertEquals("0:00", HHUiLogic.duration(-5))          // откат часов не даёт «0:-5»
+    }
+
+    @Test fun hiddenKindDetectsAnonymousAndUnknown() {
+        assertEquals("anonymous", HHUiLogic.hiddenKind("sip:anonymous@anonymous.invalid"))
+        assertEquals("anonymous", HHUiLogic.hiddenKind("tel:anonymous"))
+        assertEquals("anonymous", HHUiLogic.hiddenKind(""))
+        assertEquals("unknown", HHUiLogic.hiddenKind("sip:UNKNOWN@x"))
+        assertEquals(null, HHUiLogic.hiddenKind("sip:27@host:5060"))
+        assertEquals(null, HHUiLogic.hiddenKind("tel:077111222"))
+    }
+
     @Test fun linesSimFirstNoDuplicates() {
         val l = HHUiLogic.lines(listOf(
             HHLine("sip:101@pbx", false, true), HHLine("sip:mobile@pstn", true, true), HHLine("sip:101@pbx", false, true)))

@@ -134,7 +134,7 @@ fun HHCallSheet(g: HHLogGroup, navController: NavController, viewModel: ViewMode
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(name, fontSize = 20.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
-                    Text(listOfNotNull(number.takeIf { it != name }, hhLogLine(g.aor), hhAgo(ctx, g.last.stop)).joinToString(" · "),
+                    Text(listOfNotNull(number.takeIf { it != name && !anonymous }, hhLogLine(g.aor), hhAgo(ctx, g.last.stop)).joinToString(" · "),
                         fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
             }
@@ -269,7 +269,7 @@ private fun HHHistoryScreen(navController: NavController, viewModel: ViewModel, 
                     Column(Modifier.weight(1f)) {
                         Text(fmt.format(Date(e.start ?: e.stop)), fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
                         val secs = e.start?.let { (e.stop - it) / 1000 }
-                        Text(listOfNotNull(secs?.let { "%d:%02d".format(it / 60, it % 60) }, hhLogLine(e.aor)).joinToString(" · "),
+                        Text(listOfNotNull(secs?.let { hhDuration(it) }, hhLogLine(e.aor)).joinToString(" · "),
                             fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -359,7 +359,7 @@ private fun HHRecRow(r: HHRecFile) {
     DisposableEffect(Unit) { onDispose { player.release() } }
     LaunchedEffect(playing) { while (playing) { pos = player.currentPosition / 1000; kotlinx.coroutines.delay(500) } }
     val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(r.start))
-    fun mmss(s: Int) = "%d:%02d".format(s / 60, s % 60)
+    fun mmss(s: Int) = hhDuration(s.toLong())
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = {
             try {

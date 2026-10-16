@@ -133,7 +133,7 @@ object HHSms {
         val dir = when (box) { 1 -> MESSAGE_DOWN; 4 -> MESSAGE_UP_WAIT; 5 -> MESSAGE_UP_FAIL; else -> MESSAGE_UP }
         // во входящем групповом — подпись отправителя
         val body = if (people.size > 1 && box == 1 && from != null) "${hhName("tel:$from")}: $text" else text
-        return Message(MOBILE, peer, body.ifEmpty { if (images.isEmpty()) "[MMS]" else "" }, dateSec * 1000, dir, 0, "",
+        return Message(MOBILE, peer, body.ifEmpty { if (images.isEmpty()) "[MMS]" else ctx.getString(R.string.hh_mms_photo) }, dateSec * 1000, dir, 0, "",
             box == 1 && read == 0, images, smsId = -id)   // smsId < 0 — MMS (удаление — content://mms/<id>)
     }
 

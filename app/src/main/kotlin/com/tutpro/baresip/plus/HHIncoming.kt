@@ -102,7 +102,7 @@ fun HHCallTitle(call: Call, status: String, video: Boolean = false) {
         }
         Spacer(Modifier.height(if (video) 8.dp else 16.dp))
         Text(name, color = fg, fontSize = if (video) 24.sp else 32.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, maxLines = 2)
-        if (name != number) Text(number, color = fg.copy(alpha = 0.8f), fontSize = 18.sp)
+        if (name != number && HHUiLogic.hiddenKind(call.peerUri) == null) Text(number, color = fg.copy(alpha = 0.8f), fontSize = 18.sp)
         Text(stringResource(R.string.hh_via, line), color = fg.copy(alpha = 0.6f), fontSize = 14.sp)
     }
 }

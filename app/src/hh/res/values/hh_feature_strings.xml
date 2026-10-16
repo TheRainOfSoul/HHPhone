@@ -85,6 +85,9 @@
     <string name="hh_transfer_to">Transfer to</string>
     <string name="hh_add_to">Call</string>
     <string name="hh_no_chats">No chats</string>
+    <string name="hh_no_contacts">No contacts</string>
+    <string name="hh_nothing_found">Nothing found</string>
+    <string name="hh_mms_photo">[Photo]</string>
     <string name="hh_menu">Menu</string>
     <string name="hh_backspace">Delete</string>
     <string name="hh_paste">Paste</string>

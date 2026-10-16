@@ -90,9 +90,27 @@ object HHUiLogic {
         return when {
             m < 1 -> 0 to 0L
             m < 60 -> 1 to m
+            m < 360 -> 2 to m / 60      // до 6 ч — «N ч назад», даже если уже наступил новый день (иначе ночью свежий звонок прыгал в «вчера»)
             days == 0L -> 2 to m / 60
             days == 1L -> 3 to 0L
             else -> 4 to thenMs
+        }
+    }
+
+    /** Длительность звонка/записи: M:SS, а от часа — H:MM:SS (ручной «%d:%02d» давал «63:12»). Отрицательное (откат часов) → 0:00. */
+    fun duration(seconds: Long): String {
+        val s = seconds.coerceAtLeast(0)
+        return if (s < 3600) "%d:%02d".format(s / 60, s % 60)
+        else "%d:%02d:%02d".format(s / 3600, s % 3600 / 60, s % 60)
+    }
+
+    /** Скрытый/неизвестный собеседник → какой ярлык показать ("anonymous"/"unknown"), иначе null. */
+    fun hiddenKind(peer: String): String? {
+        val key = peerKey(peer)
+        return when {
+            key.equals("unknown", true) -> "unknown"
+            key.isEmpty() || key.equals("anonymous", true) -> "anonymous"
+            else -> null
         }
     }
 

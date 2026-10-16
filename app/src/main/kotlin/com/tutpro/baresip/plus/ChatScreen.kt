@@ -380,7 +380,8 @@ private fun Messages(
     messages: List<Message>,
     onMessageDeleted: () -> Unit
 ) {
-    val peerName = Utils.friendlyUri(
+    // Групповой MMS: отправитель каждого входящего уже в теле ("Имя: текст"), а сырой "mms:<thread>" подписью не нужен.
+    val peerName = if (HHSms.isGroup(peerUri)) "" else Utils.friendlyUri(
         uri = peerUri,
         account = account,
         anonymous = stringResource(R.string.anonymous),

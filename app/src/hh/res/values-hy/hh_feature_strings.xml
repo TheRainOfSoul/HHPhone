@@ -85,6 +85,9 @@
     <string name="hh_transfer_to">Ում փոխանցել</string>
     <string name="hh_add_to">Ում զանգել</string>
     <string name="hh_no_chats">Զրույցներ չկան</string>
+    <string name="hh_no_contacts">Կոնտակտներ չկան</string>
+    <string name="hh_nothing_found">Ոչինչ չի գտնվել</string>
+    <string name="hh_mms_photo">[Լուսանկար]</string>
     <string name="hh_menu">Ընտրացանկ</string>
     <string name="hh_backspace">Ջնջել</string>
     <string name="hh_paste">Տեղադրել</string>

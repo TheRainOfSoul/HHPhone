@@ -90,7 +90,15 @@ object HHPeople {
 }
 
 fun hhContact(peer: String): Contact? = HHPeople.contact(peer)
-fun hhName(peer: String): String = HHPeople.name(peer)
+fun hhDuration(seconds: Long): String = HHUiLogic.duration(seconds)
+
+fun hhName(peer: String): String {
+    val kind = HHUiLogic.hiddenKind(peer)
+    val ctx = BaresipService.instance
+    if (kind != null && ctx != null)   // скрытый/неизвестный номер — локализованный ярлык, не сырой "anonymous"
+        return ctx.getString(if (kind == "unknown") R.string.unknown else R.string.anonymous)
+    return HHPeople.name(peer)
+}
 
 /** Ключ карточки контакта HHPhone: a<id> — контакт телефона, b<id> — baresip, n<номер> — новый. */
 fun hhCardKey(c: Contact): String = if (c is Contact.AndroidContact) "a${c.id}" else "b${c.id()}"

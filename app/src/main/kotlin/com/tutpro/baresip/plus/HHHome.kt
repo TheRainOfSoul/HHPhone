@@ -401,8 +401,8 @@ private fun HHSuggestions(number: String, onPick: (String) -> Unit) {
             verticalAlignment = Alignment.CenterVertically) {
             HHAvatar(name, null, 28.dp)
             Spacer(Modifier.width(10.dp))
-            Text(name, Modifier.weight(1f), maxLines = 1, color = MaterialTheme.colorScheme.onSurface)
-            Text(n, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+            Text(name, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface)
+            Text(n, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, maxLines = 1)
         }
     }
 }
@@ -432,11 +432,11 @@ private fun HHLogRow(ctx: Context, g: HHLogGroup, tick: Int, onCard: () -> Unit,
                 Spacer(Modifier.width(4.dp))
                 val secs = e.start?.let { (e.stop - it) / 1000 }
                 val sub = listOfNotNull(
-                    if (name != HHUiLogic.peerKey(g.peer)) HHUiLogic.peerKey(g.peer) else null,
-                    secs?.let { "%d:%02d".format(it / 60, it % 60) },
+                    if (name != HHUiLogic.peerKey(g.peer) && HHUiLogic.hiddenKind(g.peer) == null) HHUiLogic.peerKey(g.peer) else null,
+                    secs?.let { hhDuration(it) },
                     if (e.aor.endsWith("@pstn")) "SIM" else null
                 ).joinToString(" · ")   // звонки других приложений (aor "") — без пометки
-                Text(sub, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                Text(sub, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         val ago = remember(tick, e.stop) { hhAgo(ctx, e.stop) }
@@ -486,6 +486,10 @@ private fun HHPeopleTab(ctx: Context, navController: NavController, viewModel: V
             OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth().padding(12.dp), singleLine = true,
                 placeholder = { Text(stringResource(R.string.hh_search)) }, shape = RoundedCornerShape(24.dp))
         }
+        if (!favoritesOnly && col.isEmpty() && con.isEmpty()) item {
+            Text(stringResource(if (q.isBlank()) R.string.hh_no_contacts else R.string.hh_nothing_found),
+                Modifier.fillMaxWidth().padding(32.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if (col.isNotEmpty()) item { HHSection(stringResource(R.string.hh_colleagues)) }
         items(col, key = { "c${it.aor}|${it.number}" }) { c ->
             HHPersonRow(c.name.ifBlank { c.number }, null, null, c.number, starred = HHColleagues.isStar(c),
@@ -519,8 +523,8 @@ private fun HHPersonRow(name: String, peer: String?, contact: Contact?, sub: Str
         HHAvatar(name, peer, 40.dp, contact)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(name, fontSize = 16.sp, maxLines = 1, color = MaterialTheme.colorScheme.onSurface)
-            Text(sub, fontSize = 13.sp, maxLines = 1, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(name, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface)
+            Text(sub, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (onStar != null) IconButton(onClick = onStar) {
             Icon(if (starred) Icons.Filled.Star else Icons.Outlined.StarOutline, stringResource(R.string.hh_favorite),
@@ -564,7 +568,7 @@ private fun HHChatsTab(ctx: Context, navController: NavController) {
                 HHAvatar(name, m.peerUri, 44.dp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(name, fontSize = 16.sp, maxLines = 1, color = MaterialTheme.colorScheme.onSurface,
+                    Text(name, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = if (m.new) FontWeight.Bold else FontWeight.Normal)
                     Text(m.message, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
