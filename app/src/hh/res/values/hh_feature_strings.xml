@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="hh_add_by_qr">Add by QR</string>
+    <string name="hh_add_manual">Add manually</string>
+    <string name="hh_manual_user">User (extension)</string>
+    <string name="hh_manual_pass">Password</string>
+    <string name="hh_manual_server">Server (PBX address)</string>
+    <string name="hh_manual_transport">Transport</string>
+    <string name="hh_manual_auth_user">Auth username (if different)</string>
+    <string name="hh_manual_proxy">Proxy (optional)</string>
+    <string name="hh_manual_invalid">Check the fields: user, password and server are required.</string>
+    <string name="hh_manual_add">Add</string>
     <string name="hh_show_qr">Show QR</string>
     <string name="hh_qr_lock">Lock for employee</string>
     <string name="hh_pin">PIN (4–8 digits)</string>

@@ -37,6 +37,23 @@ object HHUiLogic {
         return body.filter { it.isDigit() || it in "+*#" }.ifEmpty { null }
     }
 
+    /** Учётка из полей ручного ввода: нормализует сервер/прокси, возвращает null, если не проходит проверку QR-учётки. */
+    fun manualAccount(name: String, user: String, pass: String, server: String,
+                      transport: String, authUser: String, proxy: String): HHAccountQr? {
+        val p = proxy.trim()
+        val qr = HHAccountQr(
+            name = name.trim(),
+            user = user.trim(),
+            pass = pass,                                                   // пароль как есть: пробелы/регистр значимы
+            domain = server.trim().removePrefix("sips:").removePrefix("sip:").trim(),
+            authUser = authUser.trim(),
+            proxy = when { p.isEmpty() -> ""; p.startsWith("sip:") -> p; else -> "sip:$p" },
+            transport = transport,
+            mediaEnc = "",
+        )
+        return qr.takeIf { HHQr.validAccount(it) }
+    }
+
     fun group(entries: List<HHLogEntry>): List<HHLogGroup> {
         val out = mutableListOf<HHLogGroup>()
         for (e in entries.sortedByDescending { it.stop }) {

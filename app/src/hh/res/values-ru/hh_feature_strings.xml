@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="hh_add_by_qr">Добавить по QR</string>
+    <string name="hh_add_manual">Добавить вручную</string>
+    <string name="hh_manual_user">Пользователь (номер)</string>
+    <string name="hh_manual_pass">Пароль</string>
+    <string name="hh_manual_server">Сервер (адрес АТС)</string>
+    <string name="hh_manual_transport">Транспорт</string>
+    <string name="hh_manual_auth_user">Имя для авторизации (если отличается)</string>
+    <string name="hh_manual_proxy">Прокси (необязательно)</string>
+    <string name="hh_manual_invalid">Проверьте поля: пользователь, пароль и сервер обязательны.</string>
+    <string name="hh_manual_add">Добавить</string>
     <string name="hh_show_qr">Показать QR</string>
     <string name="hh_qr_lock">Блокировать у сотрудника</string>
     <string name="hh_pin">PIN (4–8 цифр)</string>

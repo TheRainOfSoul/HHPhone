@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="hh_add_by_qr">Ավելացնել QR-ով</string>
+    <string name="hh_add_manual">Ավելացնել ձեռքով</string>
+    <string name="hh_manual_user">Օգտվող (համարը)</string>
+    <string name="hh_manual_pass">Գաղտնաբառ</string>
+    <string name="hh_manual_server">Սերվեր (ԱՀԿ-ի հասցե)</string>
+    <string name="hh_manual_transport">Տրանսպորտ</string>
+    <string name="hh_manual_auth_user">Նույնականացման անունը (եթե տարբերվում է)</string>
+    <string name="hh_manual_proxy">Պրոքսի (ըստ ցանկության)</string>
+    <string name="hh_manual_invalid">Ստուգեք դաշտերը՝ օգտվողը, գաղտնաբառը և սերվերը պարտադիր են։</string>
+    <string name="hh_manual_add">Ավելացնել</string>
     <string name="hh_show_qr">Ցույց տալ QR</string>
     <string name="hh_qr_lock">Արգելափակել աշխատակցի մոտ</string>
     <string name="hh_pin">PIN (4–8 թվանշան)</string>

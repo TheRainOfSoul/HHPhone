@@ -4,15 +4,25 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AdminPanelSettings
+import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -99,6 +109,7 @@ object HHUi {
     val downloading = MutableStateFlow<Int?>(null)
     val mainAction = MutableStateFlow<HHMainAction?>(null)   // из «Обслуживания» в «Настройках» на главный экран
     val dialNumber = MutableStateFlow<String?>(null)         // внешний номер (tel:/sip:, Circle to Search, тап по номеру) → в наборное поле
+    val manualAdd = MutableStateFlow(false)                  // открыт диалог ручного добавления учётки
 }
 
 /** Наши диалоги поверх любого экрана; вызывается один раз в MainActivity после NavHost. */
@@ -156,6 +167,9 @@ fun HHHost(navController: NavController) {
     }
     pinPrompt?.let { prompt -> PinDialog(ctx, prompt) }
 
+    val manualAdd by HHUi.manualAdd.collectAsState()
+    if (manualAdd) ManualAddDialog(ctx)
+
     // автопроверка при запуске и возврате в приложение (не чаще раза в 6 ч)
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
@@ -206,6 +220,58 @@ private fun PinDialog(ctx: Context, prompt: HHPinPrompt) {
             }) { Text(stringResource(R.string.ok)) }
         },
         dismissButton = { TextButton(onClick = { HHUi.pinPrompt.value = null }) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
+/** Ручной ввод SIP-учётки (для АТС без QR, напр. Issabel): собранная учётка идёт тем же путём, что и QR hhphone://add. */
+@Composable
+private fun ManualAddDialog(ctx: Context) {
+    var name by remember { mutableStateOf("") }
+    var user by remember { mutableStateOf("") }
+    var pass by remember { mutableStateOf("") }
+    var server by remember { mutableStateOf("") }
+    var authUser by remember { mutableStateOf("") }
+    var proxy by remember { mutableStateOf("") }
+    var transport by remember { mutableStateOf("udp") }
+    var error by remember { mutableStateOf(false) }
+    val close = { HHUi.manualAdd.value = false }
+    AlertDialog(
+        onDismissRequest = close,
+        title = { Text(stringResource(R.string.hh_add_manual)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(user, { user = it; error = false }, singleLine = true, isError = error,
+                    label = { Text(stringResource(R.string.hh_manual_user)) })
+                OutlinedTextField(pass, { pass = it; error = false }, singleLine = true, isError = error,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    label = { Text(stringResource(R.string.hh_manual_pass)) })
+                OutlinedTextField(server, { server = it; error = false }, singleLine = true, isError = error,
+                    label = { Text(stringResource(R.string.hh_manual_server)) })
+                Spacer(Modifier.height(8.dp))
+                Text(stringResource(R.string.hh_manual_transport))
+                Row {
+                    listOf("udp", "tcp", "tls").forEach { t ->
+                        FilterChip(selected = transport == t, onClick = { transport = t }, label = { Text(t.uppercase()) })
+                        Spacer(Modifier.width(8.dp))
+                    }
+                }
+                OutlinedTextField(name, { name = it }, singleLine = true,
+                    label = { Text(stringResource(R.string.hh_name)) })
+                OutlinedTextField(authUser, { authUser = it }, singleLine = true,
+                    label = { Text(stringResource(R.string.hh_manual_auth_user)) })
+                OutlinedTextField(proxy, { proxy = it }, singleLine = true,
+                    label = { Text(stringResource(R.string.hh_manual_proxy)) })
+                if (error) Text(stringResource(R.string.hh_manual_invalid))
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val qr = HHUiLogic.manualAccount(name, user, pass, server, transport, authUser, proxy)
+                if (qr == null) error = true else { close(); startProvision(ctx, HHQr.encode(qr)) }
+            }) { Text(stringResource(R.string.hh_manual_add)) }
+        },
+        dismissButton = { TextButton(onClick = close) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -288,17 +354,19 @@ fun hhMenu(items: List<MenuItem>, hidden: Set<String>): List<MenuItem> {
     val restricted by HHStaff.restricted.collectAsState()
     val admin by HHStaff.adminSession.collectAsState()
     val addByQr = MenuItem(stringResource(R.string.hh_add_by_qr), Icons.Outlined.QrCodeScanner)
+    val addManual = MenuItem(stringResource(R.string.hh_add_manual), Icons.Outlined.Keyboard)
     val adminItem = MenuItem(stringResource(R.string.hh_admin), Icons.Outlined.AdminPanelSettings)
     val unlockItem = MenuItem(stringResource(R.string.hh_unlock_device), Icons.Outlined.LockOpen)
     return when {
-        restricted -> listOf(addByQr) + items.filter { it.text !in hidden } + adminItem
-        admin -> listOf(addByQr) + items + unlockItem
-        else -> listOf(addByQr) + items
+        restricted -> listOf(addByQr, addManual) + items.filter { it.text !in hidden } + adminItem
+        admin -> listOf(addByQr, addManual) + items + unlockItem
+        else -> listOf(addByQr, addManual) + items
     }
 }
 
 fun hhMenuClick(ctx: Context, item: String): Boolean = when (item) {
     ctx.getString(R.string.hh_add_by_qr) -> { HHProvisioning.requestScan(); true }
+    ctx.getString(R.string.hh_add_manual) -> { HHUi.manualAdd.value = true; true }
     ctx.getString(R.string.hh_admin) -> { HHUi.pinPrompt.value = HHPinPrompt { HHStaff.setAdminSession(true) }; true }
     ctx.getString(R.string.hh_unlock_device) -> {
         HHStaff.save(HHLockState()); HHStaff.setAdminSession(false)
