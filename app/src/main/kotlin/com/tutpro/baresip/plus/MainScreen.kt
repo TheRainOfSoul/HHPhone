@@ -3542,6 +3542,8 @@ fun handleIntent(ctx: Context, viewModel: ViewModel, intent: Intent, action: Str
                 viewModel.dialerState.showCallConferenceButton.value = false
                 callClick(ctx, viewModel, viewModel.dialerState, true)
             }
+            else   // "dial"/"video dial": не звонить сразу, а показать номер в наборном поле HH (внешний dial, Circle to Search)
+                HHUi.dialNumber.value = hhPeerId(peer)
         }
         "call show", "call answer" -> {
             val callp = intent.getLongExtra("callp", 0L)
@@ -3645,11 +3647,9 @@ fun callAction(ctx: Context, viewModel: ViewModel, uri: Uri?, action: String) {
                         account = a
                         break
                     }
-                if (account == null) {
-                    Log.w(TAG, "No telephony providers for '$uriStr'")
-                    return
-                }
-                uap = UserAgent.ofAor(account.aor)!!.uap
+                // без SIM-провайдера (только станция) номер всё равно заполняем — звонок уйдёт через станционную линию
+                uap = if (account != null) UserAgent.ofAor(account.aor)!!.uap
+                      else uas.value.firstOrNull()?.uap ?: run { Log.w(TAG, "No accounts for '$uriStr'"); return }
             }
             else -> {
                 Log.w(TAG, "Unsupported URI scheme ${uri.scheme}")

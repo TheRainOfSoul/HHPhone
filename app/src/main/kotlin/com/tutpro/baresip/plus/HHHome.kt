@@ -60,6 +60,7 @@ import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.AccountBox
+import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.ManageAccounts
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.Settings
@@ -102,6 +103,9 @@ fun HHHome(navController: NavController, viewModel: ViewModel, onQuitClick: () -
     val ctx = LocalContext.current
     val pager = rememberPagerState(initialPage = 1) { 4 }
     val scope = rememberCoroutineScope()
+    // внешний номер (tel:/sip:, Circle to Search, тап по номеру) — показать вкладку телефона, само поле заполнит HHPhoneTab
+    val extDial by HHUi.dialNumber.collectAsState()
+    LaunchedEffect(extDial) { if (extDial != null) pager.animateScrollToPage(1) }
     val allowContacts = hhContactsAccess(ctx)
     LaunchedEffect(Unit) {   // HHPhone заменяет звонилку — контакты телефона нужны сразу; спрашиваем один раз
         while (!Config.isInitialized()) delay(200)   // первый запуск: config читает сервис
@@ -219,6 +223,12 @@ private fun HHHeader(navController: NavController, onQuitClick: () -> Unit) {
     }
 }
 
+/** Текст из буфера обмена (null — пусто/нет доступа). Читаем только по нажатию «Вставить». */
+private fun hhClipboardText(ctx: Context): String? {
+    val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager ?: return null
+    return cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(ctx)?.toString()
+}
+
 /** Линии для кнопок вызова: SIM и станции. */
 @Composable
 internal fun hhLines(): List<HHLine> {
@@ -249,6 +259,15 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
     }
     var number by rememberSaveable { mutableStateOf("") }
     var keypad by rememberSaveable { mutableStateOf(true) }
+    // внешний номер (tel:/sip:, Circle to Search) — заполнить поле и показать клавиатуру, но не звонить сами
+    val extDial by HHUi.dialNumber.collectAsState()
+    LaunchedEffect(extDial) {
+        val n = extDial ?: return@LaunchedEffect
+        number = n; keypad = true
+        // сигнал гасим с задержкой: navigateToHome пересоздаёт экран, пусть свежая вкладка тоже успеет применить номер
+        // (умирающий экземпляр при пересоздании отменяет эту корутину, поэтому гонки «очистил до монтажа нового» нет)
+        delay(500); if (HHUi.dialNumber.value == n) HHUi.dialNumber.value = null
+    }
     val lines = hhLines()
     val green = colorResource(R.color.colorTrafficGreen)
 
@@ -284,6 +303,15 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                             color = MaterialTheme.colorScheme.onSurface)
                         if (number.isNotEmpty()) IconButton(onClick = { number = number.dropLast(1) }) {
                             Icon(Icons.AutoMirrored.Outlined.Backspace, stringResource(R.string.hh_backspace), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        else {   // пусто — вставить скопированный номер (буфер читаем только по нажатию)
+                            val noNumber = stringResource(R.string.hh_paste_empty)
+                            IconButton(onClick = {
+                                val got = HHUiLogic.dialableFromClipboard(hhClipboardText(ctx))
+                                if (got != null) number = got else Toast.makeText(ctx, noNumber, Toast.LENGTH_SHORT).show()
+                            }) {
+                                Icon(Icons.Outlined.ContentPaste, stringResource(R.string.hh_paste), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
                     HHKeypad(onKey = { number += it }, onLong = { k ->

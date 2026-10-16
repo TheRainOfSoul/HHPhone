@@ -78,6 +78,8 @@
     <string name="hh_no_chats">No chats</string>
     <string name="hh_menu">Menu</string>
     <string name="hh_backspace">Delete</string>
+    <string name="hh_paste">Paste</string>
+    <string name="hh_paste_empty">No number in clipboard</string>
     <string name="hh_favorite">Favorite</string>
     <string name="hh_registered">registered</string>
     <string name="hh_not_registered">not registered</string>

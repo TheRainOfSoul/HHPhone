@@ -82,6 +82,8 @@
     <string name="hh_no_chats">Чатов нет</string>
     <string name="hh_menu">Меню</string>
     <string name="hh_backspace">Стереть</string>
+    <string name="hh_paste">Вставить</string>
+    <string name="hh_paste_empty">В буфере нет номера</string>
     <string name="hh_favorite">Избранное</string>
     <string name="hh_registered">на связи</string>
     <string name="hh_not_registered">нет связи</string>

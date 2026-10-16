@@ -78,6 +78,8 @@
     <string name="hh_no_chats">Զրույցներ չկան</string>
     <string name="hh_menu">Ընտրացանկ</string>
     <string name="hh_backspace">Ջնջել</string>
+    <string name="hh_paste">Տեղադրել</string>
+    <string name="hh_paste_empty">Սեղմատախտակում համար չկա</string>
     <string name="hh_favorite">Ընտրյալ</string>
     <string name="hh_registered">կապի մեջ է</string>
     <string name="hh_not_registered">կապ չկա</string>

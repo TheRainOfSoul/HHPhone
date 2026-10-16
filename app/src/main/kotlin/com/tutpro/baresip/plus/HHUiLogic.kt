@@ -27,6 +27,16 @@ object HHUiLogic {
         return if (s.any { it.isLetter() }) s else s.filter { it.isDigit() || it in "+*#" }
     }
 
+    /** Номер из буфера обмена для наборного поля: sip-адрес целиком, телефон → цифры/+*#, текст с буквами → null. */
+    fun dialableFromClipboard(text: String?): String? {
+        val t = text?.trim().orEmpty()
+        if (t.isEmpty()) return null
+        if (t.startsWith("sip:")) return t.substringBefore(";")
+        val body = t.removePrefix("tel:")
+        if (body.any { it.isLetter() }) return null            // имя/фраза, а не номер
+        return body.filter { it.isDigit() || it in "+*#" }.ifEmpty { null }
+    }
+
     fun group(entries: List<HHLogEntry>): List<HHLogGroup> {
         val out = mutableListOf<HHLogGroup>()
         for (e in entries.sortedByDescending { it.stop }) {

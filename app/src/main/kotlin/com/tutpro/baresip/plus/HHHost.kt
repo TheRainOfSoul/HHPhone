@@ -98,6 +98,7 @@ object HHUi {
     val update = MutableStateFlow<HHLatest?>(null)
     val downloading = MutableStateFlow<Int?>(null)
     val mainAction = MutableStateFlow<HHMainAction?>(null)   // из «Обслуживания» в «Настройках» на главный экран
+    val dialNumber = MutableStateFlow<String?>(null)         // внешний номер (tel:/sip:, Circle to Search, тап по номеру) → в наборное поле
 }
 
 /** Наши диалоги поверх любого экрана; вызывается один раз в MainActivity после NavHost. */
