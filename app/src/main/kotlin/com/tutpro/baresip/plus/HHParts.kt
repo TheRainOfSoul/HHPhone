@@ -98,13 +98,8 @@ fun hhCardRoute(c: Contact?, peer: String): String =
     "hh_contact/" + android.net.Uri.encode(if (c != null) hhCardKey(c) else "n" + hhPeerId(peer))
 
 /** Номер для своих станций, полный sip-адрес — для чужого сервера или буквенного имени. */
-fun hhPeerId(peer: String): String {
-    val key = HHUiLogic.peerKey(peer)
-    if (!peer.startsWith("sip:")) return key
-    val dom = peer.substringAfter("@", "").substringBefore(";")
-    val own = BaresipService.uas.value.map { it.account.aor.substringAfter("@") }
-    return if (key.any { it.isLetter() } || (dom.isNotEmpty() && dom !in own)) peer.substringBefore(";") else key
-}
+fun hhPeerId(peer: String): String =
+    HHUiLogic.peerId(peer, BaresipService.uas.value.map { it.account.aor.substringAfter("@") })
 
 /** Фото контакта или первая буква в цветном круге. */
 @Composable

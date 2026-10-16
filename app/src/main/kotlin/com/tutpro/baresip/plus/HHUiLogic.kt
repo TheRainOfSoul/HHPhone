@@ -27,6 +27,16 @@ object HHUiLogic {
         return if (s.any { it.isLetter() }) s else s.filter { it.isDigit() || it in "+*#" }
     }
 
+    /** Как показать собеседника: номер — для своей станции (домен совпал без учёта порта), полный sip-адрес — для чужого сервера или буквенного имени. */
+    fun peerId(peer: String, ownDomains: List<String>): String {
+        val key = peerKey(peer)
+        if (!peer.startsWith("sip:")) return key
+        val noPort = Regex(":\\d+$")   // 123.1.1.1:5060 и 123.1.1.1 — одна станция; ponytail: IPv6 без скобок не поддержан (не наш случай)
+        val dom = peer.substringAfter("@", "").substringBefore(";").replace(noPort, "")
+        val own = ownDomains.map { it.substringBefore(";").replace(noPort, "") }
+        return if (key.any { it.isLetter() } || (dom.isNotEmpty() && dom !in own)) peer.substringBefore(";") else key
+    }
+
     /** Номер из буфера обмена для наборного поля: sip-адрес целиком, телефон → цифры/+*#, текст с буквами → null. */
     fun dialableFromClipboard(text: String?): String? {
         val t = text?.trim().orEmpty()
