@@ -239,7 +239,8 @@ internal fun hhLines(): List<HHLine> {
     })
 }
 
-private fun lineLabel(@Suppress("UNUSED_PARAMETER") ctx: Context, l: HHLine): String = hhLineLabel(l)
+private fun lineLabel(ctx: Context, l: HHLine): String =   // A4: на SIM-кнопке — имя оператора (одна SIM), иначе «SIM»
+    if (l.mobile) (Utils.simCarrierLabel(ctx) ?: hhLineLabel(l)) else hhLineLabel(l)
 
 internal fun hhLineLabel(l: HHLine): String = if (l.mobile) "SIM" else "HH " + HHPush.userDomain(l.aor).first
 

@@ -1411,6 +1411,16 @@ object Utils {
         return null
     }
 
+    /** Имя оператора одной активной SIM (A4-метка); null — нет разрешения, нет SIM или их несколько (тогда зовётся «SIM»). */
+    @SuppressLint("MissingPermission")
+    fun simCarrierLabel(ctx: Context): String? {
+        if (ctx.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) return null
+        return try {
+            val subs = ctx.getSystemService(SubscriptionManager::class.java)?.activeSubscriptionInfoList
+            if (subs?.size == 1) subs[0].carrierName?.toString()?.trim()?.ifEmpty { null } else null
+        } catch (_: Exception) { null }
+    }
+
     fun sendSms(ctx: Context, destination: String, message: String): Boolean =
         HHSms.send(ctx, destination, message)   // HHPhone: длинный текст частями, запись в системную базу
 

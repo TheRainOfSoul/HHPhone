@@ -97,7 +97,9 @@ fun HHCallTitle(call: Call, status: String, video: Boolean = false) {
     val colleagues by HHColleagues.list.collectAsState()
     val name = remember(colleagues, call.peerUri) { hhName(call.peerUri) }
     val number = HHUiLogic.peerKey(call.peerUri)
-    val line = if (call.ua.account.isMobile) "SIM" else "HH " + HHPush.userDomain(call.ua.account.aor).first
+    val ctx = LocalContext.current
+    val line = if (call.ua.account.isMobile) (Utils.simCarrierLabel(ctx) ?: "SIM")   // A4: имя оператора
+        else "HH " + HHPush.userDomain(call.ua.account.aor).first
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 24.dp, start = 24.dp, end = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
         Text(status, color = fg.copy(alpha = 0.8f), fontSize = 15.sp)
