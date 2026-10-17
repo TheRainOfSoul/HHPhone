@@ -196,4 +196,17 @@
     <string name="hh_camera_flip">Flip camera</string>
     <string name="hh_video_off">Stop video</string>
     <string name="hh_video_call">Video call</string>
+    <string name="hh_filter_all">All</string>
+    <string name="hh_filter_missed">Missed</string>
+    <string name="hh_reply_with_sms">Reply with SMS</string>
+    <string name="hh_reply_call_back">I’ll call you back</string>
+    <string name="hh_reply_busy">I’m busy right now</string>
+    <string name="hh_reply_cant_talk">Can’t talk, what’s up?</string>
+    <string name="hh_reply_text_me">Please text me</string>
+    <string name="hh_speed_dial">Speed dial</string>
+    <string name="hh_speed_dial_hint">Long-press a key 2–9 to call the assigned number</string>
+    <string name="hh_speed_dial_set">Assign to key %1$s</string>
+    <string name="hh_speed_dial_number">Number</string>
+    <string name="hh_speed_dial_clear">Clear</string>
+    <string name="hh_speed_dial_empty">not set</string>
 </resources>

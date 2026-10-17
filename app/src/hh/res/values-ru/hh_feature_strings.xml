@@ -200,4 +200,17 @@
     <string name="hh_camera_flip">Сменить камеру</string>
     <string name="hh_video_off">Выключить видео</string>
     <string name="hh_video_call">Видеозвонок</string>
+    <string name="hh_filter_all">Все</string>
+    <string name="hh_filter_missed">Пропущенные</string>
+    <string name="hh_reply_with_sms">Ответить SMS</string>
+    <string name="hh_reply_call_back">Перезвоню</string>
+    <string name="hh_reply_busy">Сейчас занят</string>
+    <string name="hh_reply_cant_talk">Не могу говорить, что случилось?</string>
+    <string name="hh_reply_text_me">Напишите, пожалуйста</string>
+    <string name="hh_speed_dial">Быстрый набор</string>
+    <string name="hh_speed_dial_hint">Удерживайте клавишу 2–9, чтобы позвонить на закреплённый номер</string>
+    <string name="hh_speed_dial_set">Закрепить за клавишей %1$s</string>
+    <string name="hh_speed_dial_number">Номер</string>
+    <string name="hh_speed_dial_clear">Очистить</string>
+    <string name="hh_speed_dial_empty">не задан</string>
 </resources>

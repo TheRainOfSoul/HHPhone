@@ -196,4 +196,17 @@
     <string name="hh_camera_flip">Փոխել տեսախցիկը</string>
     <string name="hh_video_off">Անջատել տեսանյութը</string>
     <string name="hh_video_call">Տեսազանգ</string>
+    <string name="hh_filter_all">Բոլորը</string>
+    <string name="hh_filter_missed">Բաց թողնված</string>
+    <string name="hh_reply_with_sms">Պատասխանել SMS-ով</string>
+    <string name="hh_reply_call_back">Հետ կզանգեմ</string>
+    <string name="hh_reply_busy">Հիմա զբաղված եմ</string>
+    <string name="hh_reply_cant_talk">Չեմ կարող խոսել, ի՞նչ է պատահել</string>
+    <string name="hh_reply_text_me">Խնդրում եմ գրեք</string>
+    <string name="hh_speed_dial">Արագ հավաքում</string>
+    <string name="hh_speed_dial_hint">Երկար սեղմեք 2–9 ստեղնը՝ կցված համարին զանգելու համար</string>
+    <string name="hh_speed_dial_set">Կցել %1$s ստեղնին</string>
+    <string name="hh_speed_dial_number">Համար</string>
+    <string name="hh_speed_dial_clear">Մաքրել</string>
+    <string name="hh_speed_dial_empty">նշված չէ</string>
 </resources>

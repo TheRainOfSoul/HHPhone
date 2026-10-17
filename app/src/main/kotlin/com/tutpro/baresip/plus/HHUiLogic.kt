@@ -155,6 +155,16 @@ object HHUiLogic {
         else -> null
     }
 
+    /** Журнал только с пропущенными — для фильтра вкладки «Телефон» (A5). */
+    fun missedGroups(groups: List<HHLogGroup>): List<HHLogGroup> = groups.filter { missed(it.last) }
+
+    /** Куда слать SMS при «отклонить с сообщением» (A1): номер для числового собеседника, null — буквенному SIP не шлём. */
+    fun smsReplyNumber(peerUri: String): String? =
+        peerKey(peerUri).takeIf { it.isNotEmpty() && it.all { c -> c.isDigit() || c in "+*#" } }
+
+    /** Линия быстрого набора (A2): сначала SIM, иначе первая доступная. */
+    fun speedLine(lines: List<HHLine>): HHLine? = lines.firstOrNull { it.mobile } ?: lines.firstOrNull()
+
     fun screenFor(callStatuses: List<String>, video: Boolean): String {
         val open = callStatuses.filter { it != "closed" }
         return when {

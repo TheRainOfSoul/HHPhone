@@ -2,6 +2,7 @@ package com.tutpro.baresip.plus
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -19,14 +20,17 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -107,19 +111,58 @@ fun HHCallTitle(call: Call, status: String, video: Boolean = false) {
     }
 }
 
-/** Входящий: ползунок — влево «Отклонить», вправо «Ответить». */
+/** Входящий: ползунок — влево «Отклонить», вправо «Ответить»; для числового собеседника — «Ответить SMS» (A1). */
 @Composable
 fun HHIncoming(call: Call) {
     val ctx = LocalContext.current
+    val smsTo = HHUiLogic.smsReplyNumber(call.peerUri)
+    var showReplies by remember { mutableStateOf(false) }
+    if (showReplies && smsTo != null) HHReplyDialog(ctx, smsTo, onDone = {
+        HHCalls.reject(call); showReplies = false
+    }) { showReplies = false }
     HHCallBackdrop(call) {
         Column(Modifier.fillMaxSize()) {
             HHCallTitle(call, stringResource(R.string.hh_incoming_call))
             Spacer(Modifier.weight(1f))
+            if (smsTo != null) {
+                val fg = if (hhDark()) Color.White else MaterialTheme.colorScheme.onSurface
+                TextButton(onClick = { showReplies = true }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Text(stringResource(R.string.hh_reply_with_sms), color = fg)
+                }
+                Spacer(Modifier.height(12.dp))
+            }
             HHAnswerSlider(onAnswer = { HHCalls.answer(ctx, call) }, onReject = { HHCalls.reject(call) })
             // выше низа экрана: туда голосовой ассистент (Gemini «быстрые фразы», Bixby) выводит свои подсказки
             Spacer(Modifier.height(200.dp))
         }
     }
+}
+
+/** Заготовки быстрого ответа при отклонении звонка (A1): выбор — отправить SMS и отклонить. */
+@Composable
+private fun HHReplyDialog(ctx: android.content.Context, to: String, onDone: () -> Unit, onDismiss: () -> Unit) {
+    val presets = listOf(R.string.hh_reply_call_back, R.string.hh_reply_busy, R.string.hh_reply_cant_talk, R.string.hh_reply_text_me)
+    val failed = stringResource(R.string.hh_save_failed)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.hh_reply_with_sms)) },
+        text = {
+            Column {
+                presets.forEach { res ->
+                    val text = stringResource(res)
+                    Text(text, Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            if (!HHSms.send(ctx, to, text))
+                                android.widget.Toast.makeText(ctx, failed, android.widget.Toast.LENGTH_SHORT).show()
+                            onDone()
+                        }
+                        .padding(vertical = 14.dp), fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.hh_cancel)) } }
+    )
 }
 
 @Composable

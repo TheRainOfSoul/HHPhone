@@ -259,6 +259,8 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
     }
     var number by rememberSaveable { mutableStateOf("") }
     var keypad by rememberSaveable { mutableStateOf(true) }
+    var missedOnly by rememberSaveable { mutableStateOf(false) }   // A5: фильтр «только пропущенные»
+    var assignKey by remember { mutableStateOf<Char?>(null) }      // A2: клавиша, которую назначаем в быстрый набор
     // внешний номер (tel:/sip:, Circle to Search) — заполнить поле и показать клавиатуру, но не звонить сами
     val extDial by HHUi.dialNumber.collectAsState()
     LaunchedEffect(extDial) {
@@ -277,14 +279,21 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
     LaunchedEffect(Unit) { while (true) { delay(60_000); tick++ } }
     var sheet by remember { mutableStateOf<HHLogGroup?>(null) }
     sheet?.let { HHCallSheet(it, navController, viewModel, lines) { sheet = null } }
+    assignKey?.let { key -> HHSpeedDialDialog(ctx, key, number) { assignKey = null } }   // A2
+    val shown = if (missedOnly) HHUiLogic.missedGroups(log) else log   // A5
     Column(Modifier.fillMaxSize()) {
+        if (!keypad) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HHChip(!missedOnly, stringResource(R.string.hh_filter_all)) { missedOnly = false }
+            HHChip(missedOnly, stringResource(R.string.hh_filter_missed)) { missedOnly = true }
+        }
         Box(Modifier.weight(1f)) {
         LazyColumn(Modifier.fillMaxSize(), state = listState) {
-            if (log.isEmpty()) item {
-                Text(stringResource(R.string.hh_no_calls), Modifier.fillMaxWidth().padding(32.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (shown.isEmpty()) item {
+                Text(stringResource(if (missedOnly) R.string.hh_nothing_found else R.string.hh_no_calls),
+                    Modifier.fillMaxWidth().padding(32.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            items(log, key = { "${it.peer}|${it.last.stop}" }) { g ->   // tick не в ключе: строки не пересоздаются раз в минуту
+            items(shown, key = { "${it.peer}|${it.last.stop}" }) { g ->   // tick не в ключе: строки не пересоздаются раз в минуту
                 // нажатие — меню звонка (не звонит сразу)
                 HHLogRow(ctx, g, tick, onCard = { navController.navigate(hhCardRoute(hhContact(g.peer), g.peer)) }) { sheet = g }
                 HorizontalDivider(Modifier.padding(start = 72.dp), color = MaterialTheme.colorScheme.outlineVariant)
@@ -320,6 +329,13 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                             '1' -> lines.firstOrNull { !it.mobile }?.let { l ->
                                 UserAgent.ofAor(l.aor)?.account?.vmUri?.takeIf { it.isNotEmpty() }?.let { HHCalls.dial(ctx, viewModel, l.aor, it) }
                             } ?: false
+                            in '2'..'9' -> {   // A2: быстрый набор — закреплён номер звоним, пусто предлагаем закрепить
+                                val saved = ctx.getSharedPreferences("hh_ui", Context.MODE_PRIVATE).getString("speed_$k", null)
+                                if (saved != null)
+                                    HHUiLogic.speedLine(lines)?.let { if (HHCalls.dial(ctx, viewModel, it.aor, saved)) number = "" }
+                                else assignKey = k
+                                true
+                            }
                             else -> false
                         }
                     })
@@ -373,6 +389,41 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
             }
         }
     }
+}
+
+/** Чип-фильтр (A5): выбран — бордовый, иначе приглушённый. */
+@Composable
+internal fun HHChip(selected: Boolean, label: String, onClick: () -> Unit) =
+    Surface(onClick = onClick, shape = RoundedCornerShape(16.dp),
+        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant) {
+        Text(label, Modifier.padding(horizontal = 14.dp, vertical = 6.dp), fontSize = 14.sp,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+
+/** Диалог быстрого набора (A2): задать/очистить номер для клавиши. initial — подставить набранное. Ключ хранится в prefs hh_ui как speed_<клавиша>. */
+@Composable
+internal fun HHSpeedDialDialog(ctx: Context, key: Char, initial: String, onDismiss: () -> Unit) {
+    val prefs = ctx.getSharedPreferences("hh_ui", Context.MODE_PRIVATE)
+    val existing = prefs.getString("speed_$key", null)
+    var value by remember { mutableStateOf(existing ?: initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.hh_speed_dial_set, key.toString())) },
+        text = {
+            OutlinedTextField(value = value, onValueChange = { value = it }, singleLine = true,
+                label = { Text(stringResource(R.string.hh_speed_dial_number)) }, modifier = Modifier.fillMaxWidth())
+        },
+        confirmButton = {
+            TextButton(enabled = value.isNotBlank(), onClick = {
+                prefs.edit().putString("speed_$key", value.trim()).apply(); onDismiss()
+            }) { Text(stringResource(R.string.hh_save)) }
+        },
+        dismissButton = {
+            if (existing != null) TextButton(onClick = { prefs.edit().remove("speed_$key").apply(); onDismiss() }) {
+                Text(stringResource(R.string.hh_speed_dial_clear), color = MaterialTheme.colorScheme.error)
+            } else TextButton(onClick = onDismiss) { Text(stringResource(R.string.hh_cancel)) }
+        }
+    )
 }
 
 @Composable

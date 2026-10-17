@@ -330,4 +330,25 @@ class HHUiLogicTest {
         assertEquals("device not voice capable", HHUiLogic.mobileProfileBlocker(true, true, false, true))
         assertEquals("no default voice subscription", HHUiLogic.mobileProfileBlocker(true, true, true, false))
     }
+
+    @Test fun missedGroupsKeepsOnlyMissed() {
+        val miss = HHLogGroup("tel:1", "sip:mobile@pstn", HHLogEntry("tel:1", "sip:mobile@pstn", "in", null, 10, false), 1)
+        val answered = HHLogGroup("tel:2", "sip:mobile@pstn", HHLogEntry("tel:2", "sip:mobile@pstn", "in", 5, 10, false), 1)
+        val outgoing = HHLogGroup("tel:3", "sip:mobile@pstn", HHLogEntry("tel:3", "sip:mobile@pstn", "out", null, 10, false), 1)
+        assertEquals(listOf(miss), HHUiLogic.missedGroups(listOf(miss, answered, outgoing)))
+    }
+
+    @Test fun smsReplyNumberOnlyForDialablePeer() {
+        assertEquals("+37491", HHUiLogic.smsReplyNumber("tel:+37491"))
+        assertEquals("101", HHUiLogic.smsReplyNumber("sip:101@pbx.local"))
+        assertEquals(null, HHUiLogic.smsReplyNumber("sip:bob@pbx.local"))   // буквенному адресу SMS не шлём
+    }
+
+    @Test fun speedLinePrefersSim() {
+        val sim = HHLine("sip:mobile@pstn", true, true)
+        val hh = HHLine("sip:101@pbx", false, true)
+        assertEquals(sim, HHUiLogic.speedLine(listOf(hh, sim)))
+        assertEquals(hh, HHUiLogic.speedLine(listOf(hh)))
+        assertEquals(null, HHUiLogic.speedLine(emptyList()))
+    }
 }

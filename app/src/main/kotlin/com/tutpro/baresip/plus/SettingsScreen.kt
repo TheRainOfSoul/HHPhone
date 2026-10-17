@@ -62,6 +62,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -1024,6 +1025,30 @@ private fun SettingsContent(
     }
 
     @Composable
+    fun SpeedDial() {   // A2: управление быстрым набором (клавиши 2–9), хранение в prefs hh_ui
+        val ctx = LocalContext.current
+        val prefs = ctx.getSharedPreferences("hh_ui", Context.MODE_PRIVATE)
+        var edit by remember { mutableStateOf<Char?>(null) }
+        var tick by remember { mutableIntStateOf(0) }
+        Column(Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.hh_speed_dial), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.hh_speed_dial_hint), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            key(tick) {
+                ('2'..'9').forEach { k ->
+                    val n = prefs.getString("speed_$k", null)
+                    Row(Modifier.fillMaxWidth().clickable { edit = k }.padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(k.toString(), fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 20.dp))
+                        Text(n ?: stringResource(R.string.hh_speed_dial_empty), fontSize = 16.sp,
+                            color = if (n != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+        edit?.let { k -> HHSpeedDialDialog(ctx, k, "") { edit = null; tick++ } }
+    }
+
+    @Composable
     fun ProximitySensing() {
         val proximitySensingTitle = stringResource(R.string.proximity_sensing)
         val proximitySensingHelp = stringResource(R.string.proximity_sensing_help)
@@ -1427,6 +1452,7 @@ private fun SettingsContent(
                     }
                     1 -> {   // Звонки
                         HHRecSettings()
+                        SpeedDial()
                         ProximitySensing()
                         AudioSettings(navController)
                     }
