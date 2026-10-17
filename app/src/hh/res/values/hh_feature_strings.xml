@@ -215,4 +215,5 @@
     <string name="hh_answer_buttons">Answer with buttons instead of a slider</string>
     <string name="hh_contact_ringtone">Ringtone</string>
     <string name="hh_contact_ringtone_default">Default</string>
+    <string name="hh_net_advanced">Advanced</string>
 </resources>

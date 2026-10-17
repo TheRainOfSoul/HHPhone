@@ -42,6 +42,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -1497,18 +1499,26 @@ private fun SettingsContent(
                         } else
                             Text(stringResource(R.string.hh_set_no_sim), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    3 -> {   // Сеть (SIP)
-                        AddressFamily()
-                        ListenAddress()
+                    3 -> {   // Сеть (SIP): часто используемое на виду, редкое — под «Дополнительно»
                         TransportProtocols()
-                        DnsServers()
-                        TlsCertificateFile(activity)
                         VerifyServer()
-                        CaFile(activity)
-                        UserAgent()
-                        UniqueContactUri()
-                        VideoSize()   // видео — редкость для HHPhone, к специалистам
+                        VideoSize()
                         VideoFps()
+                        var advanced by remember { mutableStateOf(false) }
+                        Row(Modifier.fillMaxWidth().clickable { advanced = !advanced }.padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.hh_net_advanced), Modifier.weight(1f), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Icon(if (advanced) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+                        }
+                        if (advanced) {
+                            AddressFamily()
+                            ListenAddress()
+                            DnsServers()
+                            TlsCertificateFile(activity)
+                            CaFile(activity)
+                            UserAgent()
+                            UniqueContactUri()
+                        }
                     }
                     else -> {   // Обслуживание
                         HHMaintenance(navController, onRestartApp)

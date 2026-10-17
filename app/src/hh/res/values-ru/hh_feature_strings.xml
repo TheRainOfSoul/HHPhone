@@ -219,4 +219,5 @@
     <string name="hh_answer_buttons">Ответ кнопками вместо ползунка</string>
     <string name="hh_contact_ringtone">Мелодия</string>
     <string name="hh_contact_ringtone_default">По умолчанию</string>
+    <string name="hh_net_advanced">Дополнительно</string>
 </resources>

@@ -215,4 +215,5 @@
     <string name="hh_answer_buttons">Պատասխանել կոճակներով, ոչ թե սահիչով</string>
     <string name="hh_contact_ringtone">Զանգերանգ</string>
     <string name="hh_contact_ringtone_default">Լռելյայն</string>
+    <string name="hh_net_advanced">Լրացուցիչ</string>
 </resources>
