@@ -209,4 +209,10 @@
     <string name="hh_speed_dial_number">Number</string>
     <string name="hh_speed_dial_clear">Clear</string>
     <string name="hh_speed_dial_empty">not set</string>
+    <string name="hh_block_filters">Block on SIM</string>
+    <string name="hh_block_unknown">Block numbers not in contacts</string>
+    <string name="hh_block_hidden">Block hidden numbers</string>
+    <string name="hh_answer_buttons">Answer with buttons instead of a slider</string>
+    <string name="hh_contact_ringtone">Ringtone</string>
+    <string name="hh_contact_ringtone_default">Default</string>
 </resources>

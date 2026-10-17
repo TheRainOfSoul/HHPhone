@@ -209,4 +209,10 @@
     <string name="hh_speed_dial_number">Համար</string>
     <string name="hh_speed_dial_clear">Մաքրել</string>
     <string name="hh_speed_dial_empty">նշված չէ</string>
+    <string name="hh_block_filters">Արգելափակում SIM-ի վրա</string>
+    <string name="hh_block_unknown">Արգելափակել կոնտակտներում չեղածները</string>
+    <string name="hh_block_hidden">Արգելափակել թաքնված համարները</string>
+    <string name="hh_answer_buttons">Պատասխանել կոճակներով, ոչ թե սահիչով</string>
+    <string name="hh_contact_ringtone">Զանգերանգ</string>
+    <string name="hh_contact_ringtone_default">Լռելյայն</string>
 </resources>

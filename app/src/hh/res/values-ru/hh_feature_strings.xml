@@ -213,4 +213,10 @@
     <string name="hh_speed_dial_number">Номер</string>
     <string name="hh_speed_dial_clear">Очистить</string>
     <string name="hh_speed_dial_empty">не задан</string>
+    <string name="hh_block_filters">Блокировка на SIM</string>
+    <string name="hh_block_unknown">Блокировать не из контактов</string>
+    <string name="hh_block_hidden">Блокировать скрытые номера</string>
+    <string name="hh_answer_buttons">Ответ кнопками вместо ползунка</string>
+    <string name="hh_contact_ringtone">Мелодия</string>
+    <string name="hh_contact_ringtone_default">По умолчанию</string>
 </resources>

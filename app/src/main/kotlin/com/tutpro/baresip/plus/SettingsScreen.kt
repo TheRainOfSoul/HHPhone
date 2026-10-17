@@ -1049,6 +1049,38 @@ private fun SettingsContent(
     }
 
     @Composable
+    fun HHSwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+        Row(Modifier.fillMaxWidth().padding(end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(label, Modifier.weight(1f), fontSize = 18.sp)
+            Switch(checked = checked, onCheckedChange = onChange)
+        }
+    }
+
+    @Composable
+    fun BlockFilters() {   // A3: блок «не из контактов / скрытых» на SIM-линии (на станции нельзя — коллеги не в контактах)
+        val mobile = BaresipService.uas.value.firstOrNull { it.account.isMobile } ?: return
+        var unknown by remember { mutableStateOf(mobile.account.blockUnknown) }
+        var hidden by remember { mutableStateOf(mobile.account.blockHidden) }
+        Text(stringResource(R.string.hh_block_filters), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        HHSwitchRow(stringResource(R.string.hh_block_unknown), unknown) {
+            unknown = it; mobile.account.blockUnknown = it; Account.saveAccounts()
+        }
+        HHSwitchRow(stringResource(R.string.hh_block_hidden), hidden) {
+            hidden = it; mobile.account.blockHidden = it; Account.saveAccounts()
+        }
+    }
+
+    @Composable
+    fun AnswerStyle() {   // C: ответ кнопками вместо ползунка (prefs hh_ui/answer_buttons)
+        val ctx = LocalContext.current
+        val prefs = ctx.getSharedPreferences("hh_ui", Context.MODE_PRIVATE)
+        var buttons by remember { mutableStateOf(prefs.getBoolean("answer_buttons", false)) }
+        HHSwitchRow(stringResource(R.string.hh_answer_buttons), buttons) {
+            buttons = it; prefs.edit().putBoolean("answer_buttons", it).apply()
+        }
+    }
+
+    @Composable
     fun ProximitySensing() {
         val proximitySensingTitle = stringResource(R.string.proximity_sensing)
         val proximitySensingHelp = stringResource(R.string.proximity_sensing_help)
@@ -1453,6 +1485,8 @@ private fun SettingsContent(
                     1 -> {   // Звонки
                         HHRecSettings()
                         SpeedDial()
+                        BlockFilters()
+                        AnswerStyle()
                         ProximitySensing()
                         AudioSettings(navController)
                     }

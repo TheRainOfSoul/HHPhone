@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -102,7 +103,7 @@ fun HHCallTitle(call: Call, status: String, video: Boolean = false) {
         Text(status, color = fg.copy(alpha = 0.8f), fontSize = 15.sp)
         if (!dark && !video) {   // над видео аватар не нужен — виден собеседник
             Spacer(Modifier.height(20.dp))
-            HHAvatar(name, call.peerUri, 140.dp)
+            HHAvatar(name, call.peerUri, 172.dp)   // C: крупное фото на экране звонка
         }
         Spacer(Modifier.height(if (video) 8.dp else 16.dp))
         Text(name, color = fg, fontSize = if (video) 24.sp else 32.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, maxLines = 2)
@@ -131,7 +132,9 @@ fun HHIncoming(call: Call) {
                 }
                 Spacer(Modifier.height(12.dp))
             }
-            HHAnswerSlider(onAnswer = { HHCalls.answer(ctx, call) }, onReject = { HHCalls.reject(call) })
+            val buttons = remember { ctx.getSharedPreferences("hh_ui", android.content.Context.MODE_PRIVATE).getBoolean("answer_buttons", false) }
+            if (buttons) HHAnswerButtons(onAnswer = { HHCalls.answer(ctx, call) }, onReject = { HHCalls.reject(call) })
+            else HHAnswerSlider(onAnswer = { HHCalls.answer(ctx, call) }, onReject = { HHCalls.reject(call) })
             // выше низа экрана: туда голосовой ассистент (Gemini «быстрые фразы», Bixby) выводит свои подсказки
             Spacer(Modifier.height(200.dp))
         }
@@ -163,6 +166,25 @@ private fun HHReplyDialog(ctx: android.content.Context, to: String, onDone: () -
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.hh_cancel)) } }
     )
+}
+
+/** Классический ответ двумя кнопками (C): красная «Отклонить», зелёная «Ответить». */
+@Composable
+private fun HHAnswerButtons(onAnswer: () -> Unit, onReject: () -> Unit) {
+    val red = HHEndRed
+    val green = colorResource(R.color.colorTrafficGreen)
+    Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(72.dp).clip(CircleShape).background(red).clickable { onReject() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.CallEnd, stringResource(R.string.hh_decline), tint = Color.White, modifier = Modifier.size(32.dp))
+            }
+        }
+        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(72.dp).clip(CircleShape).background(green).clickable { onAnswer() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Call, stringResource(R.string.hh_answer), tint = Color.White, modifier = Modifier.size(32.dp))
+            }
+        }
+    }
 }
 
 @Composable

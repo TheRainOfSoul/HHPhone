@@ -3,6 +3,8 @@ package com.tutpro.baresip.plus
 import android.content.ContentProviderOperation
 import android.content.ContentUris
 import android.content.ContentValues
+import android.content.Intent
+import android.media.RingtoneManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
@@ -429,6 +431,19 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
             withContext(Dispatchers.IO) { HHContactStore.decodePhoto(ctx, uri) }?.let { newPhoto = it; removePhoto = false }
         }
     }
+    val ringtonePicker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->   // A6
+        if (res.resultCode != android.app.Activity.RESULT_OK) return@rememberLauncherForActivityResult   // отмена — не трогаем мелодию
+        @Suppress("DEPRECATION")
+        val uri = res.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI) as? Uri
+        val id = card?.contactId ?: return@rememberLauncherForActivityResult
+        scope.launch(Dispatchers.IO) {
+            try {
+                ctx.contentResolver.update(ContactsContract.Contacts.CONTENT_URI,
+                    ContentValues().apply { put(ContactsContract.Contacts.CUSTOM_RINGTONE, uri?.toString()) },
+                    "${ContactsContract.Contacts._ID}=?", arrayOf(id.toString()))
+            } catch (e: Exception) { Log.w("HHContact", "ringtone set failed: $e") }
+        }
+    }
     HHLightStatusBar()
     val c = card ?: return
     val onBar = MaterialTheme.colorScheme.onPrimary
@@ -544,6 +559,26 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
                         Icon(Icons.Outlined.Block, null, tint = MaterialTheme.colorScheme.error)
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(if (blocked) R.string.hh_unblock else R.string.hh_block), color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                if (c.key.startsWith("a") && c.editable && c.contactId > 0) {   // A6: своя мелодия (контакт телефона)
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = {
+                        val current = try {
+                            ctx.contentResolver.query(ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, c.contactId),
+                                arrayOf(ContactsContract.Contacts.CUSTOM_RINGTONE), null, null, null)?.use {
+                                if (it.moveToFirst()) it.getString(0)?.let(Uri::parse) else null
+                            }
+                        } catch (_: Exception) { null }
+                        val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_RINGTONE)
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, current)
+                        }
+                        try { ringtonePicker.launch(intent) } catch (_: Exception) {}
+                    }) {
+                        Text(stringResource(R.string.hh_contact_ringtone))
                     }
                 }
             }
