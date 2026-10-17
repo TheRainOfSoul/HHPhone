@@ -146,6 +146,15 @@ object HHUiLogic {
     fun callButtons(lines: List<HHLine>): List<List<HHLine>> =
         if (lines.size <= 2) lines.map { listOf(it) } else listOf(listOf(lines[0]), lines.drop(1))
 
+    /** Почему не создаётся виртуальный SIM-профиль (sip:mobile@pstn); null — все условия выполнены. Для лога диагностики. */
+    fun mobileProfileBlocker(hasPhoneAccount: Boolean, simReady: Boolean, voiceCapable: Boolean, voiceSubValid: Boolean): String? = when {
+        !hasPhoneAccount -> "no call-capable phone account (not default dialer/SMS, or READ_PHONE_STATE denied)"
+        !simReady -> "SIM not ready"
+        !voiceCapable -> "device not voice capable"
+        !voiceSubValid -> "no default voice subscription"
+        else -> null
+    }
+
     fun screenFor(callStatuses: List<String>, video: Boolean): String {
         val open = callStatuses.filter { it != "closed" }
         return when {

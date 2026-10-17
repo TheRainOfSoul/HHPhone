@@ -351,7 +351,7 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                                         Icon(Icons.Default.Call, null, tint = Color.White)
                                         Spacer(Modifier.width(6.dp))
                                         val l = group[0]
-                                        Text(if (group.size > 1) "HH ▾" else lineLabel(ctx, l), color = Color.White, fontWeight = FontWeight.Medium, maxLines = 1)
+                                        Text(if (group.size > 1) "HH ▾" else lineLabel(ctx, l), color = Color.White, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         if (group.size == 1 && !l.mobile) {
                                             Spacer(Modifier.width(6.dp))
                                             // точка регистрации: цвет + подпись для TalkBack

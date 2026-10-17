@@ -321,4 +321,13 @@ class HHUiLogicTest {
         assertEquals("tel:091111111", HHUiLogic.lastNumber(log.take(1), setOf(sim)))
         assertEquals(null, HHUiLogic.lastNumber(log, setOf("sip:102@other")))
     }
+
+    @Test fun mobileProfileBlockerNamesFirstFailingCondition() {
+        assertEquals(null, HHUiLogic.mobileProfileBlocker(true, true, true, true))   // всё сошлось — профиль создаётся
+        assertEquals("no call-capable phone account (not default dialer/SMS, or READ_PHONE_STATE denied)",
+            HHUiLogic.mobileProfileBlocker(false, true, true, true))
+        assertEquals("SIM not ready", HHUiLogic.mobileProfileBlocker(true, false, true, true))
+        assertEquals("device not voice capable", HHUiLogic.mobileProfileBlocker(true, true, false, true))
+        assertEquals("no default voice subscription", HHUiLogic.mobileProfileBlocker(true, true, true, false))
+    }
 }

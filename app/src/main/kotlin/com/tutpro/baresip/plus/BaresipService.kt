@@ -2587,15 +2587,18 @@ class BaresipService: Service() {
                 it.account.isMobile || Utils.uriMatch(it.account.aor, "sip:mobile@pstn")
             }
 
-            if (mobileAccountHandle == null || !isSimReady || !isVoiceCapable ||
-                    voiceSubId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+            val blocker = HHUiLogic.mobileProfileBlocker(mobileAccountHandle != null, isSimReady,
+                isVoiceCapable, voiceSubId != SubscriptionManager.INVALID_SUBSCRIPTION_ID)
+            if (blocker != null) {
                 if (existingMobileUa != null) {
-                    Log.d(TAG, "Removing existing Mobile account (SIM not ready, not default dialer, not voice capable, or disabled by user)")
+                    Log.d(TAG, "Removing existing Mobile account: $blocker")
                     if (existingMobileUa.uap != 0L) Api.ua_destroy(existingMobileUa.uap)
                     existingMobileUa.remove()
                     if (isNativeReady) Account.saveAccounts()
                     updateStatusNotification()
                 }
+                else
+                    Log.d(TAG, "Mobile account not created: $blocker")   // раньше молчал — на части телефонов профиль «тихо» не появлялся
                 return
             }
 
