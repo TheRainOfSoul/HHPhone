@@ -26,6 +26,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.RadioButton
 import androidx.compose.material.icons.filled.FiberManualRecord
@@ -281,17 +283,23 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
     var sheet by remember { mutableStateOf<HHLogGroup?>(null) }
     sheet?.let { HHCallSheet(it, navController, viewModel, lines) { sheet = null } }
     assignKey?.let { key -> HHSpeedDialDialog(ctx, key, number) { assignKey = null } }   // A2
-    val shown = if (missedOnly) HHUiLogic.missedGroups(log) else log   // A5
+    var q by rememberSaveable { mutableStateOf("") }   // поиск по журналу: имя или номер
+    val shown = (if (missedOnly) HHUiLogic.missedGroups(log) else log)   // A5
+        .filter { keypad || q.isBlank() || hhName(it.peer).contains(q.trim(), true) || HHUiLogic.peerKey(it.peer).contains(q.trim()) }
     Column(Modifier.fillMaxSize()) {
-        if (!keypad) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            HHChip(!missedOnly, stringResource(R.string.hh_filter_all)) { missedOnly = false }
-            HHChip(missedOnly, stringResource(R.string.hh_filter_missed)) { missedOnly = true }
+        if (!keypad) {
+            OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp), singleLine = true,
+                placeholder = { Text(stringResource(R.string.hh_search)) }, shape = RoundedCornerShape(24.dp))
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                HHChip(!missedOnly, stringResource(R.string.hh_filter_all)) { missedOnly = false }
+                HHChip(missedOnly, stringResource(R.string.hh_filter_missed)) { missedOnly = true }
+            }
         }
         Box(Modifier.weight(1f)) {
         LazyColumn(Modifier.fillMaxSize(), state = listState) {
             if (shown.isEmpty()) item {
-                Text(stringResource(if (missedOnly) R.string.hh_nothing_found else R.string.hh_no_calls),
+                Text(stringResource(if (missedOnly || (!keypad && q.isNotBlank())) R.string.hh_nothing_found else R.string.hh_no_calls),
                     Modifier.fillMaxWidth().padding(32.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             items(shown, key = { "${it.peer}|${it.last.stop}" }) { g ->   // tick не в ключе: строки не пересоздаются раз в минуту
@@ -311,7 +319,10 @@ private fun HHPhoneTab(ctx: Context, navController: NavController, viewModel: Vi
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(number, Modifier.weight(1f), fontSize = 30.sp, maxLines = 1, overflow = TextOverflow.StartEllipsis,
                             color = MaterialTheme.colorScheme.onSurface)
-                        if (number.isNotEmpty()) IconButton(onClick = { number = number.dropLast(1) }) {
+                        // нажатие — стереть цифру, долгое — весь номер
+                        if (number.isNotEmpty()) Box(Modifier.size(48.dp).clip(CircleShape)
+                            .combinedClickable(onLongClick = { number = "" }) { number = number.dropLast(1) },
+                            contentAlignment = Alignment.Center) {
                             Icon(Icons.AutoMirrored.Outlined.Backspace, stringResource(R.string.hh_backspace), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         else {   // пусто — вставить скопированный номер (буфер читаем только по нажатию)
