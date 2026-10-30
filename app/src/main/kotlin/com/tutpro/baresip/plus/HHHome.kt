@@ -501,6 +501,7 @@ private fun HHLogRow(ctx: Context, g: HHLogGroup, tick: Int, onCard: () -> Unit,
                 ).joinToString(" · ")   // звонки других приложений (aor "") — без пометки
                 Text(sub, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+            HHNotes.get(ctx, e)?.let { HHNoteLine(it) }
         }
         val ago = remember(tick, e.stop) { hhAgo(ctx, e.stop) }
         Text(ago, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)

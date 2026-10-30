@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.AccountBox
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -111,6 +113,7 @@ private fun deleteCalls(ctx: android.content.Context, entries: List<HHLogEntry>)
         }
         CallHistoryNew.save()
     }
+    entries.forEach { HHNotes.set(ctx, it, "") }
     HHHistory.bump()
 }
 
@@ -141,6 +144,10 @@ fun HHCallSheet(g: HHLogGroup, navController: NavController, viewModel: ViewMode
             // запись последнего звонка; записи прежних — в «Истории звонков» у каждого звонка
             val recs = remember(g) { HHRec.of(HHRec.list(ctx), g.last, g.entries) }
             recs.forEach { HHRecRow(it) }
+            var note by remember(g) { mutableStateOf(HHNotes.get(ctx, g.last) ?: "") }   // заметка к последнему звонку
+            OutlinedTextField(note, { note = it; HHNotes.set(ctx, g.last, it) },
+                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp), maxLines = 4,
+                placeholder = { Text(stringResource(R.string.hh_call_note)) })
             if (!anonymous) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     hhLineTargets(g.peer, lines).forEach { (label, aor, target) ->
@@ -271,6 +278,7 @@ private fun HHHistoryScreen(navController: NavController, viewModel: ViewModel, 
                         val secs = e.start?.let { (e.stop - it) / 1000 }
                         Text(listOfNotNull(secs?.let { hhDuration(it) }, hhLogLine(e.aor)).joinToString(" · "),
                             fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        HHNotes.get(ctx, e)?.let { HHNoteLine(it, maxLines = 3) }
                     }
                 }
                 HHRec.of(recs, e, calls).forEach { r -> key(r.loc) { HHRecRow(r) } }   // записи этого звонка
@@ -346,6 +354,17 @@ fun HHContactSheet(c: Contact, navController: NavController, viewModel: ViewMode
     }
 }
 
+
+/** Заметка к звонку под строкой журнала. */
+@Composable
+internal fun HHNoteLine(text: String, maxLines: Int = 1) {
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(Icons.Outlined.EditNote, null, Modifier.size(16.dp).padding(top = 2.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(4.dp))
+        Text(text, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = maxLines,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    }
+}
 
 /** Запись разговора: прослушать (▶/❚❚, позиция), поделиться, удалить. */
 @Composable

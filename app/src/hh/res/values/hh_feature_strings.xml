@@ -112,6 +112,8 @@
     <string name="hh_new_chat">New chat</string>
     <string name="hh_no_favorites">No favorites yet. Tap ☆ next to a contact in Contacts</string>
     <string name="hh_sms">SMS</string>
+    <string name="hh_call_note">Call note</string>
+    <string name="hh_call_notes">Call notes</string>
     <string name="hh_call_history">Call history</string>
     <string name="hh_create_contact">Create contact</string>
     <string name="hh_copy_number">Copy number</string>

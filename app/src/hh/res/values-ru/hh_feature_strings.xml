@@ -116,6 +116,8 @@
     <string name="hh_new_chat">Новый чат</string>
     <string name="hh_no_favorites">Избранного пока нет. Нажмите ☆ рядом с контактом во вкладке «Контакты»</string>
     <string name="hh_sms">SMS</string>
+    <string name="hh_call_note">Заметка к звонку</string>
+    <string name="hh_call_notes">Заметки к звонкам</string>
     <string name="hh_call_history">История звонков</string>
     <string name="hh_create_contact">Создать контакт</string>
     <string name="hh_copy_number">Скопировать номер</string>

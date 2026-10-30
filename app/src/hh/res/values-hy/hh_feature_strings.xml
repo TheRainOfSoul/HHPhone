@@ -112,6 +112,8 @@
     <string name="hh_new_chat">Նոր զրույց</string>
     <string name="hh_no_favorites">Ընտրյալներ դեռ չկան։ Սեղմեք ☆ կոնտակտի կողքին «Կոնտակտներ» ներդիրում</string>
     <string name="hh_sms">SMS</string>
+    <string name="hh_call_note">Զանգի նշում</string>
+    <string name="hh_call_notes">Զանգերի նշումներ</string>
     <string name="hh_call_history">Զանգերի պատմություն</string>
     <string name="hh_create_contact">Ստեղծել կոնտակտ</string>
     <string name="hh_copy_number">Պատճենել համարը</string>

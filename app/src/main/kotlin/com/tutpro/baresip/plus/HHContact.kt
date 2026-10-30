@@ -545,6 +545,19 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
                 if (blocked) Text(stringResource(R.string.hh_is_blocked), color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
                 Spacer(Modifier.height(16.dp))
                 c.nums.filter { it.number.isNotBlank() }.forEach { n -> HHNumberRow(ctx, n, c.name, lines, navController, viewModel) }
+                val notes = HHNotes.forPeers(ctx, c.nums.filter { it.number.isNotBlank() }
+                    .map { if (it.type == SIP_TYPE) it.number else "tel:" + it.number })
+                if (notes.isNotEmpty()) {
+                    val fmt = remember { java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT) }
+                    Text(stringResource(R.string.hh_call_notes), Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp),
+                        fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary)
+                    notes.forEach { (stop, text) ->
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)) {
+                            Text(fmt.format(java.util.Date(stop)), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(text, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                }
                 if (canBlock) {
                     Spacer(Modifier.height(20.dp))
                     OutlinedButton(onClick = {
