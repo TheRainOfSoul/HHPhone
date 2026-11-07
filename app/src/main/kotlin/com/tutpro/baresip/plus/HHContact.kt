@@ -544,7 +544,8 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
                     modifier = Modifier.padding(horizontal = 20.dp))
                 if (blocked) Text(stringResource(R.string.hh_is_blocked), color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
                 Spacer(Modifier.height(16.dp))
-                c.nums.filter { it.number.isNotBlank() }.forEach { n -> HHNumberRow(ctx, n, c.name, lines, navController, viewModel) }
+                c.nums.filter { it.number.isNotBlank() }.forEach { n -> HHNumberRow(ctx, n, c.name, lines, navController, viewModel) {
+                    c.bitmap ?: c.photo?.let { HHContactStore.decodePhoto(ctx, it) } } }
                 val notes = HHNotes.forPeers(ctx, c.nums.filter { it.number.isNotBlank() }
                     .map { if (it.type == SIP_TYPE) it.number else "tel:" + it.number })
                 if (notes.isNotEmpty()) {
@@ -601,7 +602,8 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
 
 /** Номер в просмотре: тип, номер, звонок (выбор линии, если их несколько) и SMS. */
 @Composable
-private fun HHNumberRow(ctx: Context, n: HHNum, name: String, lines: List<HHLine>, navController: NavController, viewModel: ViewModel) {
+private fun HHNumberRow(ctx: Context, n: HHNum, name: String, lines: List<HHLine>, navController: NavController, viewModel: ViewModel,
+                        photo: () -> Bitmap?) {
     val peer = if (n.type == SIP_TYPE) n.number else "tel:" + n.number
     val targets = hhLineTargets(peer, lines)
     val videoTargets = hhLineTargets(peer, lines.filter { !it.mobile })   // видео — только через станцию (SIP), не SIM
@@ -612,7 +614,7 @@ private fun HHNumberRow(ctx: Context, n: HHNum, name: String, lines: List<HHLine
             Text(n.number, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
             Text(typeName(ctx, n), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        IconButton(onClick = { HHShortcuts.pin(ctx, name, peer) }) {
+        IconButton(onClick = { HHShortcuts.pin(ctx, name, peer, photo()) }) {
             Icon(Icons.Outlined.AddToHomeScreen, stringResource(R.string.hh_pin_to_home), tint = MaterialTheme.colorScheme.primary)
         }
         hhChatRoute(peer, "", lines)?.let { r ->

@@ -27,6 +27,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.RadioButton
@@ -138,7 +142,7 @@ fun HHHome(navController: NavController, viewModel: ViewModel, onQuitClick: () -
             when (page) {
                 0 -> HHPeopleTab(ctx, navController, viewModel, favoritesOnly = true, allowContacts)
                 1 -> HHPhoneTab(ctx, navController, viewModel)
-                2 -> HHPeopleTab(ctx, navController, viewModel, favoritesOnly = false, allowContacts)
+                2 -> HHPeopleTab(ctx, navController, viewModel, favoritesOnly = false, allowContacts, active = pager.settledPage == 2)
                 else -> HHChatsTab(ctx, navController)
             }
         }
@@ -514,7 +518,15 @@ private fun HHLogRow(ctx: Context, g: HHLogGroup, tick: Int, onCard: () -> Unit,
 
 /** Контакты (с поиском и «Коллегами») или Избранное. */
 @Composable
-private fun HHPeopleTab(ctx: Context, navController: NavController, viewModel: ViewModel, favoritesOnly: Boolean, allowContacts: () -> Unit) {
+private fun HHPeopleTab(ctx: Context, navController: NavController, viewModel: ViewModel, favoritesOnly: Boolean, allowContacts: () -> Unit,
+                        active: Boolean = false) {
+    val search = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focus = LocalFocusManager.current
+    LaunchedEffect(active) {   // перешли на «Контакты» — сразу печатать в поиск; ушли — убрать клавиатуру
+        if (active) try { search.requestFocus(); keyboard?.show() } catch (_: IllegalStateException) {}   // поле прокручено за экран
+        else focus.clearFocus()
+    }
     val colleagues by HHColleagues.list.collectAsState()
     val stars by HHColleagues.stars.collectAsState()
     var q by rememberSaveable { mutableStateOf("") }
@@ -547,7 +559,7 @@ private fun HHPeopleTab(ctx: Context, navController: NavController, viewModel: V
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (!favoritesOnly) item {
-            OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth().padding(12.dp), singleLine = true,
+            OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth().padding(12.dp).focusRequester(search), singleLine = true,
                 placeholder = { Text(stringResource(R.string.hh_search)) }, shape = RoundedCornerShape(24.dp))
         }
         if (!favoritesOnly && col.isEmpty() && con.isEmpty()) item {

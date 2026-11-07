@@ -3219,8 +3219,10 @@ fun handleServiceEvent(ctx: Context, viewModel: ViewModel, event: String, params
     if (event == "started") {
         val uriString = params[0] as String
         Log.d(TAG, "Handling service event 'started' with URI '$uriString'")
-        if (uriString != "")
-            callAction(ctx, viewModel, uriString.toUri(), "dial")
+        if (uriString != "") {
+            callAction(ctx, viewModel, uriString.toUri(), BaresipService.callActionKind)
+            BaresipService.callActionKind = "dial"
+        }
         else {
             if (viewModel.selectedAor.value == "" && uas.value.isNotEmpty())
                 viewModel.updateSelectedAor(uas.value.first().account.aor)

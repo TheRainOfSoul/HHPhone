@@ -3745,6 +3745,7 @@ class BaresipService: Service() {
         var logLevel = 2
         var sipTrace = false
         var callActionUri = ""
+        var callActionKind = "dial"   // "call" — ярлык быстрого звонка (ACTION_CALL): звонить сразу после старта
         var isMainVisible = false
         var isMicMuted = false
         var isRecOn = false

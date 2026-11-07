@@ -19,7 +19,7 @@ object HHShortcuts {
     private const val MAX = 4   // лаунчеры всё равно показывают 4–5 ярлыков
 
     /** Чистая часть: кого звать и как подписать ярлык. */
-    data class Target(val id: String, val label: String, val callUri: String)
+    data class Target(val id: String, val label: String, val callUri: String, val contact: Contact? = null)
 
     /** tel:/sip: для интента: sip — как есть; иначе tel: с номером без пробелов. */
     fun callUri(raw: String): String {
@@ -40,7 +40,7 @@ object HHShortcuts {
             .filter { it.favorite() }
             .mapNotNull { c ->
                 c.uris().firstOrNull { it.uri.isNotBlank() }
-                    ?.let { Target(idFor(it.uri), c.name().ifBlank { HHUiLogic.peerKey(it.uri) }, callUri(it.uri)) }
+                    ?.let { Target(idFor(it.uri), c.name().ifBlank { HHUiLogic.peerKey(it.uri) }, callUri(it.uri), c) }
             }
             .distinctBy { it.callUri }
             .take(max)
@@ -50,45 +50,54 @@ object HHShortcuts {
     fun refresh() {
         val ctx = BaresipService.instance?.applicationContext ?: return
         try {
-            ShortcutManagerCompat.setDynamicShortcuts(ctx, favoriteTargets(BaresipService.contacts).map { build(ctx, it) })
+            // фото есть, но не прочиталось (фоновый старт) — ярлык не трогаем, иначе закреплённый получит букву вместо фото
+            ShortcutManagerCompat.setDynamicShortcuts(ctx, favoriteTargets(BaresipService.contacts).mapNotNull { t ->
+                val c = t.contact
+                val bmp = c?.let { photo(ctx, it) }
+                if (bmp == null && c != null && hasPhoto(c)) null else build(ctx, t, bmp)
+            })
         } catch (e: Exception) {
             Log.w(TAG, "setDynamicShortcuts failed: $e")
         }
     }
 
-    /** Положить ярлык конкретного номера на рабочий стол (кнопка в карточке контакта). */
-    fun pin(ctx: Context, name: String, peer: String) {
+    /** Положить ярлык конкретного номера на рабочий стол (кнопка в карточке контакта); photo — фото этой карточки. */
+    fun pin(ctx: Context, name: String, peer: String, photo: Bitmap?) {
         if (!ShortcutManagerCompat.isRequestPinShortcutSupported(ctx)) {
             HHUi.message.value = ctx.getString(R.string.hh_pin_unsupported)
             return
         }
         val label = name.ifBlank { HHUiLogic.peerKey(peer) }
         try {
-            ShortcutManagerCompat.requestPinShortcut(ctx, build(ctx, Target(idFor(peer), label, callUri(peer))), null)
+            ShortcutManagerCompat.requestPinShortcut(ctx, build(ctx, Target(idFor(peer), label, callUri(peer)), photo), null)
         } catch (e: Exception) {
             Log.w(TAG, "requestPinShortcut failed: $e")
         }
     }
 
-    private fun build(ctx: Context, t: Target): ShortcutInfoCompat {
+    private fun build(ctx: Context, t: Target, photo: Bitmap?): ShortcutInfoCompat {
         val intent = Intent(ctx, MainActivity::class.java)
             .setAction(Intent.ACTION_CALL)
             .setData(t.callUri.toUri())
         return ShortcutInfoCompat.Builder(ctx, t.id)
             .setShortLabel(t.label)
             .setLongLabel(t.label)
-            .setIcon(IconCompat.createWithAdaptiveBitmap(icon(ctx, t.label, t.callUri)))
+            .setIcon(IconCompat.createWithAdaptiveBitmap(photo ?: letter(t.label)))
             .setIntent(intent)
             .build()
     }
 
-    /** Фото контакта из книги, иначе буква в цветном круге (палитра и буква — как у HHAvatar). */
-    private fun icon(ctx: Context, name: String, callUri: String): Bitmap =
-        HHPeople.contact(callUri)?.let { photo(ctx, it) }
-            ?: Utils.createTextAvatar(
+    /** Буква в цветном круге (палитра и буква — как у HHAvatar). */
+    private fun letter(name: String): Bitmap =
+        Utils.createTextAvatar(
                 HHUiLogic.avatarLetter(name),
                 String.format("#%06X", 0xFFFFFF and hhAvatarColors[HHUiLogic.avatarColor(name)].toArgb())
             )
+
+    private fun hasPhoto(c: Contact) = when (c) {
+        is Contact.AndroidContact -> c.thumbnailUri != null
+        is Contact.BaresipContact -> c.avatarImage != null
+    }
 
     private fun photo(ctx: Context, c: Contact): Bitmap? = when (c) {
         is Contact.AndroidContact -> c.thumbnailUri?.let { HHContactStore.decodePhoto(ctx, it) }

@@ -187,11 +187,13 @@ class MainActivity : ComponentActivity() {
                         intent.data,
                         if (intent?.action == ACTION_CALL) "call" else "dial"
                     )
-                else
+                else {
+                    BaresipService.callActionKind = if (intent?.action == ACTION_CALL) "call" else "dial"
                     BaresipService.callActionUri = intent.data
                         .toString().replace("%2B", "+")
                         .replace("%20", "")
                         .filterNot{setOf('-', ' ', '(', ')').contains(it)}
+                }
         }
 
         var permissions = if (Build.VERSION.SDK_INT >= 33)
