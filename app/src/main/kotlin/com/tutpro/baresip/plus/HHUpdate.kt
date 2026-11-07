@@ -22,7 +22,7 @@ data class HHLatest(val versionCode: Int = 0, val versionName: String = "", val 
 /** Обновления с GitHub Releases: ссылки «последнего выпуска», не API (у API лимит 60 запросов/час на IP). */
 object HHUpdate {
     const val BASE = "https://github.com/TheRainOfSoul/HHPhone/releases/latest/download/"
-    private const val INTERVAL_MS = 6 * 3_600_000L
+    private const val INTERVAL_MS = 3_600_000L   // проверка при возврате в приложение, не чаще раза в час
     private val json = Json { ignoreUnknownKeys = true }
 
     fun parse(text: String): HHLatest? =

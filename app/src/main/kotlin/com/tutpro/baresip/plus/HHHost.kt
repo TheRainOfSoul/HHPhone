@@ -75,10 +75,56 @@ object HHProvisioning {
             // время пишем только после ответа: без сети при старте проверка повторится при следующем возврате
             if (latest != null) prefs.edit().putLong("last", now).apply()
             when {
-                latest != null && latest.newerThan(BuildConfig.VERSION_CODE) -> HHUi.update.value = latest
+                latest != null && latest.newerThan(BuildConfig.VERSION_CODE) -> {
+                    HHUi.update.value = latest   // кнопка «Обновить» в шапке
+                    if (manual) HHUi.message.value = ctx.getString(R.string.hh_update_button_hint, latest.versionName)
+                    // как в HHDesk: APK качаем заранее, чтобы по кнопке сразу открылась установка; по мобильной сети — только по кнопке
+                    val cm = ctx.getSystemService(android.net.ConnectivityManager::class.java)
+                    if (cm?.isActiveNetworkMetered == false) fetch(ctx, latest, install = false)
+                }
                 manual && latest == null -> HHUi.message.value = ctx.getString(R.string.hh_update_no_connection)
                 manual -> HHUi.message.value = ctx.getString(R.string.hh_update_none)
             }
+        }
+    }
+
+    private fun apkFile(ctx: Context) = java.io.File(ctx.filesDir, "update/HHPhone.apk")
+    private var installWhenDone = false   // нажали «Обновить», пока APK ещё качался в фоне
+
+    /** Скачать APK версии latest (если ещё не скачан) и, если просили, поставить. */
+    private fun fetch(ctx: Context, latest: HHLatest, install: Boolean) {
+        if (install) installWhenDone = true
+        if (HHUi.downloading.value != null) return
+        val prefs = ctx.getSharedPreferences("hh_update", Context.MODE_PRIVATE)
+        val apk = apkFile(ctx)
+        if (prefs.getInt("apk_code", 0) == latest.versionCode && apk.exists()) {
+            if (installWhenDone) { installWhenDone = false; scope.launch(Dispatchers.IO) { HHUpdate.install(ctx, apk) } }
+            return
+        }
+        HHUi.downloading.value = 0
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) { HHUpdate.download(apk) { p -> HHUi.downloading.value = p } }
+            HHUi.downloading.value = null
+            if (ok) prefs.edit().putInt("apk_code", latest.versionCode).apply()
+            if (installWhenDone) {
+                installWhenDone = false
+                if (ok) withContext(Dispatchers.IO) { HHUpdate.install(ctx, apk) } else HHUi.message.value = ctx.getString(R.string.hh_update_failed)
+            }
+        }
+    }
+
+    /** Первый запуск после обновления: окно «Что нового» с заметками выпуска (без сети — покажем при следующем запуске). */
+    fun whatsNew(ctx: Context) {
+        val prefs = ctx.getSharedPreferences("hh_update", Context.MODE_PRIVATE)
+        val cur = BuildConfig.VERSION_CODE
+        val seen = prefs.getInt("seen_code", 0)
+        if (seen == cur) return
+        val pi = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
+        if (seen == 0 && pi.firstInstallTime == pi.lastUpdateTime) { prefs.edit().putInt("seen_code", cur).apply(); return }   // новая установка
+        scope.launch {
+            val latest = withContext(Dispatchers.IO) { apkFile(ctx).delete(); HHUpdate.check() } ?: return@launch
+            prefs.edit().putInt("seen_code", cur).apply()
+            if (latest.versionCode == cur && latest.notes.isNotBlank()) HHUi.whatsNew.value = latest
         }
     }
 
@@ -89,13 +135,7 @@ object HHProvisioning {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             return   // повторный экран настроек сам не открываем: пользователь снова нажмёт «Обновить»
         }
-        val apk = java.io.File(ctx.filesDir, "update/HHPhone.apk")
-        HHUi.downloading.value = 0
-        scope.launch {
-            val ok = withContext(Dispatchers.IO) { HHUpdate.download(apk) { p -> HHUi.downloading.value = p } }
-            HHUi.downloading.value = null
-            if (ok) withContext(Dispatchers.IO) { HHUpdate.install(ctx, apk) } else HHUi.message.value = ctx.getString(R.string.hh_update_failed)
-        }
+        fetch(ctx, HHUi.update.value ?: return, install = true)
     }
 }
 
@@ -107,6 +147,7 @@ object HHUi {
     val confirm = MutableStateFlow<Pair<String, () -> Unit>?>(null)
     val update = MutableStateFlow<HHLatest?>(null)
     val downloading = MutableStateFlow<Int?>(null)
+    val whatsNew = MutableStateFlow<HHLatest?>(null)         // окно «Что нового» после обновления
     val mainAction = MutableStateFlow<HHMainAction?>(null)   // из «Обслуживания» в «Настройках» на главный экран
     val dialNumber = MutableStateFlow<String?>(null)         // внешний номер (tel:/sip:, Circle to Search, тап по номеру) → в наборное поле
     val manualAdd = MutableStateFlow(false)                  // открыт диалог ручного добавления учётки
@@ -177,15 +218,14 @@ fun HHHost(navController: NavController) {
         lifecycleOwner.lifecycle.addObserver(obs)
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
-    val update by HHUi.update.collectAsState()
-    val downloading by HHUi.downloading.collectAsState()
-    update?.let { u ->
+    LaunchedEffect(Unit) { HHProvisioning.whatsNew(ctx) }
+    val whatsNew by HHUi.whatsNew.collectAsState()
+    whatsNew?.let { u ->
         AlertDialog(
-            onDismissRequest = { HHUi.update.value = null },
-            title = { Text(stringResource(R.string.hh_update_available, u.versionName)) },
-            text = { Text(if (downloading != null) stringResource(R.string.hh_update_downloading, downloading!!) else u.notes) },
-            confirmButton = { TextButton(enabled = downloading == null, onClick = { HHProvisioning.installUpdate(ctx) }) { Text(stringResource(R.string.hh_update_now)) } },
-            dismissButton = { TextButton(onClick = { HHUi.update.value = null }) { Text(stringResource(R.string.hh_update_later)) } },
+            onDismissRequest = { HHUi.whatsNew.value = null },
+            title = { Text(stringResource(R.string.hh_whats_new, u.versionName)) },
+            text = { Text(u.notes, Modifier.verticalScroll(rememberScrollState())) },
+            confirmButton = { TextButton(onClick = { HHUi.whatsNew.value = null }) { Text(stringResource(R.string.ok)) } },
         )
     }
 }

@@ -70,6 +70,7 @@ import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.ManageAccounts
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -205,6 +206,16 @@ private fun HHHeader(navController: NavController, onQuitClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically) {
         Text(stringResource(R.string.app_name), color = MaterialTheme.colorScheme.onPrimary, fontSize = 20.sp,
             fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+        // вышла новая версия — кнопка в шапке, по нажатию сразу системная установка (как в HHDesk)
+        val update by HHUi.update.collectAsState()
+        val downloading by HHUi.downloading.collectAsState()
+        update?.let {
+            TextButton(onClick = { HHProvisioning.installUpdate(ctx) }) {
+                Icon(Icons.Outlined.SystemUpdate, null, tint = MaterialTheme.colorScheme.onPrimary)
+                Spacer(Modifier.width(6.dp))
+                Text(downloading?.let { "$it%" } ?: stringResource(R.string.hh_update_now), color = MaterialTheme.colorScheme.onPrimary)
+            }
+        }
         Box {
             IconButton(onClick = { menu = true }) {
                 Icon(Icons.Default.MoreVert, stringResource(R.string.hh_menu), tint = MaterialTheme.colorScheme.onPrimary)

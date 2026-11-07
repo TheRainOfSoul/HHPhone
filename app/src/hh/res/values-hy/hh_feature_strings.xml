@@ -43,6 +43,8 @@
     <string name="hh_update_downloading">Ներբեռնում %1$d%%…</string>
     <string name="hh_update_none">Տեղադրված է վերջին տարբերակը։</string>
     <string name="hh_update_no_connection">Չհաջողվեց ստուգել թարմացումները․ կապ չկա։</string>
+    <string name="hh_whats_new">Ինչ նոր կա %1$s տարբերակում</string>
+    <string name="hh_update_button_hint">Հասանելի է %1$s տարբերակը․ սեղմեք «Թարմացնել» վերևում։</string>
     <string name="hh_update_failed">Չհաջողվեց ներբեռնել թարմացումը։ Փորձեք ավելի ուշ։</string>
     <string name="hh_update_allow">Թույլատրեք HHPhone-ին տեղադրել հավելվածներ և կրկին սեղմեք «Թարմացնել»։</string>
     <string name="hh_confirm_add">Ավելացնե՞լ %1$s հաշիվն այս հեռախոսում։</string>

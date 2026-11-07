@@ -25,11 +25,11 @@ class HHUpdateTest {
         assertFalse(HHLatest(2, "9.9.9", "").newerThan(3))
     }
 
-    @Test fun sixHoursBetweenChecks() {
+    @Test fun hourBetweenChecks() {
         val h = 3_600_000L
-        assertTrue(HHUpdate.due(0, 6 * h))
-        assertFalse(HHUpdate.due(10 * h, 15 * h))
-        assertTrue(HHUpdate.due(10 * h, 16 * h))
+        assertTrue(HHUpdate.due(0, h))
+        assertFalse(HHUpdate.due(10 * h, 10 * h + h / 2))
+        assertTrue(HHUpdate.due(10 * h, 11 * h))
         assertTrue(HHUpdate.due(20 * h, 10 * h))   // часы перевели назад — проверяем
     }
 }

@@ -43,6 +43,8 @@
     <string name="hh_update_downloading">Скачивание %1$d%%…</string>
     <string name="hh_update_none">Установлена последняя версия.</string>
     <string name="hh_update_no_connection">Не удалось проверить обновления: нет связи.</string>
+    <string name="hh_whats_new">Что нового в версии %1$s</string>
+    <string name="hh_update_button_hint">Доступна версия %1$s — нажмите «Обновить» вверху.</string>
     <string name="hh_update_failed">Не удалось скачать обновление. Попробуйте позже.</string>
     <string name="hh_update_allow">Разрешите HHPhone устанавливать приложения и нажмите «Обновить» ещё раз.</string>
     <string name="hh_confirm_add">Добавить на этот телефон учётную запись %1$s?</string>
