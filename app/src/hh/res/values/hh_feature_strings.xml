@@ -176,6 +176,7 @@
     <string name="hh_rec_need_a11y">Android muted the microphone: turn on the “HHPhone call recording” accessibility service (menu ⋮ → Call recording)</string>
     <string name="hh_rec_item">Call recording %1$s</string>
     <string name="hh_rec_play">Play</string>
+    <string name="hh_share_contact">Share contact</string>
     <string name="hh_rec_share">Share</string>
     <string name="hh_rec_delete">Delete recording</string>
     <string name="hh_rec_play_failed">Could not play the recording</string>

@@ -176,6 +176,7 @@
     <string name="hh_rec_need_a11y">Android-ը անջատել է խոսափողը. միացրեք «HHPhone զանգերի ձայնագրում» ծառայությունը (մենյու ⋮ → Զանգերի ձայնագրում)</string>
     <string name="hh_rec_item">Զանգի ձայնագրություն %1$s</string>
     <string name="hh_rec_play">Լսել</string>
+    <string name="hh_share_contact">Կիսվել կոնտակտով</string>
     <string name="hh_rec_share">Կիսվել</string>
     <string name="hh_rec_delete">Ջնջել ձայնագրությունը</string>
     <string name="hh_rec_play_failed">Չհաջողվեց նվագարկել ձայնագրությունը</string>

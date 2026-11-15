@@ -57,6 +57,7 @@ import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -103,6 +104,35 @@ import java.io.File
 
 /** Тип строки «SIP-адрес» среди номеров карточки (у Phone.TYPE таких значений нет). */
 private const val SIP_TYPE = -2
+
+/** Контакт в vCard 3.0 для «Поделиться»: имя, телефоны с типом, SIP-адреса. */
+internal fun hhVCard(name: String, nums: List<HHNum>): String {
+    fun esc(s: String) = s.replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;").replace("\n", "\\n")
+    val lines = mutableListOf("BEGIN:VCARD", "VERSION:3.0", "FN:" + esc(name), "N:" + esc(name) + ";;;;")
+    nums.filter { it.number.isNotBlank() }.forEach { n ->
+        if (n.type == SIP_TYPE) lines += "IMPP:sip:" + n.number.trim().removePrefix("sip:")
+        else lines += "TEL;TYPE=" + when (n.type) {
+            Phone.TYPE_MOBILE -> "CELL"; Phone.TYPE_HOME -> "HOME"; Phone.TYPE_WORK -> "WORK"; else -> "VOICE"
+        } + ":" + n.number.trim()
+    }
+    lines += "END:VCARD"
+    return lines.joinToString("\r\n", postfix = "\r\n")
+}
+
+/** Отправить карточку файлом .vcf через системное «Поделиться». */
+private fun shareContact(ctx: Context, c: HHCard) {
+    try {
+        val dir = java.io.File(ctx.filesDir, "share").apply { mkdirs() }
+        dir.listFiles()?.forEach { it.delete() }   // прошлые отправки не копим
+        val file = java.io.File(dir, c.name.replace(Regex("[\\\\/:*?\"<>|]"), "").trim().ifEmpty { "contact" } + ".vcf")
+        file.writeText(hhVCard(c.name, c.nums))
+        val uri = androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", file)
+        ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/x-vcard")
+            .putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), null))
+    } catch (e: Exception) {
+        Log.w("HHContact", "share contact failed: $e")
+    }
+}
 
 /** Карточка: key — a<id> (контакт телефона), b<id> (baresip), n<номер> (новый). */
 data class HHCard(val key: String, val name: String, val nums: List<HHNum>, val photo: Uri? = null, val bitmap: Bitmap? = null,
@@ -477,6 +507,9 @@ private fun HHContactScreen(navController: NavController, viewModel: ViewModel, 
                 IconButton(onClick = {
                     if (c.editable) { startEdit(c); editing = true } else Toast.makeText(ctx, readOnlyText, Toast.LENGTH_LONG).show()
                 }) { Icon(Icons.Outlined.Edit, stringResource(R.string.hh_edit), tint = onBar) }
+                IconButton(onClick = { shareContact(ctx, c) }) {
+                    Icon(Icons.Outlined.Share, stringResource(R.string.hh_share_contact), tint = onBar)
+                }
                 Box {
                     IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.hh_menu), tint = onBar) }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {

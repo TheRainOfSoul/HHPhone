@@ -180,6 +180,7 @@
     <string name="hh_rec_need_a11y">Android заглушил микрофон: включите службу «Запись разговоров HHPhone» (меню ⋮ → Запись разговоров)</string>
     <string name="hh_rec_item">Запись разговора %1$s</string>
     <string name="hh_rec_play">Прослушать</string>
+    <string name="hh_share_contact">Поделиться контактом</string>
     <string name="hh_rec_share">Поделиться</string>
     <string name="hh_rec_delete">Удалить запись</string>
     <string name="hh_rec_play_failed">Не удалось воспроизвести запись</string>
